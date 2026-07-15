@@ -8,6 +8,7 @@ class Affiliate extends Model
 {
     protected $fillable = [
         'user_id',
+        'person_id',
         'sector_id',
         'affiliation_plan_id',
         'full_name',
@@ -34,6 +35,11 @@ class Affiliate extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function person()
+    {
+        return $this->belongsTo(Person::class);
     }
 
     public function sector()

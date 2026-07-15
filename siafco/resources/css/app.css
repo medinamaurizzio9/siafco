@@ -12,7 +12,13 @@
 }
 
 @layer components {
+    .nav-module { @apply rounded-lg border border-white/10 bg-[#07182d]/35 p-1; }
+    .nav-module-button { @apply flex w-full items-center justify-between rounded px-3 py-2 text-left text-xs font-black uppercase tracking-wide text-[#d4af37] hover:bg-[#102b4c]; }
+    .nav-module-panel { @apply mt-1 grid gap-1; }
+    .nav-chevron { @apply text-base leading-none transition-transform; }
+    .nav-module-button[aria-expanded="true"] .nav-chevron { @apply rotate-180; }
     .nav-link { @apply rounded px-3 py-2 text-slate-200 hover:bg-[#102b4c] hover:text-[#d4af37]; }
+    .nav-link-active { @apply bg-[#d4af37] font-black text-[#0b1f3a] hover:bg-[#d4af37] hover:text-[#0b1f3a]; }
     .btn-primary { @apply inline-flex items-center justify-center rounded bg-[#d4af37] px-4 py-2 font-bold text-[#0b1f3a] shadow-sm hover:bg-[#c19a2d]; }
     .btn-secondary { @apply inline-flex items-center justify-center rounded border border-slate-300 bg-white px-4 py-2 font-bold text-slate-800 hover:bg-slate-50; }
     .btn-danger { @apply inline-flex items-center justify-center rounded bg-red-700 px-4 py-2 font-bold text-white hover:bg-red-800; }

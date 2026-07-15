@@ -9,9 +9,20 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InstitutionalQrController;
 use App\Http\Controllers\InstitutionalSettingController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PlaceholderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\VerificationController;
+use App\Http\Controllers\Investments\DashboardController as InvestmentDashboardController;
+use App\Http\Controllers\Investments\InvestmentLotController;
+use App\Http\Controllers\Investments\InvestorController;
+use App\Http\Controllers\Investments\InvestorPanelController;
+use App\Http\Controllers\Investments\InvestorTypeController;
+use App\Http\Controllers\Investments\ReceiptController as InvestmentReceiptController;
+use App\Http\Controllers\Investments\ReportController as InvestmentReportController;
+use App\Http\Controllers\Investments\ReturnPeriodController;
+use App\Http\Controllers\Investments\SettingController as InvestmentSettingController;
+use App\Http\Controllers\Investments\ShareReservationController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
@@ -25,6 +36,7 @@ Route::get('/verificar/{token}', [VerificationController::class, 'show'])->name(
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/mi-perfil', PlaceholderController::class)->defaults('title', 'Mi perfil')->defaults('message', 'Edicion de perfil personal preparada para una fase posterior.')->name('profile.show');
 
     Route::get('/panel-afiliado', [AffiliatePanelController::class, 'index'])
         ->middleware('role:afiliado')
@@ -36,6 +48,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/afiliado/credencial/png', [CredentialController::class, 'affiliatePng'])->name('affiliate.credential.png');
     });
 
+    Route::get('/credenciales', PlaceholderController::class)->defaults('title', 'Credenciales')->defaults('message', 'Las credenciales se generan desde la ficha de cada afiliado activo.')->middleware('role:administrador,administrador_sector,secretaria')->name('credentials.index');
     Route::get('/credenciales/{affiliate}', [CredentialController::class, 'preview'])->name('credenciales.show');
     Route::get('/credenciales/{affiliate}/pdf', [CredentialController::class, 'adminPdf'])->name('credenciales.pdf');
 
@@ -55,6 +68,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:administrador,administrador_sector,secretaria')->group(function () {
         Route::resource('sectores', SectorController::class)->except('show')->parameters(['sectores' => 'sector'])->names('sectors');
         Route::resource('planes', AffiliationPlanController::class)->except('show')->parameters(['planes' => 'plan'])->names('plans');
+        Route::get('/afiliacion/configuracion', PlaceholderController::class)->defaults('title', 'Configuracion de afiliacion')->defaults('message', 'Planes, QR bancario, reglas de activacion, diseno de credencial y textos institucionales del modulo de afiliados.')->name('affiliation.settings.edit');
         Route::get('/afiliados/crear/nuevo', [AffiliateController::class, 'create'])->name('affiliates.create');
         Route::post('/afiliados', [AffiliateController::class, 'store'])->name('affiliates.store');
         Route::get('/afiliados/{affiliate}/editar', [AffiliateController::class, 'edit'])->name('affiliates.edit');
@@ -76,7 +90,72 @@ Route::middleware('auth')->group(function () {
         Route::post('/pagos/{payment}/rechazar', [PaymentController::class, 'reject'])->name('payments.reject');
     });
 
+    Route::get('/panel-accionista', [InvestorPanelController::class, 'index'])
+        ->middleware('role:accionista,afiliado,administrador,caja,cajero,contabilidad')
+        ->name('investments.panel');
+
+    Route::prefix('inversiones')->name('investments.')->middleware('role:administrador,caja,cajero,contabilidad')->group(function () {
+        Route::get('/dashboard', [InvestmentDashboardController::class, 'index'])->name('dashboard');
+        Route::resource('accionistas', InvestorController::class)->except('destroy')->parameters(['accionistas' => 'investor'])->names('investors');
+        Route::resource('tipos-inversionista', InvestorTypeController::class)->except('show', 'destroy')->parameters(['tipos-inversionista' => 'investorType'])->names('investor-types');
+
+        Route::get('reservas', [ShareReservationController::class, 'index'])->name('reservations.index');
+        Route::get('reservas/crear', [ShareReservationController::class, 'create'])->name('reservations.create');
+        Route::post('reservas', [ShareReservationController::class, 'store'])->name('reservations.store');
+        Route::get('reservas/{reservation}', [ShareReservationController::class, 'show'])->name('reservations.show');
+        Route::post('reservas/{reservation}/convertir', [ShareReservationController::class, 'convert'])->name('reservations.convert');
+        Route::post('reservas/{reservation}/cerrar', [ShareReservationController::class, 'close'])->name('reservations.close');
+
+        Route::get('lotes', [InvestmentLotController::class, 'index'])->name('lots.index');
+        Route::get('lotes/crear', [InvestmentLotController::class, 'create'])->name('lots.create');
+        Route::post('lotes', [InvestmentLotController::class, 'store'])->name('lots.store');
+        Route::get('lotes/{lot}', [InvestmentLotController::class, 'show'])->name('lots.show');
+        Route::post('lotes/{lot}/aprobar', [InvestmentLotController::class, 'approve'])->name('lots.approve');
+
+        Route::get('rendimientos', [ReturnPeriodController::class, 'index'])->name('returns.index');
+        Route::get('rendimientos/{period}', [ReturnPeriodController::class, 'show'])->name('returns.show');
+        Route::post('rendimientos/{period}/preparar', [ReturnPeriodController::class, 'prepare'])->name('returns.prepare');
+        Route::post('rendimientos/{period}/aprobar', [ReturnPeriodController::class, 'approve'])->name('returns.approve');
+        Route::post('rendimientos/{period}/rechazar', [ReturnPeriodController::class, 'reject'])->name('returns.reject');
+        Route::post('rendimientos/{period}/recibo', [InvestmentReceiptController::class, 'issue'])->name('receipts.issue');
+
+        Route::get('recibos', [InvestmentReceiptController::class, 'index'])->name('receipts.index');
+        Route::get('recibos/{receipt}', [InvestmentReceiptController::class, 'show'])->name('receipts.show');
+        Route::get('recibos/{receipt}/pdf', [InvestmentReceiptController::class, 'pdf'])->name('receipts.pdf');
+        Route::post('recibos/{receipt}/anular', [InvestmentReceiptController::class, 'void'])->name('receipts.void');
+
+        Route::get('aprobaciones', [ReturnPeriodController::class, 'index'])->defaults('status', 'pending_approval')->name('approvals.index');
+        Route::get('configuracion', [InvestmentSettingController::class, 'edit'])->name('settings.edit');
+        Route::put('configuracion', [InvestmentSettingController::class, 'update'])->name('settings.update');
+        Route::get('reportes', [InvestmentReportController::class, 'index'])->name('reports.index');
+        Route::get('reportes/pdf', [InvestmentReportController::class, 'pdf'])->name('reports.pdf');
+        Route::get('reportes/csv', [InvestmentReportController::class, 'csv'])->name('reports.csv');
+    });
+
     Route::view('/creditos', 'credits.placeholder')
         ->middleware('role:administrador,administrador_sector,secretaria,cajero,consulta')
         ->name('credits.placeholder');
+
+    Route::prefix('creditos')->name('credits.')->middleware('role:administrador,administrador_sector,secretaria,cajero,caja,contabilidad,consulta')->group(function () {
+        Route::get('/productos', PlaceholderController::class)->defaults('title', 'Productos de credito')->defaults('message', 'Tipos de credito, tasas y condiciones se construiran en la fase de creditos.')->name('products.index');
+        Route::get('/solicitudes', PlaceholderController::class)->defaults('title', 'Solicitudes de credito')->defaults('message', 'Registro y revision de solicitudes de credito pendiente de implementacion.')->name('applications.index');
+        Route::get('/simulador', PlaceholderController::class)->defaults('title', 'Simulador de creditos')->defaults('message', 'Simulador preparado para calcular cuotas, plazos e intereses.')->name('simulator');
+        Route::get('/aprobados', PlaceholderController::class)->defaults('title', 'Creditos aprobados')->defaults('message', 'Gestion de creditos aprobados pendiente para la fase financiera.')->name('approved.index');
+        Route::get('/cuotas', PlaceholderController::class)->defaults('title', 'Cuotas de credito')->defaults('message', 'Calendario de cuotas y seguimiento se implementara en el modulo de creditos.')->name('installments.index');
+        Route::get('/pagos', PlaceholderController::class)->defaults('title', 'Pagos de credito')->defaults('message', 'Registro de pagos de credito pendiente de implementacion.')->name('payments.index');
+        Route::get('/mora', PlaceholderController::class)->defaults('title', 'Mora por atraso')->defaults('message', 'Calculo de mora y alertas se agregaran en la fase de creditos.')->name('late-fees.index');
+        Route::get('/reportes', PlaceholderController::class)->defaults('title', 'Reportes de creditos')->defaults('message', 'Reportes financieros de creditos pendientes de implementacion.')->name('reports.index');
+        Route::get('/configuracion', PlaceholderController::class)->defaults('title', 'Configuracion de creditos')->defaults('message', 'Tasas, plazos, mora, productos, documentos y reglas de aprobacion se configuraran aqui.')->name('settings.edit');
+    });
+
+    Route::prefix('administracion')->name('administration.')->middleware('role:administrador')->group(function () {
+        Route::get('/usuarios', PlaceholderController::class)->defaults('title', 'Usuarios')->defaults('message', 'Administracion de usuarios preparada para una fase posterior.')->name('users.index');
+        Route::get('/roles-permisos', PlaceholderController::class)->defaults('title', 'Roles y permisos')->defaults('message', 'Gestion detallada de permisos por modulo pendiente de implementacion.')->name('roles.index');
+        Route::get('/auditoria', PlaceholderController::class)->defaults('title', 'Auditoria')->defaults('message', 'Consulta avanzada de auditoria preparada para una fase posterior.')->name('audit.index');
+    });
+
+    Route::prefix('configuracion-general')->name('settings.')->middleware('role:administrador,secretaria')->group(function () {
+        Route::get('/seguridad', PlaceholderController::class)->defaults('title', 'Seguridad')->defaults('message', 'Opciones de seguridad del sistema preparadas para una fase posterior.')->name('security');
+        Route::get('/sistema', PlaceholderController::class)->defaults('title', 'Configuracion del sistema')->defaults('message', 'Zona horaria, moneda por defecto y opciones generales del sistema se ampliaran aqui.')->name('system');
+    });
 });

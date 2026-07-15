@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\AffiliationPlan;
 use App\Models\InstitutionalSetting;
+use App\Models\InvestmentSetting;
+use App\Models\InvestorType;
 use App\Models\Sector;
 use App\Models\User;
 use App\Services\QrCodeService;
@@ -23,6 +25,9 @@ class DatabaseSeeder extends Seeder
             'administrador_sector' => 'Admin Sector',
             'secretaria' => 'Secretaria',
             'cajero' => 'Cajero',
+            'caja' => 'Caja Inversiones',
+            'contabilidad' => 'Contabilidad',
+            'accionista' => 'Accionista',
             'consulta' => 'Consulta',
         ] as $role => $name) {
             User::updateOrCreate(
@@ -65,5 +70,43 @@ class DatabaseSeeder extends Seeder
             'SIAFCO TIERRA BENDITA - PAGO AFILIACION/CREDENCIAL',
             'institutional/payment-qr.png'
         );
+
+        InvestmentSetting::updateOrCreate(
+            ['id' => 1],
+            [
+                'company_name' => 'Cooperativa Tierra Bendita',
+                'company_legal_name' => 'Cooperativa Minera Tierra Bendita R.L.',
+                'currency' => 'BOB',
+                'share_unit_price' => 14000,
+                'minimum_shares' => 1,
+                'maximum_shares' => 10,
+                'monthly_return_percentage' => 5,
+                'waiting_months' => 4,
+                'contract_years' => 3,
+                'reservation_days' => 30,
+                'maximum_shares_per_person' => true,
+                'renewal_enabled' => true,
+                'production_bonus_enabled' => true,
+                'extra_amount_enabled' => true,
+                'receipt_prefix' => 'REC-INV',
+                'next_receipt_number' => 1,
+                'alert_days_before_maturity' => 15,
+                'active' => true,
+            ]
+        );
+
+        foreach (range(1, 10) as $shares) {
+            InvestorType::updateOrCreate(
+                ['shares_quantity' => $shares],
+                [
+                    'name' => "Inversionista {$shares} ".($shares === 1 ? 'accion' : 'acciones'),
+                    'description' => "Clasificacion automatica para {$shares} ".($shares === 1 ? 'accion activa' : 'acciones activas').'.',
+                    'active' => true,
+                    'order' => $shares,
+                ]
+            );
+        }
+
+        $this->call(DemoDataSeeder::class);
     }
 }

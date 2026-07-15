@@ -11,11 +11,42 @@
     @stack('styles')
 </head>
 <body class="bg-slate-100 text-slate-950">
-<div class="min-h-screen lg:flex">
+<div class="min-h-screen lg:flex" data-sidebar-shell>
     @auth
-        <aside class="bg-[#0b1f3a] text-white lg:w-72">
-            <div class="flex items-center justify-between px-5 py-4 lg:block">
-                <a href="{{ auth()->user()->role === 'afiliado' ? route('affiliate.panel') : route('admin.dashboard') }}" class="flex items-center gap-3">
+        @php
+            $user = auth()->user();
+            $canManageAffiliation = $user->hasRole(['administrador', 'administrador_sector', 'secretaria']);
+            $canViewAffiliation = $user->hasRole(['administrador', 'administrador_sector', 'secretaria', 'cajero', 'consulta']);
+            $canManageInvestments = $user->hasRole(['administrador', 'caja', 'cajero', 'contabilidad']);
+            $canViewCredits = $user->hasRole(['administrador', 'administrador_sector', 'secretaria', 'cajero', 'caja', 'contabilidad', 'consulta']);
+            $canAdmin = $user->hasRole('administrador');
+            $canGeneralSettings = $user->hasRole(['administrador', 'secretaria']);
+            $isPersonalOnly = $user->hasRole(['afiliado', 'accionista']) && ! $canViewAffiliation && ! $canManageInvestments;
+
+            $openModule = match (true) {
+                request()->routeIs('admin.dashboard') => 'home',
+                request()->routeIs('affiliates.*', 'sectors.*', 'plans.*', 'payments.*', 'credentials.*', 'credenciales.*', 'institutional-qr.*', 'reports.*', 'affiliation.*') => 'affiliation',
+                request()->routeIs('investments.*') && ! request()->routeIs('investments.panel') => 'investments',
+                request()->routeIs('credits.*') => 'credits',
+                request()->routeIs('administration.*') => 'administration',
+                request()->routeIs('institutional-settings.*', 'settings.*') => 'general-settings',
+                request()->routeIs('affiliate.*', 'investments.panel', 'profile.*') => 'personal',
+                default => 'home',
+            };
+
+            $navLink = function (string $route, string $label, array $params = [], array|string $active = []) {
+                $activePatterns = $active ?: [$route];
+                $isActive = request()->routeIs(...(array) $activePatterns);
+
+                return '<a class="'.($isActive ? 'nav-link nav-link-active' : 'nav-link').'" href="'.route($route, $params).'" data-sidebar-link>'.$label.'</a>';
+            };
+
+            $soon = fn (string $route, string $label) => $navLink($route, $label);
+        @endphp
+
+        <aside class="fixed inset-y-0 left-0 z-40 hidden w-80 overflow-y-auto bg-[#0b1f3a] text-white shadow-xl lg:static lg:block lg:w-72 lg:shadow-none" data-sidebar>
+            <div class="flex items-center justify-between px-5 py-4">
+                <a href="{{ auth()->user()->role === 'afiliado' ? route('affiliate.panel') : (auth()->user()->role === 'accionista' ? route('investments.panel') : route('admin.dashboard')) }}" class="flex items-center gap-3">
                     <span class="grid h-12 w-12 place-items-center overflow-hidden rounded border border-[#d4af37] bg-white text-lg font-black text-[#0b1f3a]">
                         @if($institution->logoUrl())
                             <img class="h-full w-full object-contain p-1" src="{{ $institution->logoUrl() }}" alt="Logo">
@@ -28,38 +59,145 @@
                         <span class="block text-xs text-slate-300">{{ $institution->institution_name }}</span>
                     </span>
                 </a>
+                <button type="button" class="rounded px-2 py-1 text-sm font-black text-[#d4af37] lg:hidden" data-sidebar-close>✕</button>
             </div>
-            <nav class="grid gap-1 px-3 pb-4 text-sm">
-                @if(auth()->user()->role === 'afiliado')
-                    <a class="nav-link" href="{{ route('affiliate.panel') }}">Panel afiliado</a>
-                @else
-                    <a class="nav-link" href="{{ route('admin.dashboard') }}">Dashboard</a>
-                    <a class="nav-link" href="{{ route('affiliates.index') }}">Afiliados</a>
-                    <a class="nav-link" href="{{ route('payments.index') }}">Pagos</a>
-                    @if(auth()->user()->hasRole(['administrador', 'administrador_sector', 'secretaria']))
-                        <a class="nav-link" href="{{ route('sectors.index') }}">Sectores</a>
-                        <a class="nav-link" href="{{ route('plans.index') }}">Planes</a>
-                        <a class="nav-link" href="{{ route('institutional-qr.show') }}">QR pago</a>
-                        <a class="nav-link" href="{{ route('institutional-settings.edit') }}">Configuracion</a>
+
+            <nav class="grid gap-2 px-3 pb-4 text-sm" data-sidebar-accordion data-current-module="{{ $openModule }}">
+                @unless($isPersonalOnly)
+                    <section class="nav-module" data-accordion-module="home">
+                        <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'home' ? 'true' : 'false' }}">
+                            <span>Inicio</span><span class="nav-chevron">⌄</span>
+                        </button>
+                        <div class="nav-module-panel {{ $openModule === 'home' ? '' : 'hidden' }}">
+                            {!! $navLink('admin.dashboard', 'Dashboard general', [], ['admin.dashboard']) !!}
+                        </div>
+                    </section>
+
+                    @if($canViewAffiliation)
+                        <section class="nav-module" data-accordion-module="affiliation">
+                            <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'affiliation' ? 'true' : 'false' }}">
+                                <span>Afiliacion</span><span class="nav-chevron">⌄</span>
+                            </button>
+                            <div class="nav-module-panel {{ $openModule === 'affiliation' ? '' : 'hidden' }}">
+                                {!! $navLink('affiliates.index', 'Afiliados', [], ['affiliates.*']) !!}
+                                @if($canManageAffiliation)
+                                    {!! $navLink('sectors.index', 'Sectores', [], ['sectors.*']) !!}
+                                    {!! $navLink('plans.index', 'Planes de afiliacion', [], ['plans.*']) !!}
+                                @endif
+                                {!! $navLink('payments.index', 'Pagos de afiliacion', [], ['payments.*']) !!}
+                                @if($canManageAffiliation)
+                                    {!! $navLink('credentials.index', 'Credenciales', [], ['credentials.*', 'credenciales.*']) !!}
+                                    {!! $navLink('institutional-qr.show', 'QR institucional', [], ['institutional-qr.*']) !!}
+                                @endif
+                                {!! $navLink('reports.index', 'Reportes de afiliacion', [], ['reports.*']) !!}
+                                @if($canManageAffiliation)
+                                    {!! $navLink('affiliation.settings.edit', 'Configuracion de afiliacion', [], ['affiliation.*']) !!}
+                                @endif
+                            </div>
+                        </section>
                     @endif
-                    <a class="nav-link" href="{{ route('reports.index') }}">Reportes</a>
-                    <a class="nav-link" href="{{ route('credits.placeholder') }}">Creditos</a>
-                @endif
-                <form method="post" action="{{ route('logout') }}" class="pt-2">
-                    @csrf
-                    <button class="w-full rounded bg-[#102b4c] px-3 py-2 text-left text-slate-100 hover:bg-[#163b68]">Cerrar sesion</button>
-                </form>
+
+                    @if($canManageInvestments)
+                        <section class="nav-module" data-accordion-module="investments">
+                            <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'investments' ? 'true' : 'false' }}">
+                                <span>Accionistas e inversiones</span><span class="nav-chevron">⌄</span>
+                            </button>
+                            <div class="nav-module-panel {{ $openModule === 'investments' ? '' : 'hidden' }}">
+                                {!! $navLink('investments.dashboard', 'Dashboard de inversiones', [], ['investments.dashboard']) !!}
+                                {!! $navLink('investments.investors.index', 'Accionistas', [], ['investments.investors.*']) !!}
+                                {!! $navLink('investments.investor-types.index', 'Tipos de inversionista', [], ['investments.investor-types.*']) !!}
+                                {!! $navLink('investments.reservations.index', 'Reservas', [], ['investments.reservations.*']) !!}
+                                {!! $navLink('investments.lots.create', 'Venta de acciones', [], ['investments.lots.create']) !!}
+                                {!! $navLink('investments.lots.index', 'Lotes de inversion', [], ['investments.lots.index', 'investments.lots.show']) !!}
+                                {!! $navLink('investments.returns.index', 'Rendimientos mensuales', [], ['investments.returns.*']) !!}
+                                {!! $navLink('investments.returns.index', 'Bonos de produccion minera', ['bonus' => 1], ['investments.returns.*']) !!}
+                                {!! $navLink('investments.receipts.index', 'Recibos', [], ['investments.receipts.*']) !!}
+                                {!! $navLink('investments.approvals.index', 'Aprobaciones', [], ['investments.approvals.*']) !!}
+                                {!! $navLink('investments.reports.index', 'Reportes de inversiones', [], ['investments.reports.*']) !!}
+                                {!! $navLink('investments.settings.edit', 'Configuracion de inversiones', [], ['investments.settings.*']) !!}
+                            </div>
+                        </section>
+                    @endif
+
+                    @if($canViewCredits)
+                        <section class="nav-module" data-accordion-module="credits">
+                            <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'credits' ? 'true' : 'false' }}">
+                                <span>Creditos</span><span class="nav-chevron">⌄</span>
+                            </button>
+                            <div class="nav-module-panel {{ $openModule === 'credits' ? '' : 'hidden' }}">
+                                {!! $soon('credits.products.index', 'Productos o tipos de credito') !!}
+                                {!! $soon('credits.applications.index', 'Solicitudes') !!}
+                                {!! $soon('credits.simulator', 'Simulador') !!}
+                                {!! $soon('credits.approved.index', 'Creditos aprobados') !!}
+                                {!! $soon('credits.installments.index', 'Cuotas') !!}
+                                {!! $soon('credits.payments.index', 'Pagos') !!}
+                                {!! $soon('credits.late-fees.index', 'Mora') !!}
+                                {!! $soon('credits.reports.index', 'Reportes de creditos') !!}
+                                {!! $soon('credits.settings.edit', 'Configuracion de creditos') !!}
+                            </div>
+                        </section>
+                    @endif
+
+                    @if($canAdmin)
+                        <section class="nav-module" data-accordion-module="administration">
+                            <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'administration' ? 'true' : 'false' }}">
+                                <span>Administracion</span><span class="nav-chevron">⌄</span>
+                            </button>
+                            <div class="nav-module-panel {{ $openModule === 'administration' ? '' : 'hidden' }}">
+                                {!! $soon('administration.users.index', 'Usuarios') !!}
+                                {!! $soon('administration.roles.index', 'Roles y permisos') !!}
+                                {!! $soon('administration.audit.index', 'Auditoria') !!}
+                            </div>
+                        </section>
+                    @endif
+
+                    @if($canGeneralSettings)
+                        <section class="nav-module" data-accordion-module="general-settings">
+                            <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'general-settings' ? 'true' : 'false' }}">
+                                <span>Configuracion general</span><span class="nav-chevron">⌄</span>
+                            </button>
+                            <div class="nav-module-panel {{ $openModule === 'general-settings' ? '' : 'hidden' }}">
+                                {!! $navLink('institutional-settings.edit', 'Datos generales de SIAFCO', [], ['institutional-settings.*']) !!}
+                                {!! $soon('settings.security', 'Seguridad') !!}
+                                {!! $soon('settings.system', 'Configuracion del sistema') !!}
+                            </div>
+                        </section>
+                    @endif
+                @endunless
+
+                <section class="nav-module" data-accordion-module="personal">
+                    <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'personal' ? 'true' : 'false' }}">
+                        <span>Panel personal</span><span class="nav-chevron">⌄</span>
+                    </button>
+                    <div class="nav-module-panel {{ $openModule === 'personal' ? '' : 'hidden' }}">
+                        {!! $soon('profile.show', 'Mi perfil') !!}
+                        @if($user->hasRole('afiliado'))
+                            {!! $navLink('affiliate.panel', 'Panel del afiliado', [], ['affiliate.panel', 'affiliate.credential.*']) !!}
+                        @endif
+                        @if($user->hasRole('accionista'))
+                            {!! $navLink('investments.panel', 'Panel del accionista', [], ['investments.panel']) !!}
+                        @endif
+                        <form method="post" action="{{ route('logout') }}" class="pt-2">
+                            @csrf
+                            <button class="w-full rounded bg-[#102b4c] px-3 py-2 text-left text-slate-100 hover:bg-[#163b68]" data-sidebar-link>Cerrar sesion</button>
+                        </form>
+                    </div>
+                </section>
             </nav>
         </aside>
+        <div class="fixed inset-0 z-30 hidden bg-slate-950/50 lg:hidden" data-sidebar-backdrop></div>
     @endauth
 
     <main class="flex-1">
         @auth
             <header class="border-b border-slate-200 bg-white px-5 py-4">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-[#b8942f]">{{ auth()->user()->role }}</p>
-                        <h1 class="text-2xl font-black text-slate-950">{{ $title ?? 'SIAFCO' }}</h1>
+                    <div class="flex items-start gap-3">
+                        <button type="button" class="rounded bg-[#0b1f3a] px-3 py-2 text-sm font-black text-[#d4af37] lg:hidden" data-sidebar-open>Menu</button>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-[#b8942f]">{{ auth()->user()->role }}</p>
+                            <h1 class="text-2xl font-black text-slate-950">{{ $title ?? 'SIAFCO' }}</h1>
+                        </div>
                     </div>
                     <p class="text-sm text-slate-500">{{ auth()->user()->name }}</p>
                 </div>

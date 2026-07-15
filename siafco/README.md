@@ -37,7 +37,7 @@ $env:PATH="C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64;" + $env:PATH
 - Correo: `admin@siafco.test`
 - Password: `admin123456`
 
-Tambien se crean usuarios de apoyo para `administrador_sector`, `secretaria`, `cajero` y `consulta`, todos con password `admin123456`.
+Tambien se crean usuarios de apoyo para `administrador_sector`, `secretaria`, `cajero`, `caja`, `contabilidad`, `accionista` y `consulta`, todos con password `admin123456`.
 
 ## Modulos incluidos
 
@@ -59,6 +59,50 @@ Tambien se crean usuarios de apoyo para `administrador_sector`, `secretaria`, `c
 - Verificacion publica en `/verificar/{token}` sin CI, celular, correo, direccion ni foto.
 - Configuracion institucional en `/admin/configuracion-institucional` para nombre, logo, colores, correo, telefono, direccion y QR bancario fijo.
 - Reportes basicos y auditoria basica.
+- Subsistema independiente de Accionistas e Inversiones, integrado con personas compartidas por CI.
+
+## Accionistas e Inversiones
+
+Fase inicial implementada:
+
+- Tabla `people` para compartir datos personales entre afiliados, accionistas y usuarios.
+- Relacion `affiliates.person_id`, `investors.person_id` y `users.person_id`.
+- Registro de accionistas sin exigir afiliacion.
+- Reutilizacion de persona por CI para evitar duplicados.
+- Tipos de inversionista de 1 a 10 acciones.
+- Configuracion financiera editable: precio de accion, maximos, rendimiento mensual, espera, contrato, reserva, recibos y logo.
+- Reservas de acciones con vencimiento configurable y cierre documentado.
+- Venta de acciones como lotes independientes.
+- Aprobacion de lotes y generacion de 36 periodos mensuales.
+- Rendimiento base, bono por produccion minera, extra manual, deducciones y aprobacion.
+- Recibos con snapshots historicos, numeracion segura desde configuracion, PDF, impresion y anulacion sin borrado.
+- Dashboard cacheado de inversiones.
+- Panel privado de accionista.
+- Reportes basicos con exportacion PDF y CSV.
+- Comando diario `php artisan investments:process-periods`.
+
+Rutas principales:
+
+- `/inversiones/dashboard`
+- `/inversiones/accionistas`
+- `/inversiones/tipos-inversionista`
+- `/inversiones/lotes`
+- `/inversiones/reservas`
+- `/inversiones/rendimientos`
+- `/inversiones/recibos`
+- `/inversiones/aprobaciones`
+- `/inversiones/configuracion`
+- `/inversiones/reportes`
+- `/panel-accionista`
+
+Roles operativos:
+
+- `administrador`
+- `caja`
+- `cajero`
+- `contabilidad`
+
+El comando programado queda registrado en `routes/console.php` para ejecucion diaria a las 02:00. Detecta reservas vencidas, lotes que alcanzaron maduracion y periodos mensuales pendientes. No registra pagos ni emite recibos automaticamente.
 
 ## Preparado para fase posterior
 

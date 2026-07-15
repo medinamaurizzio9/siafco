@@ -19,6 +19,7 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'person_id',
         'email',
         'role',
         'password',
@@ -50,6 +51,16 @@ class User extends Authenticatable
     public function affiliate()
     {
         return $this->hasOne(Affiliate::class);
+    }
+
+    public function person()
+    {
+        return $this->belongsTo(Person::class);
+    }
+
+    public function investor()
+    {
+        return $this->hasOne(Investor::class, 'person_id', 'person_id');
     }
 
     public function hasRole(string|array $roles): bool
