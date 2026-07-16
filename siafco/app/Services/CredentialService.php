@@ -264,8 +264,19 @@ class CredentialService
 
     private function fontPath(string $file): ?string
     {
-        $path = 'C:\\Windows\\Fonts\\'.$file;
+        $candidates = [
+            resource_path('fonts/'.$file),
+            resource_path('fonts/'.strtolower($file)),
+            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+            '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+        ];
 
-        return is_file($path) ? $path : null;
+        foreach ($candidates as $path) {
+            if (is_file($path)) {
+                return $path;
+            }
+        }
+
+        return null;
     }
 }

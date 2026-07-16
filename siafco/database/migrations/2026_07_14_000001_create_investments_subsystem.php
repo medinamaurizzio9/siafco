@@ -12,11 +12,11 @@ return new class extends Migration
         Schema::create('people', function (Blueprint $table) {
             $table->id();
             $table->string('full_name');
-            $table->string('ci')->unique();
+            $table->string('ci')->unique('people_ci_unique');
             $table->string('ci_complement')->nullable();
             $table->string('issued_in')->nullable();
             $table->string('phone')->nullable();
-            $table->string('email')->nullable()->index();
+            $table->string('email')->nullable()->index('people_email_idx');
             $table->string('address')->nullable();
             $table->date('birth_date')->nullable();
             $table->string('marital_status')->nullable();
@@ -26,13 +26,15 @@ return new class extends Migration
 
         Schema::table('affiliates', function (Blueprint $table) {
             if (! Schema::hasColumn('affiliates', 'person_id')) {
-                $table->foreignId('person_id')->nullable()->after('id')->constrained('people')->nullOnDelete();
+                $table->foreignId('person_id')->nullable()->after('id');
+                $table->foreign('person_id', 'fk_aff_person')->references('id')->on('people')->nullOnDelete();
             }
         });
 
         Schema::table('users', function (Blueprint $table) {
             if (! Schema::hasColumn('users', 'person_id')) {
-                $table->foreignId('person_id')->nullable()->after('id')->constrained('people')->nullOnDelete();
+                $table->foreignId('person_id')->nullable()->after('id');
+                $table->foreign('person_id', 'fk_users_person')->references('id')->on('people')->nullOnDelete();
             }
         });
 
@@ -67,8 +69,8 @@ return new class extends Migration
 
         Schema::create('investor_types', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
-            $table->unsignedInteger('shares_quantity')->unique();
+            $table->string('name')->unique('inv_types_name_unique');
+            $table->unsignedInteger('shares_quantity')->unique('inv_types_shares_unique');
             $table->text('description')->nullable();
             $table->boolean('active')->default(true);
             $table->unsignedInteger('order')->default(0);
@@ -106,20 +108,23 @@ return new class extends Migration
 
         Schema::create('investors', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('person_id')->constrained('people')->cascadeOnDelete();
-            $table->string('investor_number')->unique();
-            $table->foreignId('investor_type_id')->nullable()->constrained('investor_types')->nullOnDelete();
-            $table->string('status')->default('prospect')->index();
+            $table->foreignId('person_id');
+            $table->string('investor_number')->unique('investors_number_unique');
+            $table->foreignId('investor_type_id')->nullable();
+            $table->string('status')->default('prospect')->index('investors_status_idx');
             $table->date('start_date')->nullable();
             $table->text('notes')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('created_by')->nullable();
             $table->timestamps();
-            $table->unique('person_id');
+            $table->unique('person_id', 'investors_person_unique');
+            $table->foreign('person_id', 'fk_inv_person')->references('id')->on('people')->cascadeOnDelete();
+            $table->foreign('investor_type_id', 'fk_inv_type')->references('id')->on('investor_types')->nullOnDelete();
+            $table->foreign('created_by', 'fk_inv_creator')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('share_reservations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('investor_id')->constrained('investors')->cascadeOnDelete();
+            $table->foreignId('investor_id');
             $table->unsignedInteger('shares_quantity');
             $table->decimal('share_unit_price', 12, 2);
             $table->decimal('total_amount', 12, 2);
@@ -128,22 +133,25 @@ return new class extends Migration
             $table->decimal('amount_paid', 12, 2)->nullable();
             $table->string('payment_reference')->nullable();
             $table->string('payment_method')->nullable();
-            $table->string('status')->default('pending')->index();
+            $table->string('status')->default('pending')->index('shr_res_status_idx');
             $table->text('notes')->nullable();
             $table->string('closure_reason')->nullable();
             $table->string('support_document')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('created_by')->nullable();
+            $table->foreignId('approved_by')->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->timestamps();
-            $table->index(['expiration_date', 'status']);
+            $table->index(['expiration_date', 'status'], 'shr_res_exp_status_idx');
+            $table->foreign('investor_id', 'fk_res_investor')->references('id')->on('investors')->cascadeOnDelete();
+            $table->foreign('created_by', 'fk_res_creator')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('approved_by', 'fk_res_approver')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('investment_lots', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('investor_id')->constrained('investors')->cascadeOnDelete();
-            $table->foreignId('reservation_id')->nullable()->constrained('share_reservations')->nullOnDelete();
-            $table->string('purchase_number')->unique();
+            $table->foreignId('investor_id');
+            $table->foreignId('reservation_id')->nullable();
+            $table->string('purchase_number')->unique('inv_lots_purchase_unique');
             $table->date('purchase_date');
             $table->unsignedInteger('shares_quantity');
             $table->decimal('share_unit_price', 12, 2);
@@ -153,24 +161,28 @@ return new class extends Migration
             $table->unsignedInteger('contract_years');
             $table->date('maturity_date');
             $table->date('contract_end_date');
-            $table->string('renewal_status')->default('pending_decision')->index();
-            $table->string('status')->default('pending_approval')->index();
+            $table->string('renewal_status')->default('pending_decision')->index('inv_lots_renewal_idx');
+            $table->string('status')->default('pending_approval')->index('inv_lots_status_idx');
             $table->string('payment_method');
             $table->string('payment_reference')->nullable();
             $table->string('payment_receipt')->nullable();
             $table->json('settings_snapshot')->nullable();
             $table->text('notes')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('created_by')->nullable();
+            $table->foreignId('approved_by')->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->timestamps();
-            $table->index(['maturity_date', 'status']);
-            $table->index(['contract_end_date', 'renewal_status']);
+            $table->index(['maturity_date', 'status'], 'inv_lots_maturity_status_idx');
+            $table->index(['contract_end_date', 'renewal_status'], 'inv_lots_contract_renewal_idx');
+            $table->foreign('investor_id', 'fk_lot_investor')->references('id')->on('investors')->cascadeOnDelete();
+            $table->foreign('reservation_id', 'fk_lot_reservation')->references('id')->on('share_reservations')->nullOnDelete();
+            $table->foreign('created_by', 'fk_lot_creator')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('approved_by', 'fk_lot_approver')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('investment_return_periods', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('investment_lot_id')->constrained('investment_lots')->cascadeOnDelete();
+            $table->foreignId('investment_lot_id');
             $table->unsignedInteger('period_number');
             $table->unsignedInteger('period_year');
             $table->unsignedInteger('period_month');
@@ -183,26 +195,30 @@ return new class extends Migration
             $table->decimal('extra_amount', 12, 2)->default(0);
             $table->decimal('deductions_amount', 12, 2)->default(0);
             $table->decimal('total_amount', 12, 2);
-            $table->string('status')->default('upcoming')->index();
-            $table->foreignId('prepared_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('status')->default('upcoming')->index('inv_ret_status_idx');
+            $table->foreignId('prepared_by')->nullable();
             $table->timestamp('prepared_at')->nullable();
-            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('approved_by')->nullable();
             $table->timestamp('approved_at')->nullable();
-            $table->foreignId('paid_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('paid_by')->nullable();
             $table->timestamp('paid_at')->nullable();
             $table->unsignedBigInteger('receipt_id')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
-            $table->unique(['investment_lot_id', 'period_year', 'period_month']);
-            $table->index(['due_date', 'status']);
+            $table->unique(['investment_lot_id', 'period_year', 'period_month'], 'inv_ret_period_unique');
+            $table->index(['due_date', 'status'], 'inv_ret_due_status_idx');
+            $table->foreign('investment_lot_id', 'fk_ret_lot')->references('id')->on('investment_lots')->cascadeOnDelete();
+            $table->foreign('prepared_by', 'fk_ret_preparer')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('approved_by', 'fk_ret_approver')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('paid_by', 'fk_ret_payer')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('investment_receipts', function (Blueprint $table) {
             $table->id();
-            $table->string('receipt_number')->unique();
-            $table->foreignId('investor_id')->constrained('investors')->cascadeOnDelete();
-            $table->foreignId('investment_lot_id')->constrained('investment_lots')->cascadeOnDelete();
-            $table->foreignId('return_period_id')->unique()->constrained('investment_return_periods')->cascadeOnDelete();
+            $table->string('receipt_number')->unique('inv_receipts_number_unique');
+            $table->foreignId('investor_id');
+            $table->foreignId('investment_lot_id');
+            $table->foreignId('return_period_id')->unique('inv_receipts_period_unique');
             $table->date('issue_date');
             $table->string('company_name_snapshot');
             $table->string('company_nit_snapshot')->nullable();
@@ -227,16 +243,22 @@ return new class extends Migration
             $table->string('payment_method');
             $table->string('payment_reference')->nullable();
             $table->text('notes')->nullable();
-            $table->string('verification_token')->unique();
-            $table->string('status')->default('issued')->index();
-            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('verification_token')->unique('inv_receipts_token_unique');
+            $table->string('status')->default('issued')->index('inv_receipts_status_idx');
+            $table->foreignId('approved_by')->nullable();
             $table->timestamp('approved_at')->nullable();
-            $table->foreignId('issued_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('issued_by')->nullable();
             $table->timestamp('issued_at')->nullable();
-            $table->foreignId('voided_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('voided_by')->nullable();
             $table->timestamp('voided_at')->nullable();
             $table->text('void_reason')->nullable();
             $table->timestamps();
+            $table->foreign('investor_id', 'fk_rec_investor')->references('id')->on('investors')->cascadeOnDelete();
+            $table->foreign('investment_lot_id', 'fk_rec_lot')->references('id')->on('investment_lots')->cascadeOnDelete();
+            $table->foreign('return_period_id', 'fk_rec_period')->references('id')->on('investment_return_periods')->cascadeOnDelete();
+            $table->foreign('approved_by', 'fk_rec_approver')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('issued_by', 'fk_rec_issuer')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('voided_by', 'fk_rec_voider')->references('id')->on('users')->nullOnDelete();
         });
     }
 
@@ -252,13 +274,15 @@ return new class extends Migration
 
         Schema::table('users', function (Blueprint $table) {
             if (Schema::hasColumn('users', 'person_id')) {
-                $table->dropConstrainedForeignId('person_id');
+                $table->dropForeign('fk_users_person');
+                $table->dropColumn('person_id');
             }
         });
 
         Schema::table('affiliates', function (Blueprint $table) {
             if (Schema::hasColumn('affiliates', 'person_id')) {
-                $table->dropConstrainedForeignId('person_id');
+                $table->dropForeign('fk_aff_person');
+                $table->dropColumn('person_id');
             }
         });
 

@@ -17,23 +17,29 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         User::updateOrCreate(
-            ['email' => 'admin@siafco.test'],
-            ['name' => 'Administrador SIAFCO', 'role' => 'administrador', 'password' => Hash::make('admin123456')]
+            ['email' => env('SIAFCO_ADMIN_EMAIL', 'admin@siafco.test')],
+            [
+                'name' => 'Administrador SIAFCO',
+                'role' => 'administrador',
+                'password' => Hash::make(env('SIAFCO_ADMIN_PASSWORD', 'admin123456')),
+            ]
         );
 
-        foreach ([
-            'administrador_sector' => 'Admin Sector',
-            'secretaria' => 'Secretaria',
-            'cajero' => 'Cajero',
-            'caja' => 'Caja Inversiones',
-            'contabilidad' => 'Contabilidad',
-            'accionista' => 'Accionista',
-            'consulta' => 'Consulta',
-        ] as $role => $name) {
-            User::updateOrCreate(
-                ['email' => "{$role}@siafco.test"],
-                ['name' => $name, 'role' => $role, 'password' => Hash::make('admin123456')]
-            );
+        if ((bool) env('SIAFCO_SEED_SUPPORT_USERS', app()->environment(['local', 'testing']))) {
+            foreach ([
+                'administrador_sector' => 'Admin Sector',
+                'secretaria' => 'Secretaria',
+                'cajero' => 'Cajero',
+                'caja' => 'Caja Inversiones',
+                'contabilidad' => 'Contabilidad',
+                'accionista' => 'Accionista',
+                'consulta' => 'Consulta',
+            ] as $role => $name) {
+                User::updateOrCreate(
+                    ['email' => "{$role}@siafco.test"],
+                    ['name' => $name, 'role' => $role, 'password' => Hash::make('admin123456')]
+                );
+            }
         }
 
         Sector::updateOrCreate(
@@ -107,6 +113,8 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        $this->call(DemoDataSeeder::class);
+        if ((bool) env('SIAFCO_SEED_DEMO_DATA', app()->environment(['local', 'testing']))) {
+            $this->call(DemoDataSeeder::class);
+        }
     }
 }

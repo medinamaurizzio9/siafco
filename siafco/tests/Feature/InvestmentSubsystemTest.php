@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\AffiliationPlan;
+use App\Models\Affiliate;
 use App\Models\InvestmentLot;
+use App\Models\InstitutionalSetting;
 use App\Models\InvestmentReturnPeriod;
 use App\Models\InvestmentSetting;
 use App\Models\Investor;
@@ -12,6 +14,7 @@ use App\Models\Person;
 use App\Models\Sector;
 use App\Models\User;
 use App\Services\InvestmentService;
+use App\Services\CredentialService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -168,6 +171,58 @@ class InvestmentSubsystemTest extends TestCase
         ] as $route) {
             $this->get(route($route))->assertOk();
         }
+    }
+
+    public function test_pdf_qr_and_storage_assets_are_generated(): void
+    {
+        $sector = Sector::create(['name' => 'Rural', 'code' => 'MAG-RUR', 'current_sequence' => 1, 'is_active' => true]);
+        $plan = AffiliationPlan::create(['name' => 'Inicial', 'affiliation_fee' => 100, 'credential_fee' => 30, 'is_active' => true]);
+        InstitutionalSetting::create([
+            'institution_name' => 'Cooperativa Tierra Bendita',
+            'primary_color' => '#0b1f3a',
+            'secondary_color' => '#d4af37',
+            'payment_qr_path' => 'institutional/payment-qr.png',
+        ]);
+
+        $affiliateUser = User::create([
+            'name' => 'Afiliado Activo',
+            'email' => 'activo@test.local',
+            'role' => 'afiliado',
+            'password' => Hash::make('secret'),
+        ]);
+
+        $affiliate = Affiliate::create([
+            'user_id' => $affiliateUser->id,
+            'sector_id' => $sector->id,
+            'affiliation_plan_id' => $plan->id,
+            'full_name' => 'Afiliado Activo',
+            'ci' => '990011',
+            'email' => 'activo@test.local',
+            'registration_number' => 'MAG-RUR-000001',
+            'status' => 'activo',
+            'verification_token' => 'test-token-credential',
+        ]);
+
+        $credential = app(CredentialService::class)->generate($affiliate);
+
+        $this->assertFileExists(storage_path('app/public/'.$credential->qr_path));
+        $this->assertFileExists(storage_path('app/public/'.$credential->png_path));
+        $this->assertFileExists(storage_path('app/public/'.$credential->pdf_path));
+        $this->get(route('credentials.pdf', $affiliate))->assertOk();
+        $this->get(route('reports.pdf'))->assertOk();
+
+        $lot = app(InvestmentService::class)->createLot($this->investor(), [
+            'purchase_date' => '2027-01-10',
+            'shares_quantity' => 1,
+            'payment_method' => 'Transferencia',
+        ]);
+        app(InvestmentService::class)->approveLot($lot);
+        $period = $lot->periods()->first();
+        app(InvestmentService::class)->preparePeriod($period, ['production_bonus_amount' => 0, 'extra_amount' => 0]);
+        app(InvestmentService::class)->approvePeriod($period->refresh());
+        $receipt = app(InvestmentService::class)->issueReceipt($period->refresh(), ['payment_method' => 'Caja']);
+
+        $this->get(route('investments.receipts.pdf', $receipt))->assertOk();
     }
 
     private function investor(): Investor
