@@ -1,0 +1,24 @@
+{
+  "resources/css/app.css": {
+    "file": "assets/app-vJ5PRWBH.css",
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/css/credential.css": {
+    "file": "assets/credential-BN1qXWhT.css",
+    "src": "resources/css/credential.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-CNfqsvIX.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/js/credential.js": {
+    "file": "assets/credential-SVaZzSkx.js",
+    "name": "credential",
+    "src": "resources/js/credential.js",
+    "isEntry": true
+  }
+}
