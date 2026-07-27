@@ -113,7 +113,7 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        if ((bool) env('SIAFCO_SEED_DEMO_DATA', app()->environment(['local', 'testing']))) {
+        if ((bool) env('SEED_DEMO_DATA', env('SIAFCO_SEED_DEMO_DATA', app()->environment(['local', 'testing'])))) {
             $this->call(DemoDataSeeder::class);
         }
     }

@@ -9,6 +9,9 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InstitutionalQrController;
 use App\Http\Controllers\InstitutionalSettingController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PublicAffiliationAdminController;
+use App\Http\Controllers\PublicAffiliationController;
+use App\Http\Controllers\PublicAffiliationQrController;
 use App\Http\Controllers\PlaceholderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SectorController;
@@ -33,6 +36,16 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::get('/verificar/{token}', [VerificationController::class, 'show'])->name('verify.show');
+
+Route::middleware('throttle:30,1')->prefix('afiliacion')->name('public-affiliation.')->group(function () {
+    Route::get('/', [PublicAffiliationController::class, 'index'])->name('index');
+    Route::get('/registro', [PublicAffiliationController::class, 'create'])->name('create');
+    Route::post('/registro', [PublicAffiliationController::class, 'store'])->middleware('throttle:5,1')->name('store');
+    Route::get('/{application}/pago', [PublicAffiliationController::class, 'payment'])->name('payment');
+    Route::post('/{application}/pago', [PublicAffiliationController::class, 'storePayment'])->middleware('throttle:5,1')->name('payment.store');
+    Route::get('/{application}/estado', [PublicAffiliationController::class, 'status'])->name('status');
+    Route::get('/{application}/completado', [PublicAffiliationController::class, 'completed'])->name('completed');
+});
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
@@ -66,6 +79,15 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('role:administrador,administrador_sector,secretaria')->group(function () {
+        Route::get('/afiliacion/solicitudes-publicas', [PublicAffiliationAdminController::class, 'index'])->name('public-affiliation.admin.index');
+        Route::get('/afiliacion/qr-publico', [PublicAffiliationQrController::class, 'show'])->name('public-affiliation.qr.show');
+        Route::get('/afiliacion/qr-publico/png', [PublicAffiliationQrController::class, 'png'])->name('public-affiliation.qr.png');
+        Route::get('/afiliacion/qr-publico/pdf', [PublicAffiliationQrController::class, 'pdf'])->name('public-affiliation.qr.pdf');
+        Route::get('/afiliacion/solicitudes-publicas/{application}', [PublicAffiliationAdminController::class, 'show'])->name('public-affiliation.admin.show');
+        Route::post('/afiliacion/solicitudes-publicas/{application}/tomar', [PublicAffiliationAdminController::class, 'take'])->name('public-affiliation.admin.take');
+        Route::post('/afiliacion/pagos/{payment}/confirmar', [PublicAffiliationAdminController::class, 'approve'])->name('public-affiliation.admin.approve');
+        Route::post('/afiliacion/pagos/{payment}/rechazar', [PublicAffiliationAdminController::class, 'reject'])->name('public-affiliation.admin.reject');
+        Route::get('/afiliacion/pagos/{payment}/comprobante', [PublicAffiliationAdminController::class, 'receipt'])->name('public-affiliation.admin.receipt');
         Route::resource('sectores', SectorController::class)->except('show')->parameters(['sectores' => 'sector'])->names('sectors');
         Route::resource('planes', AffiliationPlanController::class)->except('show')->parameters(['planes' => 'plan'])->names('plans');
         Route::get('/afiliacion/configuracion', PlaceholderController::class)->defaults('title', 'Configuracion de afiliacion')->defaults('message', 'Planes, QR bancario, reglas de activacion, diseno de credencial y textos institucionales del modulo de afiliados.')->name('affiliation.settings.edit');

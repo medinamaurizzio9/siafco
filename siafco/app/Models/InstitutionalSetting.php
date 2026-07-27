@@ -19,6 +19,10 @@ class InstitutionalSetting extends Model
         'phone',
         'address',
         'payment_qr_path',
+        'payment_bank',
+        'payment_holder',
+        'payment_account',
+        'payment_instructions',
     ];
 
     public static function current(): self

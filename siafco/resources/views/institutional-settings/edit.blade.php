@@ -33,8 +33,12 @@
             </div>
             <div>
                 <label class="form-label">QR bancario fijo</label>
-                <input class="form-input" type="file" name="payment_qr" accept="image/*">
+                <input class="form-input" type="file" name="payment_qr" accept="image/png,image/jpeg,image/webp">
             </div>
+            <div><label class="form-label">Banco</label><input class="form-input" name="payment_bank" value="{{ old('payment_bank',$setting->payment_bank) }}"></div>
+            <div><label class="form-label">Titular</label><input class="form-input" name="payment_holder" value="{{ old('payment_holder',$setting->payment_holder) }}"></div>
+            <div><label class="form-label">Cuenta (opcional)</label><input class="form-input" name="payment_account" value="{{ old('payment_account',$setting->payment_account) }}"></div>
+            <div class="md:col-span-2"><label class="form-label">Instrucciones de pago</label><textarea class="form-input" name="payment_instructions" rows="3">{{ old('payment_instructions',$setting->payment_instructions) }}</textarea></div>
             <div class="md:col-span-2">
                 <button class="btn-primary">Guardar configuracion</button>
             </div>

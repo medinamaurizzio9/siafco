@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AffiliationPlan;
 use App\Services\AuditService;
+use App\Models\Sector;
 use Illuminate\Http\Request;
 
 class AffiliationPlanController extends Controller
@@ -15,7 +16,7 @@ class AffiliationPlanController extends Controller
 
     public function create()
     {
-        return view('plans.form', ['plan' => new AffiliationPlan()]);
+        return view('plans.form', ['plan' => new AffiliationPlan(), 'sectors' => Sector::where('is_active', true)->orderBy('name')->get()]);
     }
 
     public function store(Request $request)
@@ -28,7 +29,7 @@ class AffiliationPlanController extends Controller
 
     public function edit(AffiliationPlan $plan)
     {
-        return view('plans.form', compact('plan'));
+        return view('plans.form', ['plan' => $plan, 'sectors' => Sector::where('is_active', true)->orderBy('name')->get()]);
     }
 
     public function update(Request $request, AffiliationPlan $plan)
@@ -51,9 +52,15 @@ class AffiliationPlanController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'sector_id' => ['nullable', 'exists:sectors,id'],
+            'type' => ['required', 'in:convenio,alianza,independiente'],
             'affiliation_fee' => ['required', 'numeric', 'min:0'],
             'credential_fee' => ['required', 'numeric', 'min:0'],
+            'currency' => ['required', 'string', 'size:3'],
+            'valid_from' => ['nullable', 'date'],
+            'valid_until' => ['nullable', 'date', 'after_or_equal:valid_from'],
             'description' => ['nullable', 'string'],
+            'payment_instructions' => ['nullable', 'string', 'max:2000'],
             'is_active' => ['nullable', 'boolean'],
         ]) + ['is_active' => $request->boolean('is_active')];
     }

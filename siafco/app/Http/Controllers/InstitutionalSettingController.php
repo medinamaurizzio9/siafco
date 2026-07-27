@@ -28,6 +28,10 @@ class InstitutionalSettingController extends Controller
             'phone' => ['nullable', 'string', 'max:80'],
             'address' => ['nullable', 'string', 'max:255'],
             'payment_qr' => ['nullable', 'image', 'max:4096'],
+            'payment_bank' => ['nullable', 'string', 'max:120'],
+            'payment_holder' => ['nullable', 'string', 'max:255'],
+            'payment_account' => ['nullable', 'string', 'max:120'],
+            'payment_instructions' => ['nullable', 'string', 'max:2000'],
         ]);
 
         unset($data['logo'], $data['payment_qr']);

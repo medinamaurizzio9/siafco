@@ -25,7 +25,7 @@
 
             $openModule = match (true) {
                 request()->routeIs('admin.dashboard') => 'home',
-                request()->routeIs('affiliates.*', 'sectors.*', 'plans.*', 'payments.*', 'credentials.*', 'credenciales.*', 'institutional-qr.*', 'reports.*', 'affiliation.*') => 'affiliation',
+                request()->routeIs('affiliates.*', 'sectors.*', 'plans.*', 'payments.*', 'credentials.*', 'credenciales.*', 'institutional-qr.*', 'reports.*', 'affiliation.*', 'public-affiliation.admin.*') => 'affiliation',
                 request()->routeIs('investments.*') && ! request()->routeIs('investments.panel') => 'investments',
                 request()->routeIs('credits.*') => 'credits',
                 request()->routeIs('administration.*') => 'administration',
@@ -79,15 +79,18 @@
                                 <span>Afiliacion</span><span class="nav-chevron">⌄</span>
                             </button>
                             <div class="nav-module-panel {{ $openModule === 'affiliation' ? '' : 'hidden' }}">
+                                {!! $navLink('admin.dashboard', 'Dashboard', [], ['admin.dashboard']) !!}
                                 {!! $navLink('affiliates.index', 'Afiliados', [], ['affiliates.*']) !!}
                                 @if($canManageAffiliation)
+                                    {!! $navLink('public-affiliation.admin.index', 'Solicitudes publicas', [], ['public-affiliation.admin.*']) !!}
                                     {!! $navLink('sectors.index', 'Sectores', [], ['sectors.*']) !!}
                                     {!! $navLink('plans.index', 'Planes de afiliacion', [], ['plans.*']) !!}
                                 @endif
                                 {!! $navLink('payments.index', 'Pagos de afiliacion', [], ['payments.*']) !!}
                                 @if($canManageAffiliation)
                                     {!! $navLink('credentials.index', 'Credenciales', [], ['credentials.*', 'credenciales.*']) !!}
-                                    {!! $navLink('institutional-qr.show', 'QR institucional', [], ['institutional-qr.*']) !!}
+                                    {!! $navLink('public-affiliation.qr.show', 'QR publico de afiliacion', [], ['public-affiliation.qr.*']) !!}
+                                    {!! $navLink('institutional-qr.show', 'QR y pago institucional', [], ['institutional-qr.*']) !!}
                                 @endif
                                 {!! $navLink('reports.index', 'Reportes de afiliacion', [], ['reports.*']) !!}
                                 @if($canManageAffiliation)

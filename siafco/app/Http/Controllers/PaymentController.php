@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AffiliationPayment;
 use App\Services\AuditService;
 use App\Services\CredentialService;
+use App\Services\PublicAffiliationApprovalService;
 use Illuminate\Http\Request;
 
 class PaymentController extends Controller
@@ -37,8 +38,13 @@ class PaymentController extends Controller
         return back()->with('status', 'Comprobante registrado.');
     }
 
-    public function confirm(AffiliationPayment $payment, CredentialService $credentialService)
+    public function confirm(AffiliationPayment $payment, CredentialService $credentialService, PublicAffiliationApprovalService $publicApproval)
     {
+        if ($payment->public_affiliation_request_id) {
+            $publicApproval->approve($payment, auth()->id());
+            return back()->with('status', 'Pago confirmado, afiliado activado y credencial generada.');
+        }
+
         $payment->update([
             'status' => 'confirmado',
             'confirmed_by' => auth()->id(),
@@ -53,9 +59,14 @@ class PaymentController extends Controller
         return back()->with('status', 'Pago confirmado y credencial generada.');
     }
 
-    public function reject(Request $request, AffiliationPayment $payment)
+    public function reject(Request $request, AffiliationPayment $payment, PublicAffiliationApprovalService $publicApproval)
     {
         $data = $request->validate(['rejection_reason' => ['required', 'string', 'max:500']]);
+
+        if ($payment->public_affiliation_request_id) {
+            $publicApproval->reject($payment, auth()->id(), $data['rejection_reason']);
+            return back()->with('status', 'Pago rechazado.');
+        }
 
         $payment->update([
             'status' => 'rechazado',
