@@ -8,6 +8,7 @@ use App\Models\AffiliationPlan;
 use App\Models\Person;
 use App\Models\PublicAffiliationRequest;
 use App\Models\User;
+use App\Support\TextNormalizer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -17,6 +18,11 @@ class PublicAffiliationService
 {
     public function register(array $data, ?string $photoPath, string $ip, ?string $userAgent): PublicAffiliationRequest
     {
+        $data = TextNormalizer::fields($data, [
+            'full_name', 'ci_complement', 'issued_in', 'address', 'regional',
+            'institution', 'position', 'marital_status',
+        ]);
+
         return DB::transaction(function () use ($data, $photoPath, $ip, $userAgent) {
             $plan = AffiliationPlan::query()
                 ->whereKey($data['affiliation_plan_id'])
@@ -101,6 +107,8 @@ class PublicAffiliationService
 
     public function submitPayment(PublicAffiliationRequest $request, array $data, ?string $receiptPath): AffiliationPayment
     {
+        $data = TextNormalizer::fields($data, ['bank_name', 'payer_name', 'observations']);
+
         return DB::transaction(function () use ($request, $data, $receiptPath) {
             $request = PublicAffiliationRequest::whereKey($request->id)->lockForUpdate()->firstOrFail();
             if (in_array($request->status, ['approved', 'cancelled'], true)) {

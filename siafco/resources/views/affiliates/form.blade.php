@@ -4,7 +4,7 @@
         @if($affiliate->exists) @method('put') @endif
         <div>
             <label class="form-label">Nombre completo</label>
-            <input class="form-input" name="full_name" value="{{ old('full_name', $affiliate->full_name) }}" required>
+            <input class="form-input" name="full_name" value="{{ old('full_name', $affiliate->full_name) }}" data-uppercase required>
         </div>
         <div>
             <label class="form-label">CI</label>
@@ -36,15 +36,15 @@
         </div>
         <div>
             <label class="form-label">Regional</label>
-            <input class="form-input" name="regional" value="{{ old('regional', $affiliate->regional) }}">
+            <input class="form-input" name="regional" value="{{ old('regional', $affiliate->regional) }}" data-uppercase>
         </div>
         <div>
             <label class="form-label">Institucion</label>
-            <input class="form-input" name="institution" value="{{ old('institution', $affiliate->institution) }}">
+            <input class="form-input" name="institution" value="{{ old('institution', $affiliate->institution) }}" data-uppercase>
         </div>
         <div>
             <label class="form-label">Cargo/profesion</label>
-            <input class="form-input" name="position" value="{{ old('position', $affiliate->position) }}">
+            <input class="form-input" name="position" value="{{ old('position', $affiliate->position) }}" data-uppercase>
         </div>
         <div>
             <label class="form-label">Fecha de nacimiento</label>
@@ -52,7 +52,7 @@
         </div>
         <div>
             <label class="form-label">Estado civil</label>
-            <input class="form-input" name="marital_status" value="{{ old('marital_status', $affiliate->marital_status) }}">
+            <input class="form-input" name="marital_status" value="{{ old('marital_status', $affiliate->marital_status) }}" data-uppercase>
         </div>
         <div>
             <label class="form-label">Foto</label>
@@ -60,7 +60,7 @@
         </div>
         <div class="xl:col-span-3">
             <label class="form-label">Direccion</label>
-            <input class="form-input" name="address" value="{{ old('address', $affiliate->address) }}">
+            <input class="form-input" name="address" value="{{ old('address', $affiliate->address) }}" data-uppercase>
         </div>
         @if($affiliate->exists)
             <div>

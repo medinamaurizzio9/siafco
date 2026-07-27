@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Affiliate;
+use App\Models\AffiliateBenefit;
 use App\Models\AffiliationPayment;
 use App\Models\AffiliationPlan;
 use App\Models\DigitalCredential;
@@ -56,8 +57,13 @@ class PublicAffiliationTest extends TestCase
         $application = PublicAffiliationRequest::firstOrFail();
         $response->assertRedirect(route('public-affiliation.payment', $application));
         $this->assertDatabaseHas('people', ['ci' => '7788991']);
+        $this->assertDatabaseHas('people', [
+            'ci' => '7788991', 'full_name' => 'ANA PÉREZ LIMA', 'address' => 'ZONA CENTRAL',
+            'email' => 'ana@example.test',
+        ]);
         $this->assertDatabaseHas('affiliates', ['ci' => '7788991', 'status' => 'pendiente_pago', 'registration_number' => null]);
         $this->assertDatabaseHas('users', ['email' => 'ana@example.test', 'role' => 'afiliado']);
+        $this->assertTrue(Hash::check('clave-segura-123', User::where('email', 'ana@example.test')->firstOrFail()->password));
         $this->assertSame('120.00', $application->amount_due);
         $this->assertSame('pending_payment', $application->status);
     }
@@ -119,5 +125,78 @@ class PublicAffiliationTest extends TestCase
         $this->assertSame('approved', $application->fresh()->status);
         $this->expectException(\Illuminate\Validation\ValidationException::class);
         $service->approve($payment->fresh(), $reviewer->id);
+    }
+
+    public function test_password_component_is_reusable_and_access_password_is_shown_once(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+        [$sector, $plan] = $this->catalog();
+
+        $this->get(route('login'))->assertOk()
+            ->assertSee('data-password-toggle', false)
+            ->assertSee('aria-pressed="false"', false);
+
+        $this->post(route('public-affiliation.store'), $this->form($sector, $plan))->assertRedirect();
+        $application = PublicAffiliationRequest::firstOrFail();
+        $this->get(route('public-affiliation.payment', $application))->assertOk();
+        $this->post(route('public-affiliation.payment.store', $application), [
+            'transaction_number' => 'Mixta-AbC-01',
+            'payment_date' => today()->toDateString(),
+            'payer_name' => 'Ana Pérez',
+            'paid_amount' => 120,
+        ])->assertRedirect(route('public-affiliation.completed', $application));
+
+        $this->get(route('public-affiliation.completed', $application))
+            ->assertOk()->assertSee('clave-segura-123')->assertSee('Copiar contraseña');
+        $this->get(route('public-affiliation.completed', $application))
+            ->assertOk()->assertDontSee('clave-segura-123')
+            ->assertSee('Por seguridad, la contraseña solo se muestra una vez.');
+        $this->assertDatabaseHas('affiliation_payments', ['transaction_number' => 'Mixta-AbC-01', 'payer_name' => 'ANA PÉREZ']);
+    }
+
+    public function test_pending_user_can_login_but_only_sees_tracking_and_cannot_download_credential(): void
+    {
+        Storage::fake('public');
+        [$sector, $plan] = $this->catalog();
+        $this->post(route('public-affiliation.store'), $this->form($sector, $plan));
+        $application = PublicAffiliationRequest::firstOrFail();
+        AffiliateBenefit::create(['title' => 'CREDENCIAL DIGITAL', 'icon' => 'card', 'active' => true, 'visible_when_pending' => true, 'order' => 1]);
+
+        $this->post(route('login.post'), ['email' => 'ana@example.test', 'password' => 'clave-segura-123'])
+            ->assertRedirect(route('affiliate.panel'));
+        $this->get(route('affiliate.panel'))->assertOk()
+            ->assertSee($application->request_code)
+            ->assertSee('Bloqueado')
+            ->assertDontSee('Descargar PDF');
+        $this->get(route('affiliate.credential.pdf'))->assertRedirect(route('affiliate.panel'));
+        $this->get(route('affiliate.credential.png'))->assertRedirect(route('affiliate.panel'));
+        $this->get(route('investments.panel'))->assertRedirect(route('affiliate.panel'));
+    }
+
+    public function test_active_user_sees_full_panel_and_can_download_existing_credential(): void
+    {
+        Storage::fake('public');
+        [$sector, $plan] = $this->catalog();
+        $person = Person::create(['full_name' => 'ANA', 'ci' => 'ACT-1', 'email' => 'active@test.local']);
+        $user = User::create(['person_id' => $person->id, 'name' => 'ANA', 'email' => 'active@test.local', 'role' => 'afiliado', 'password' => Hash::make('secret123')]);
+        $affiliate = Affiliate::create([
+            'person_id' => $person->id, 'user_id' => $user->id, 'sector_id' => $sector->id,
+            'affiliation_plan_id' => $plan->id, 'full_name' => 'ANA', 'ci' => 'ACT-1',
+            'email' => 'active@test.local', 'status' => 'activo',
+            'registration_number' => 'SAL-000001', 'verification_token' => fake()->uuid(),
+        ]);
+        foreach (['credentials/card.pdf', 'credentials/card.png', 'credentials/qr.png'] as $path) Storage::disk('public')->put($path, 'file');
+        DigitalCredential::create([
+            'affiliate_id' => $affiliate->id, 'pdf_path' => 'credentials/card.pdf',
+            'png_path' => 'credentials/card.png', 'qr_path' => 'credentials/qr.png',
+            'generated_at' => now()->addMinute(),
+        ]);
+        AffiliateBenefit::create(['title' => 'SOPORTE', 'icon' => 'support', 'active' => true, 'visible_when_pending' => true, 'order' => 1]);
+
+        $this->actingAs($user)->get(route('affiliate.panel'))->assertOk()
+            ->assertSee('Descargar PDF')->assertSee('Mis servicios y beneficios')
+            ->assertDontSee('Bloqueado');
+        $this->actingAs($user)->get(route('affiliate.credential.pdf'))->assertDownload('credencial-SAL-000001.pdf');
     }
 }

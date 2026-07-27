@@ -18,8 +18,9 @@
             @csrf
             <label class="form-label">Correo</label>
             <input class="form-input" type="email" name="email" value="{{ old('email') }}" required autofocus>
-            <label class="form-label mt-4">Password</label>
-            <input class="form-input" type="password" name="password" required>
+            <div class="mt-4">
+                <x-password-input name="password" label="Contraseña" autocomplete="current-password" />
+            </div>
             <label class="mt-4 flex items-center gap-2 text-sm text-slate-600">
                 <input type="checkbox" name="remember" value="1" class="rounded border-slate-300 text-emerald-700">
                 Recordarme

@@ -61,4 +61,9 @@ class Affiliate extends Model
     {
         return $this->hasOne(DigitalCredential::class)->latestOfMany();
     }
+
+    public function publicRequest()
+    {
+        return $this->hasOne(PublicAffiliationRequest::class)->latestOfMany();
+    }
 }

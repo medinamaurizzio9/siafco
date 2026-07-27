@@ -17,10 +17,10 @@
             @csrf
             <div><p class="text-sm font-bold text-slate-500">Paso 2 de 3</p><h2 class="text-xl font-black">Registra tu transferencia</h2></div>
             @foreach([['transaction_number','Número de transacción','text'],['payment_date','Fecha de pago','date'],['bank_name','Banco de origen (opcional)','text'],['payer_name','Nombre del pagador','text'],['paid_amount','Monto pagado','number']] as [$name,$label,$type])
-                <label><span class="form-label">{{ $label }}</span><input class="form-input" name="{{ $name }}" type="{{ $type }}" @if($name === 'paid_amount') step="0.01" value="{{ old($name, $application->amount_due) }}" @else value="{{ old($name, $application->payment?->$name) }}" @endif {{ $name === 'bank_name' ? '' : 'required' }}></label>
+                <label><span class="form-label">{{ $label }}</span><input class="form-input" name="{{ $name }}" type="{{ $type }}" @if(in_array($name,['bank_name','payer_name'])) data-uppercase @endif @if($name === 'paid_amount') step="0.01" value="{{ old($name, $application->amount_due) }}" @else value="{{ old($name, $application->payment?->$name) }}" @endif {{ $name === 'bank_name' ? '' : 'required' }}></label>
             @endforeach
             <label><span class="form-label">Comprobante (opcional)</span><input class="form-input" type="file" name="receipt" accept="image/jpeg,image/png,image/webp,application/pdf" capture="environment"></label>
-            <label><span class="form-label">Observaciones (opcional)</span><textarea class="form-input" name="observations" rows="3">{{ old('observations') }}</textarea></label>
+            <label><span class="form-label">Observaciones (opcional)</span><textarea class="form-input" name="observations" rows="3" data-uppercase>{{ old('observations') }}</textarea></label>
             <p class="text-sm text-slate-600">Registrar la transacción no confirma el pago. Secretaría hará una revisión manual.</p>
             <button class="btn-primary min-h-12 w-full">Enviar pago a revisión</button>
         </form>

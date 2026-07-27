@@ -25,7 +25,7 @@
 
             $openModule = match (true) {
                 request()->routeIs('admin.dashboard') => 'home',
-                request()->routeIs('affiliates.*', 'sectors.*', 'plans.*', 'payments.*', 'credentials.*', 'credenciales.*', 'institutional-qr.*', 'reports.*', 'affiliation.*', 'public-affiliation.admin.*') => 'affiliation',
+                request()->routeIs('affiliates.*', 'affiliate-benefits.*', 'sectors.*', 'plans.*', 'payments.*', 'credentials.*', 'credenciales.*', 'institutional-qr.*', 'reports.*', 'affiliation.*', 'public-affiliation.admin.*') => 'affiliation',
                 request()->routeIs('investments.*') && ! request()->routeIs('investments.panel') => 'investments',
                 request()->routeIs('credits.*') => 'credits',
                 request()->routeIs('administration.*') => 'administration',
@@ -85,6 +85,7 @@
                                     {!! $navLink('public-affiliation.admin.index', 'Solicitudes publicas', [], ['public-affiliation.admin.*']) !!}
                                     {!! $navLink('sectors.index', 'Sectores', [], ['sectors.*']) !!}
                                     {!! $navLink('plans.index', 'Planes de afiliacion', [], ['plans.*']) !!}
+                                    {!! $navLink('affiliate-benefits.index', 'Servicios y beneficios', [], ['affiliate-benefits.*']) !!}
                                 @endif
                                 {!! $navLink('payments.index', 'Pagos de afiliacion', [], ['payments.*']) !!}
                                 @if($canManageAffiliation)

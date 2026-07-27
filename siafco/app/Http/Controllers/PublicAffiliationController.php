@@ -53,6 +53,7 @@ class PublicAffiliationController extends Controller
 
         $photo = $request->file('photo')->store('affiliates/photos', 'public');
         $application = $service->register($data, $photo, $request->ip(), $request->userAgent());
+        $request->session()->flash('public_affiliation_password.'.$application->public_token, $data['password']);
 
         return redirect()->route('public-affiliation.payment', $application)
             ->with('status', 'Tu solicitud fue registrada. Realiza el pago y registra tu número de transacción.');
@@ -60,6 +61,7 @@ class PublicAffiliationController extends Controller
 
     public function payment(PublicAffiliationRequest $application)
     {
+        session()->keep('public_affiliation_password.'.$application->public_token);
         $application->load('person', 'sector', 'plan', 'payment');
         return view('public-affiliation.payment', [
             'application' => $application,
@@ -72,6 +74,8 @@ class PublicAffiliationController extends Controller
 
     public function storePayment(Request $request, PublicAffiliationRequest $application, PublicAffiliationService $service)
     {
+        $passwordKey = 'public_affiliation_password.'.$application->public_token;
+        $request->session()->keep($passwordKey);
         $data = $request->validate([
             'transaction_number' => ['required', 'string', 'max:120'],
             'payment_date' => ['required', 'date', 'before_or_equal:today'],
@@ -83,6 +87,9 @@ class PublicAffiliationController extends Controller
         ]);
         $receipt = $request->file('receipt')?->store('affiliation-receipts', 'local');
         $service->submitPayment($application, $data, $receipt);
+        if ($temporaryPassword = $request->session()->get($passwordKey)) {
+            $request->session()->flash('completed_password.'.$application->public_token, $temporaryPassword);
+        }
 
         return redirect()->route('public-affiliation.completed', $application)
             ->with('status', 'Tu pago está en revisión. La activación no es automática.');
@@ -95,6 +102,9 @@ class PublicAffiliationController extends Controller
 
     public function completed(PublicAffiliationRequest $application)
     {
-        return view('public-affiliation.completed', ['application' => $application->load('sector', 'plan')]);
+        return view('public-affiliation.completed', [
+            'application' => $application->load('person', 'sector', 'plan'),
+            'temporaryPassword' => session()->pull('completed_password.'.$application->public_token),
+        ]);
     }
 }

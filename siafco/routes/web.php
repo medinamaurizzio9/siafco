@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AffiliateController;
+use App\Http\Controllers\AffiliateBenefitController;
 use App\Http\Controllers\AffiliatePanelController;
 use App\Http\Controllers\AffiliationPlanController;
 use App\Http\Controllers\AuthController;
@@ -47,7 +48,7 @@ Route::middleware('throttle:30,1')->prefix('afiliacion')->name('public-affiliati
     Route::get('/{application}/completado', [PublicAffiliationController::class, 'completed'])->name('completed');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'affiliate.active-access'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/mi-perfil', PlaceholderController::class)->defaults('title', 'Mi perfil')->defaults('message', 'Edicion de perfil personal preparada para una fase posterior.')->name('profile.show');
 
@@ -90,6 +91,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/afiliacion/pagos/{payment}/comprobante', [PublicAffiliationAdminController::class, 'receipt'])->name('public-affiliation.admin.receipt');
         Route::resource('sectores', SectorController::class)->except('show')->parameters(['sectores' => 'sector'])->names('sectors');
         Route::resource('planes', AffiliationPlanController::class)->except('show')->parameters(['planes' => 'plan'])->names('plans');
+        Route::resource('beneficios-afiliado', AffiliateBenefitController::class)
+            ->except('show')->parameters(['beneficios-afiliado' => 'affiliateBenefit'])->names('affiliate-benefits');
         Route::get('/afiliacion/configuracion', PlaceholderController::class)->defaults('title', 'Configuracion de afiliacion')->defaults('message', 'Planes, QR bancario, reglas de activacion, diseno de credencial y textos institucionales del modulo de afiliados.')->name('affiliation.settings.edit');
         Route::get('/afiliados/crear/nuevo', [AffiliateController::class, 'create'])->name('affiliates.create');
         Route::post('/afiliados', [AffiliateController::class, 'store'])->name('affiliates.store');

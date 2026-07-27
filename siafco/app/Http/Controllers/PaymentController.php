@@ -6,6 +6,7 @@ use App\Models\AffiliationPayment;
 use App\Services\AuditService;
 use App\Services\CredentialService;
 use App\Services\PublicAffiliationApprovalService;
+use App\Support\TextNormalizer;
 use Illuminate\Http\Request;
 
 class PaymentController extends Controller
@@ -61,7 +62,10 @@ class PaymentController extends Controller
 
     public function reject(Request $request, AffiliationPayment $payment, PublicAffiliationApprovalService $publicApproval)
     {
-        $data = $request->validate(['rejection_reason' => ['required', 'string', 'max:500']]);
+        $data = TextNormalizer::fields(
+            $request->validate(['rejection_reason' => ['required', 'string', 'max:500']]),
+            ['rejection_reason']
+        );
 
         if ($payment->public_affiliation_request_id) {
             $publicApproval->reject($payment, auth()->id(), $data['rejection_reason']);

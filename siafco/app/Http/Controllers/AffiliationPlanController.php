@@ -6,6 +6,7 @@ use App\Models\AffiliationPlan;
 use App\Services\AuditService;
 use App\Models\Sector;
 use Illuminate\Http\Request;
+use App\Support\TextNormalizer;
 
 class AffiliationPlanController extends Controller
 {
@@ -50,7 +51,7 @@ class AffiliationPlanController extends Controller
 
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'sector_id' => ['nullable', 'exists:sectors,id'],
             'type' => ['required', 'in:convenio,alianza,independiente'],
@@ -63,5 +64,7 @@ class AffiliationPlanController extends Controller
             'payment_instructions' => ['nullable', 'string', 'max:2000'],
             'is_active' => ['nullable', 'boolean'],
         ]) + ['is_active' => $request->boolean('is_active')];
+
+        return TextNormalizer::fields($data, ['name', 'currency', 'description', 'payment_instructions']);
     }
 }

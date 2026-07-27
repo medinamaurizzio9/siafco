@@ -9,6 +9,7 @@ use App\Models\Person;
 use App\Models\Sector;
 use App\Models\User;
 use App\Services\AuditService;
+use App\Support\TextNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -141,7 +142,7 @@ class AffiliateController extends Controller
 
     private function validated(Request $request, ?Affiliate $affiliate = null): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'full_name' => ['required', 'string', 'max:255'],
             'ci' => ['required', 'string', 'max:30', Rule::unique('affiliates')->ignore($affiliate)],
             'phone' => ['nullable', 'string', 'max:40'],
@@ -156,6 +157,10 @@ class AffiliateController extends Controller
             'birth_date' => ['nullable', 'date'],
             'marital_status' => ['nullable', 'string', 'max:80'],
             'status' => ['nullable', 'in:pendiente_pago,activo,inactivo,observado'],
+        ]);
+
+        return TextNormalizer::fields($data, [
+            'full_name', 'address', 'regional', 'institution', 'position', 'marital_status',
         ]);
     }
 }

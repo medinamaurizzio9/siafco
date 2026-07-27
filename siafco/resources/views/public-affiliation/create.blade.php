@@ -11,13 +11,14 @@
                 ['full_name','Nombre completo','text'], ['ci','Cédula de identidad','text'],
                 ['ci_complement','Complemento (opcional)','text'], ['issued_in','Lugar de expedición','text'],
                 ['phone','Celular','tel'], ['email','Correo electrónico','email'],
-                ['password','Contraseña de acceso','password'], ['password_confirmation','Confirmar contraseña','password'],
                 ['address','Dirección','text'], ['birth_date','Fecha de nacimiento','date'],
                 ['marital_status','Estado civil','text'], ['position','Cargo o profesión','text'],
                 ['regional','Regional','text'], ['institution','Institución','text'],
             ] as [$name,$label,$type])
-                <label><span class="form-label">{{ $label }}</span><input class="form-input" type="{{ $type }}" name="{{ $name }}" value="{{ old($name) }}" {{ $name === 'ci_complement' ? '' : 'required' }}></label>
+                <label><span class="form-label">{{ $label }}</span><input class="form-input" type="{{ $type }}" name="{{ $name }}" value="{{ old($name) }}" @if(in_array($name, ['full_name','ci_complement','issued_in','address','marital_status','position','regional','institution'])) data-uppercase @endif {{ $name === 'ci_complement' ? '' : 'required' }}></label>
             @endforeach
+            <x-password-input name="password" label="Contraseña de acceso" autocomplete="new-password" />
+            <x-password-input name="password_confirmation" label="Confirmar contraseña" autocomplete="new-password" />
             <label class="sm:col-span-2"><span class="form-label">Fotografía</span><input class="form-input" type="file" name="photo" accept="image/jpeg,image/png,image/webp" capture="user" required></label>
         </fieldset>
         <fieldset class="section-card grid gap-4 sm:grid-cols-2">

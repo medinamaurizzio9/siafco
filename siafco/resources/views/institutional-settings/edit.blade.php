@@ -5,7 +5,7 @@
             @method('put')
             <div class="md:col-span-2">
                 <label class="form-label">Nombre institucion</label>
-                <input class="form-input" name="institution_name" value="{{ old('institution_name', $setting->institution_name) }}" required>
+                <input class="form-input" name="institution_name" value="{{ old('institution_name', $setting->institution_name) }}" data-uppercase required>
             </div>
             <div>
                 <label class="form-label">Color principal</label>
@@ -25,7 +25,7 @@
             </div>
             <div class="md:col-span-2">
                 <label class="form-label">Direccion</label>
-                <input class="form-input" name="address" value="{{ old('address', $setting->address) }}">
+                <input class="form-input" name="address" value="{{ old('address', $setting->address) }}" data-uppercase>
             </div>
             <div>
                 <label class="form-label">Logo</label>
@@ -35,10 +35,10 @@
                 <label class="form-label">QR bancario fijo</label>
                 <input class="form-input" type="file" name="payment_qr" accept="image/png,image/jpeg,image/webp">
             </div>
-            <div><label class="form-label">Banco</label><input class="form-input" name="payment_bank" value="{{ old('payment_bank',$setting->payment_bank) }}"></div>
-            <div><label class="form-label">Titular</label><input class="form-input" name="payment_holder" value="{{ old('payment_holder',$setting->payment_holder) }}"></div>
+            <div><label class="form-label">Banco</label><input class="form-input" name="payment_bank" value="{{ old('payment_bank',$setting->payment_bank) }}" data-uppercase></div>
+            <div><label class="form-label">Titular</label><input class="form-input" name="payment_holder" value="{{ old('payment_holder',$setting->payment_holder) }}" data-uppercase></div>
             <div><label class="form-label">Cuenta (opcional)</label><input class="form-input" name="payment_account" value="{{ old('payment_account',$setting->payment_account) }}"></div>
-            <div class="md:col-span-2"><label class="form-label">Instrucciones de pago</label><textarea class="form-input" name="payment_instructions" rows="3">{{ old('payment_instructions',$setting->payment_instructions) }}</textarea></div>
+            <div class="md:col-span-2"><label class="form-label">Instrucciones de pago</label><textarea class="form-input" name="payment_instructions" rows="3" data-uppercase>{{ old('payment_instructions',$setting->payment_instructions) }}</textarea></div>
             <div class="md:col-span-2">
                 <button class="btn-primary">Guardar configuracion</button>
             </div>

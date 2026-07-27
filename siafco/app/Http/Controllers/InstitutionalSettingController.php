@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\InstitutionalSetting;
 use App\Services\AuditService;
+use App\Support\TextNormalizer;
 use Illuminate\Http\Request;
 
 class InstitutionalSettingController extends Controller
@@ -35,6 +36,9 @@ class InstitutionalSettingController extends Controller
         ]);
 
         unset($data['logo'], $data['payment_qr']);
+        $data = TextNormalizer::fields($data, [
+            'institution_name', 'address', 'payment_bank', 'payment_holder', 'payment_instructions',
+        ]);
 
         if ($request->hasFile('logo')) {
             $data['logo_path'] = $request->file('logo')->store('institutional/logo', 'public');

@@ -4,19 +4,19 @@
         @if($sector->exists) @method('put') @endif
         <div>
             <label class="form-label">Nombre</label>
-            <input class="form-input" name="name" value="{{ old('name', $sector->name) }}" required>
+            <input class="form-input" name="name" value="{{ old('name', $sector->name) }}" data-uppercase required>
         </div>
         <div>
             <label class="form-label">Codigo correlativo</label>
-            <input class="form-input" name="code" value="{{ old('code', $sector->code) }}" placeholder="MAG-RUR" required>
+            <input class="form-input" name="code" value="{{ old('code', $sector->code) }}" placeholder="MAG-RUR" data-uppercase required>
         </div>
         <div>
             <label class="form-label">Regional</label>
-            <input class="form-input" name="regional" value="{{ old('regional', $sector->regional) }}">
+            <input class="form-input" name="regional" value="{{ old('regional', $sector->regional) }}" data-uppercase>
         </div>
         <div>
             <label class="form-label">Institucion</label>
-            <input class="form-input" name="institution" value="{{ old('institution', $sector->institution) }}">
+            <input class="form-input" name="institution" value="{{ old('institution', $sector->institution) }}" data-uppercase>
         </div>
         <label class="flex items-center gap-2 md:col-span-2">
             <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $sector->is_active ?? true))>

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\AffiliationPlan;
+use App\Models\AffiliateBenefit;
 use App\Models\InstitutionalSetting;
 use App\Models\InvestmentSetting;
 use App\Models\InvestorType;
@@ -61,6 +62,21 @@ class DatabaseSeeder extends Seeder
                 'is_active' => true,
             ]
         );
+
+        foreach ([
+            ['CREDENCIAL DIGITAL', 'Descarga tu credencial institucional.', 'card', 'affiliate.credential.preview'],
+            ['SOLICITUD DE CRÉDITO', 'Inicia una solicitud de crédito.', 'credit', null],
+            ['SIMULADOR DE CRÉDITO', 'Consulta cuotas y plazos estimados.', 'calculator', null],
+            ['HISTORIAL DE PAGOS', 'Revisa tus pagos de afiliación.', 'history', null],
+            ['BENEFICIOS POR CONVENIO', 'Consulta beneficios institucionales vigentes.', 'gift', null],
+            ['NOTICIAS Y COMUNICADOS', 'Información institucional para afiliados.', 'news', null],
+            ['SOPORTE Y ASESORÍA', 'Canales de atención y orientación.', 'support', null],
+        ] as $order => [$title, $description, $icon, $route]) {
+            AffiliateBenefit::updateOrCreate(['title' => $title], [
+                'description' => $description, 'icon' => $icon, 'route_name' => $route,
+                'active' => true, 'visible_when_pending' => true, 'order' => $order + 1,
+            ]);
+        }
 
         InstitutionalSetting::firstOrCreate([], [
             'institution_name' => 'Cooperativa Tierra Bendita',

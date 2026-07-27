@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Sector;
 use App\Services\AuditService;
+use App\Support\TextNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -50,12 +51,14 @@ class SectorController extends Controller
 
     private function validated(Request $request, ?Sector $sector = null): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'code' => ['required', 'string', 'max:20', Rule::unique('sectors')->ignore($sector)],
             'regional' => ['nullable', 'string', 'max:255'],
             'institution' => ['nullable', 'string', 'max:255'],
             'is_active' => ['nullable', 'boolean'],
         ]) + ['is_active' => $request->boolean('is_active')];
+
+        return TextNormalizer::fields($data, ['name', 'code', 'regional', 'institution']);
     }
 }
