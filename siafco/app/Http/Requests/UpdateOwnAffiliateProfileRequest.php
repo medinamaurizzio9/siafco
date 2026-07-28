@@ -48,7 +48,7 @@ class UpdateOwnAffiliateProfileRequest extends FormRequest
         $affiliate = $this->user()?->affiliate;
 
         return [
-            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120', 'dimensions:min_width=300,min_height=300'],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+().\s-]*$/'],
             'email' => [
                 'required', 'email:rfc', 'max:150',
@@ -94,6 +94,7 @@ class UpdateOwnAffiliateProfileRequest extends FormRequest
             'photo.image' => 'El archivo seleccionado no es una imagen válida.',
             'photo.mimes' => 'La fotografía debe ser JPG, JPEG, PNG o WEBP.',
             'photo.max' => 'La fotografía no debe superar los 5 MB.',
+            'photo.dimensions' => 'La fotografía debe medir al menos 300 × 300 píxeles.',
             'phone.regex' => 'El celular contiene caracteres no permitidos.',
             'email.unique' => 'El correo electrónico ya está registrado.',
             'birth_date.before' => 'La fecha de nacimiento debe ser anterior a hoy.',

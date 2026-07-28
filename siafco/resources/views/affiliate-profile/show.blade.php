@@ -1,8 +1,14 @@
 <x-layouts.app title="Mi perfil">
     <div class="mx-auto max-w-6xl space-y-6">
-        <header>
-            <h2 class="text-2xl font-black text-[#0b1f3a]">MI PERFIL</h2>
-            <p class="mt-1 text-slate-600">Consulta y actualiza tu información personal.</p>
+        <header class="flex flex-col gap-3 border-b border-slate-300 pb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <h2 class="text-xl font-black text-[#0b1f3a]">Información personal</h2>
+                <p class="mt-1 text-slate-600">Mantén actualizados tus datos de contacto y fotografía institucional.</p>
+            </div>
+            <div class="text-sm sm:text-right">
+                <p class="font-black text-[#0b1f3a]">{{ $affiliate->registration_number }}</p>
+                <p class="text-slate-500">{{ \App\Support\AffiliationStatusPresenter::label($affiliate->status) }}</p>
+            </div>
         </header>
 
         @if($affiliate->status !== 'activo')
@@ -16,34 +22,14 @@
             @method('PATCH')
 
             <section class="section-card">
-                <div class="border-b border-slate-200 pb-4">
-                    <h3 class="text-lg font-black text-[#0b1f3a]">FOTOGRAFÍA</h3>
-                    <p class="mt-1 text-sm text-slate-600">Esta fotografía también se utiliza en tu credencial institucional.</p>
-                </div>
-                <div class="mt-5 grid items-center gap-6 sm:grid-cols-[150px_1fr]">
-                    <div class="mx-auto h-40 w-32 overflow-hidden rounded border-2 border-[#d4af37] bg-slate-100">
-                        <img
-                            src="{{ $affiliate->photo_path ? Storage::disk('public')->url($affiliate->photo_path) : '' }}"
-                            alt="Fotografía actual"
-                            class="{{ $affiliate->photo_path ? '' : 'hidden' }} h-full w-full object-cover"
-                            data-photo-preview
-                        >
-                        <div class="{{ $affiliate->photo_path ? 'hidden' : '' }} grid h-full place-items-center px-3 text-center text-sm font-bold text-slate-500" data-photo-placeholder>
-                            Sin fotografía
-                        </div>
-                    </div>
-                    <div>
-                        <input class="sr-only" id="photo" type="file" name="photo" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" data-photo-input>
-                        <div class="flex flex-col gap-3 sm:flex-row">
-                            <label for="photo" class="btn-primary cursor-pointer">CAMBIAR FOTOGRAFÍA</label>
-                            <button type="button" class="rounded border border-slate-300 bg-white px-4 py-2 font-bold text-slate-700 hover:bg-slate-50" data-photo-clear>
-                                ELIMINAR SELECCIÓN
-                            </button>
-                        </div>
-                        <p class="mt-3 text-sm text-slate-500">JPG, JPEG, PNG o WEBP. Tamaño máximo: 5 MB.</p>
-                        @error('photo')<p class="mt-2 text-sm font-semibold text-red-700">{{ $message }}</p>@enderror
-                    </div>
-                </div>
+                <x-forms.photo-cropper
+                    :required="false"
+                    :initial-src="$affiliate->photo_path ? Storage::disk('public')->url($affiliate->photo_path) : null"
+                    label="FOTOGRAFÍA INSTITUCIONAL"
+                    description="Esta imagen también se utilizará en tu credencial digital."
+                    select-label="CAMBIAR FOTOGRAFÍA"
+                    cancel-label="CANCELAR CAMBIO"
+                />
             </section>
 
             <section class="section-card">
@@ -177,32 +163,4 @@
         </section>
     </div>
 
-    @push('scripts')
-        <script>
-            (() => {
-                const input = document.querySelector('[data-photo-input]');
-                const preview = document.querySelector('[data-photo-preview]');
-                const placeholder = document.querySelector('[data-photo-placeholder]');
-                const initialSrc = preview?.getAttribute('src') || '';
-
-                const restore = () => {
-                    if (!input || !preview || !placeholder) return;
-                    input.value = '';
-                    preview.src = initialSrc;
-                    preview.classList.toggle('hidden', !initialSrc);
-                    placeholder.classList.toggle('hidden', Boolean(initialSrc));
-                };
-
-                input?.addEventListener('change', () => {
-                    const file = input.files?.[0];
-                    if (!file || !file.type.startsWith('image/')) return restore();
-                    preview.src = URL.createObjectURL(file);
-                    preview.classList.remove('hidden');
-                    placeholder.classList.add('hidden');
-                });
-                document.querySelector('[data-photo-clear]')?.addEventListener('click', restore);
-                document.querySelector('[data-profile-reset]')?.addEventListener('click', () => requestAnimationFrame(restore));
-            })();
-        </script>
-    @endpush
 </x-layouts.app>

@@ -1,7 +1,9 @@
 import './bootstrap';
 import './public-affiliation-form';
+import { initPhotoCroppers } from './components/photo-cropper';
 
 document.addEventListener('DOMContentLoaded', () => {
+    initPhotoCroppers();
     document.querySelectorAll('[data-password-toggle]').forEach((button) => {
         button.addEventListener('click', () => {
             const input = button.closest('label')?.querySelector('[data-password-input]');

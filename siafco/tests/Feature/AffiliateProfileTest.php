@@ -27,7 +27,13 @@ class AffiliateProfileTest extends TestCase
 
         $this->actingAs($user)->get(route('affiliate.profile.show'))
             ->assertOk()
-            ->assertSee('MI PERFIL')
+            ->assertSee('Mi perfil')
+            ->assertSee('Información personal')
+            ->assertDontSee('>MI PERFIL<', false)
+            ->assertSee('data-crop-modal', false)
+            ->assertSee('aria-hidden="true"', false)
+            ->assertSee('data-crop-zoom', false)
+            ->assertSee('APLICAR RECORTE')
             ->assertSee($affiliate->full_name)
             ->assertSee($affiliate->ci)
             ->assertSee($affiliate->registration_number)
@@ -183,6 +189,43 @@ class AffiliateProfileTest extends TestCase
 
         $this->actingAs($consultation)->get(route('affiliate.profile.show'))->assertForbidden();
         $this->actingAs($orphan)->get(route('affiliate.profile.show'))->assertNotFound();
+    }
+
+    public function test_profile_photo_rejects_small_oversized_and_svg_files(): void
+    {
+        Storage::fake('public');
+        [$user, $affiliate] = $this->affiliate();
+        $base = ['email' => $affiliate->email];
+
+        $this->actingAs($user)->patch(route('affiliate.profile.update'), $base + [
+            'photo' => UploadedFile::fake()->image('small.jpg', 200, 200),
+        ])->assertSessionHasErrors('photo');
+
+        $this->actingAs($user)->patch(route('affiliate.profile.update'), $base + [
+            'photo' => UploadedFile::fake()->image('large.jpg', 600, 600)->size(5200),
+        ])->assertSessionHasErrors('photo');
+
+        $this->actingAs($user)->patch(route('affiliate.profile.update'), $base + [
+            'photo' => UploadedFile::fake()->createWithContent(
+                'vector.svg',
+                '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600"></svg>'
+            ),
+        ])->assertSessionHasErrors('photo');
+    }
+
+    public function test_shared_cropper_defines_square_crop_zoom_reset_and_600_pixel_jpeg(): void
+    {
+        $script = file_get_contents(resource_path('js/components/photo-cropper.js'));
+
+        $this->assertStringContainsString('aspectRatio: 1', $script);
+        $this->assertStringContainsString("dragMode: 'move'", $script);
+        $this->assertStringContainsString('cropBoxResizable: true', $script);
+        $this->assertStringContainsString('data-crop-zoom', file_get_contents(resource_path('views/components/forms/photo-cropper.blade.php')));
+        $this->assertStringContainsString('cropper?.reset()', $script);
+        $this->assertStringContainsString('width: 600', $script);
+        $this->assertStringContainsString('height: 600', $script);
+        $this->assertStringContainsString("'image/jpeg', 0.9", $script);
+        $this->assertStringContainsString('new DataTransfer()', $script);
     }
 
     private function affiliate(
