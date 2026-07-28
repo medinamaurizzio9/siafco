@@ -67,7 +67,7 @@
                 <label class="form-label">Estado</label>
                 <select class="form-input" name="status">
                     @foreach(['pendiente_pago','activo','inactivo','observado'] as $status)
-                        <option value="{{ $status }}" @selected(old('status', $affiliate->status) === $status)>{{ $status }}</option>
+                        <option value="{{ $status }}" @selected(old('status', $affiliate->status) === $status)>{{ \App\Support\AffiliationStatusPresenter::label($status) }}</option>
                     @endforeach
                 </select>
             </div>

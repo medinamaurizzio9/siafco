@@ -1,4 +1,5 @@
 import './bootstrap';
+import './public-affiliation-form';
 
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-password-toggle]').forEach((button) => {

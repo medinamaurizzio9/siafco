@@ -4,7 +4,7 @@
         <select class="form-input" name="status">
             <option value="">Todos los estados</option>
             @foreach(['pendiente_pago','activo','inactivo','observado'] as $status)
-                <option value="{{ $status }}" @selected(request('status') === $status)>{{ $status }}</option>
+                <option value="{{ $status }}" @selected(request('status') === $status)>{{ \App\Support\AffiliationStatusPresenter::label($status) }}</option>
             @endforeach
         </select>
         <button class="btn-secondary">Filtrar</button>
@@ -23,7 +23,7 @@
                         <td>{{ $affiliate->full_name }}</td>
                         <td>{{ $affiliate->ci }}</td>
                         <td>{{ $affiliate->sector->name }}</td>
-                        <td><span class="badge">{{ $affiliate->status }}</span></td>
+                        <td><x-affiliation-status :status="$affiliate->status" size="sm" /></td>
                         <td class="text-right"><a class="btn-secondary" href="{{ route('affiliates.show', $affiliate) }}">Ver</a></td>
                     </tr>
                 @endforeach

@@ -3,7 +3,7 @@
         <div><h2 class="text-2xl font-black text-[#0b1f3a]">Solicitudes públicas</h2><p class="text-sm text-slate-600">Registro, pago y revisión de autoafiliaciones.</p></div>
         <form class="flex flex-wrap gap-2">
             <input class="form-input w-64" name="search" value="{{ request('search') }}" placeholder="Código, nombre, CI o transacción">
-            <select class="form-input w-48" name="status"><option value="">Todos los estados</option>@foreach(['pending_payment','payment_submitted','under_review','approved','rejected'] as $status)<option @selected(request('status')===$status)>{{ $status }}</option>@endforeach</select>
+            <select class="form-input w-48" name="status"><option value="">Todos los estados</option>@foreach(['pending_payment','payment_submitted','under_review','approved','rejected'] as $status)<option value="{{ $status }}" @selected(request('status')===$status)>{{ \App\Support\AffiliationStatusPresenter::label($status) }}</option>@endforeach</select>
             <button class="btn-primary">Filtrar</button>
         </form>
     </div>
@@ -15,7 +15,7 @@
             <td>{{ $application->sector->name }}<br><span class="text-xs text-slate-500">{{ $application->plan->name }}</span></td>
             <td>BOB {{ number_format($application->amount_due, 2) }}</td>
             <td>{{ $application->payment?->transaction_number ?: 'Sin pago' }}</td>
-            <td><span class="badge">{{ str_replace('_',' ',$application->status) }}</span></td>
+            <td><x-affiliation-status :status="$application->status" size="sm" /></td>
             <td><a class="btn-secondary" href="{{ route('public-affiliation.admin.show', $application) }}">Revisar</a></td>
         </tr>@empty<tr><td colspan="7">No hay solicitudes con esos filtros.</td></tr>@endforelse</tbody></table>
     </div>

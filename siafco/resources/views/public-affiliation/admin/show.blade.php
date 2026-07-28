@@ -5,7 +5,7 @@
             <div><p class="text-sm font-bold text-slate-500">{{ $application->request_code }}</p><h2 class="text-xl font-black">{{ $application->person->full_name }}</h2><p>CI {{ $application->person->ci }} {{ $application->person->ci_complement }}</p><p>{{ $application->person->phone }}</p><p>{{ $application->person->email }}</p></div></div>
             <dl class="mt-5 grid grid-cols-2 gap-3 text-sm">
                 <dt class="font-bold">Sector</dt><dd>{{ $application->sector->name }}</dd><dt class="font-bold">Plan</dt><dd>{{ $application->plan->name }}</dd>
-                <dt class="font-bold">Esperado</dt><dd>BOB {{ number_format($application->amount_due,2) }}</dd><dt class="font-bold">Estado</dt><dd>{{ $application->status }}</dd>
+                <dt class="font-bold">Esperado</dt><dd>BOB {{ number_format($application->amount_due,2) }}</dd><dt class="font-bold">Estado</dt><dd><x-affiliation-status :status="$application->status" size="sm" /></dd>
             </dl>
         </section>
         <section class="section-card">

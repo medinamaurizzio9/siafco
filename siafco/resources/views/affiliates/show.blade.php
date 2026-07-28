@@ -12,7 +12,7 @@
                 <div>
                     <p class="text-sm font-bold uppercase text-[#b8942f]">{{ $affiliate->registration_number }}</p>
                     <h2 class="text-3xl font-black text-[#0b1f3a]">{{ $affiliate->full_name }}</h2>
-                    <p class="mt-1 text-slate-600">{{ $affiliate->sector->name }} · {{ $affiliate->status }}</p>
+                    <div class="mt-2 flex flex-wrap items-center gap-2"><span class="text-slate-600">{{ $affiliate->sector->name }}</span><x-affiliation-status :status="$affiliate->status" size="sm" /></div>
                     @if(auth()->user()->hasRole(['administrador','administrador_sector','secretaria']))
                         <a class="btn-secondary mt-4" href="{{ route('affiliates.edit', $affiliate) }}">Editar datos</a>
                     @endif
@@ -53,7 +53,7 @@
                     <tr>
                         <td>Bs {{ number_format($payment->amount, 2) }}</td>
                         <td>{{ $payment->transaction_number ?: 'Pendiente' }}</td>
-                        <td><span class="badge">{{ $payment->status }}</span></td>
+                        <td><x-affiliation-status :status="$payment->status" size="sm" /></td>
                         <td>
                             @if(auth()->user()->hasRole(['administrador','cajero']))
                                 <form class="inline" method="post" action="{{ route('payments.confirm', $payment) }}">@csrf<button class="btn-primary">Confirmar</button></form>

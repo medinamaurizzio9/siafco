@@ -21,7 +21,7 @@
         <section class="rounded-lg border border-slate-200 bg-white p-5">
             <h2 class="font-black">Activos e inactivos</h2>
             @foreach($byStatus as $status => $total)
-                <div class="mt-3 flex justify-between border-b border-slate-100 pb-2"><span>{{ $status }}</span><strong>{{ $total }}</strong></div>
+                <div class="mt-3 flex justify-between border-b border-slate-100 pb-2"><span>{{ \App\Support\AffiliationStatusPresenter::label($status) }}</span><strong>{{ $total }}</strong></div>
             @endforeach
         </section>
     </div>

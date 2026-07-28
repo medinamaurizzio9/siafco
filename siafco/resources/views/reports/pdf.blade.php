@@ -46,7 +46,7 @@
         <thead><tr><th>Estado</th><th>Total</th></tr></thead>
         <tbody>
         @foreach($byStatus as $status => $total)
-            <tr><td>{{ $status }}</td><td>{{ $total }}</td></tr>
+            <tr><td>{{ \App\Support\AffiliationStatusPresenter::label($status) }}</td><td>{{ $total }}</td></tr>
         @endforeach
         </tbody>
     </table>

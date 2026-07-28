@@ -41,9 +41,9 @@ class PublicAffiliationTest extends TestCase
             'phone' => '70000001', 'email' => 'ana@example.test', 'address' => 'Zona Central',
             'password' => 'clave-segura-123', 'password_confirmation' => 'clave-segura-123',
             'sector_id' => $sector->id, 'affiliation_plan_id' => $plan->id,
-            'regional' => 'La Paz', 'institution' => 'Hospital Central', 'position' => 'Médica',
+            'regional' => 'LA PAZ', 'institution' => 'Hospital Central', 'position' => 'Médica',
             'photo' => UploadedFile::fake()->image('foto.jpg'), 'birth_date' => '1990-05-10',
-            'marital_status' => 'Soltera', 'terms' => '1', 'data_processing' => '1',
+            'marital_status' => 'SOLTERO', 'terms' => '1', 'data_processing' => '1',
         ], $overrides);
     }
 
@@ -66,6 +66,10 @@ class PublicAffiliationTest extends TestCase
         $this->assertTrue(Hash::check('clave-segura-123', User::where('email', 'ana@example.test')->firstOrFail()->password));
         $this->assertSame('120.00', $application->amount_due);
         $this->assertSame('pending_payment', $application->status);
+        $photoPath = Affiliate::firstOrFail()->photo_path;
+        $this->assertMatchesRegularExpression('/^affiliates\/photos\/[0-9a-f-]{36}\.jpg$/', $photoPath);
+        [$width, $height] = getimagesize(Storage::disk('public')->path($photoPath));
+        $this->assertSame([600, 600], [$width, $height]);
     }
 
     public function test_reuses_existing_investor_person_and_does_not_expose_private_data_in_status(): void
@@ -103,6 +107,15 @@ class PublicAffiliationTest extends TestCase
         $this->assertSame('payment_submitted', $application->fresh()->status);
         $this->assertSame('pago_en_revision', $application->affiliate->fresh()->status);
         $this->assertSame('pending', $payment->status);
+
+        $this->get(route('public-affiliation.status', $application))
+            ->assertOk()
+            ->assertDontSee('PAYMENT SUBMITTED')
+            ->assertDontSee('payment_submitted')
+            ->assertSee('Pago enviado para revisión')
+            ->assertSee('Hemos recibido la información de tu pago.')
+            ->assertSee('Paso 3 de 4')
+            ->assertSee('bg-orange-100', false);
     }
 
     public function test_approval_is_idempotent_and_generates_registration_and_credential_once(): void
@@ -167,6 +180,8 @@ class PublicAffiliationTest extends TestCase
             ->assertRedirect(route('affiliate.panel'));
         $this->get(route('affiliate.panel'))->assertOk()
             ->assertSee($application->request_code)
+            ->assertSee('Pendiente de pago')
+            ->assertDontSee('pending_payment')
             ->assertSee('Bloqueado')
             ->assertDontSee('Descargar PDF');
         $this->get(route('affiliate.credential.pdf'))->assertRedirect(route('affiliate.panel'));
@@ -198,5 +213,99 @@ class PublicAffiliationTest extends TestCase
             ->assertSee('Descargar PDF')->assertSee('Mis servicios y beneficios')
             ->assertDontSee('Bloqueado');
         $this->actingAs($user)->get(route('affiliate.credential.pdf'))->assertDownload('credencial-SAL-000001.pdf');
+    }
+
+    public function test_administrative_public_requests_show_translated_statuses(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $person = Person::create(['full_name' => 'ANA', 'ci' => 'ADM-1', 'email' => 'admin-request@test.local']);
+        PublicAffiliationRequest::create([
+            'person_id' => $person->id, 'sector_id' => $sector->id,
+            'affiliation_plan_id' => $plan->id, 'public_token' => fake()->uuid(),
+            'request_code' => 'SOL-ADMIN-1', 'amount_due' => 120,
+            'status' => 'under_review', 'submitted_at' => now(),
+        ]);
+        $secretary = User::create([
+            'name' => 'SECRETARÍA', 'email' => 'secretary@test.local',
+            'role' => 'secretaria', 'password' => Hash::make('secret123'),
+        ]);
+
+        $this->actingAs($secretary)->get(route('public-affiliation.admin.index'))
+            ->assertOk()->assertSee('Pago en revisión')->assertDontSee('UNDER REVIEW');
+    }
+
+    public function test_public_form_shows_closed_select_catalogs_and_accessibility(): void
+    {
+        $this->catalog();
+
+        $response = $this->get(route('public-affiliation.create'))->assertOk();
+        foreach (['LP - La Paz', 'CB - Cochabamba', 'SC - Santa Cruz', 'BN - Beni', 'PA - Pando', 'TR - Tarija', 'CH - Chuquisaca', 'OR - Oruro', 'PT - Potosí'] as $option) {
+            $response->assertSee($option);
+        }
+        foreach (['Soltero', 'Casado', 'Divorciado', 'Viudo'] as $option) {
+            $response->assertSee($option);
+        }
+        foreach (['LA PAZ', 'COCHABAMBA', 'SANTA CRUZ', 'ORURO', 'POTOSÍ', 'SUCRE', 'TARIJA', 'BENI', 'PANDO'] as $value) {
+            $response->assertSee('value="'.$value.'"', false);
+        }
+        $response->assertSee('aria-required="true"', false)
+            ->assertSee('aria-describedby="issued_in-error"', false)
+            ->assertSee('data-photo-cropper', false);
+    }
+
+    public function test_closed_selects_reject_unknown_values_and_keep_old_input(): void
+    {
+        Storage::fake('public');
+        [$sector, $plan] = $this->catalog();
+
+        $response = $this->from(route('public-affiliation.create'))->post(
+            route('public-affiliation.store'),
+            $this->form($sector, $plan, [
+                'issued_in' => 'XX', 'marital_status' => 'CONVIVIENTE', 'regional' => 'OTRA',
+            ])
+        );
+
+        $response->assertRedirect(route('public-affiliation.create'))
+            ->assertSessionHasErrors(['issued_in', 'marital_status', 'regional'])
+            ->assertSessionHasInput('issued_in', 'XX')
+            ->assertSessionHasInput('marital_status', 'CONVIVIENTE')
+            ->assertSessionHasInput('regional', 'OTRA');
+    }
+
+    public function test_ci_complement_remains_optional_and_passwords_must_match(): void
+    {
+        Storage::fake('public');
+        [$sector, $plan] = $this->catalog();
+
+        $this->post(route('public-affiliation.store'), $this->form($sector, $plan, ['ci_complement' => null]))
+            ->assertRedirect();
+        $this->assertDatabaseHas('people', ['ci' => '7788991', 'ci_complement' => null]);
+
+        $this->post(route('public-affiliation.store'), $this->form($sector, $plan, [
+            'ci' => '7788992', 'email' => 'otra@example.test',
+            'password_confirmation' => 'distinta-123',
+        ]))->assertSessionHasErrors(['password']);
+    }
+
+    public function test_invalid_photo_formats_and_oversized_files_are_rejected_in_spanish(): void
+    {
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
+        Storage::fake('public');
+        [$sector, $plan] = $this->catalog();
+
+        $this->post(route('public-affiliation.store'), $this->form($sector, $plan, [
+            'photo' => UploadedFile::fake()->create('documento.pdf', 100, 'application/pdf'),
+        ]))->assertSessionHasErrors('photo');
+        $this->post(route('public-affiliation.store'), $this->form($sector, $plan, [
+            'photo' => UploadedFile::fake()->create('vector.svg', 10, 'image/svg+xml'),
+        ]))->assertSessionHasErrors('photo');
+        $invalidImageResponse = $this->post(route('public-affiliation.store'), $this->form($sector, $plan, [
+            'photo' => UploadedFile::fake()->createWithContent('falsa.jpg', 'not-an-image'),
+        ]));
+        $invalidImageResponse->assertRedirect()->assertSessionHasErrors('photo');
+
+        $this->post(route('public-affiliation.store'), $this->form($sector, $plan, [
+            'photo' => UploadedFile::fake()->create('grande.jpg', 5121, 'image/jpeg'),
+        ]))->assertSessionHasErrors(['photo' => 'La fotografía supera el tamaño permitido de 5 MB.']);
     }
 }

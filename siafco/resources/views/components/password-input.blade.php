@@ -6,11 +6,17 @@
     'value' => null,
 ])
 
-<label>
-    <span class="form-label">{{ $label }}</span>
+<label for="{{ $name }}" data-field-wrapper>
+    @if($label)
+        <span class="form-label" data-field-label>{{ $label }} @if($required)<span class="text-red-600" aria-hidden="true">*</span>@endif</span>
+    @endif
     <span class="relative block">
-        <input class="form-input pr-12" type="password" name="{{ $name }}" value="{{ $value }}"
-            autocomplete="{{ $autocomplete }}" data-password-input @required($required) {{ $attributes }}>
+        <input id="{{ $name }}" class="form-input pr-12 @error($name) border-red-500 bg-red-50 text-red-900 @enderror"
+            type="password" name="{{ $name }}" value="{{ $value }}"
+            autocomplete="{{ $autocomplete }}" data-password-input data-validate-field
+            data-touched="{{ $errors->has($name) ? 'true' : 'false' }}"
+            aria-invalid="{{ $errors->has($name) ? 'true' : 'false' }}" aria-describedby="{{ $name }}-error"
+            @if($required) required aria-required="true" @endif {{ $attributes }}>
         <button
             class="absolute inset-y-0 right-0 grid w-12 place-items-center text-slate-500 hover:text-[#0b1f3a] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#d4af37]"
             type="button" data-password-toggle aria-label="Mostrar {{ mb_strtolower($label) }}" aria-pressed="false">
@@ -22,4 +28,5 @@
             </svg>
         </button>
     </span>
+    <x-forms.field-error :name="$name" />
 </label>

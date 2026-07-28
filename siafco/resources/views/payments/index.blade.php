@@ -3,7 +3,7 @@
         <select class="form-input sm:max-w-xs" name="status">
             <option value="">Todos</option>
             @foreach(['pendiente','confirmado','rechazado'] as $status)
-                <option value="{{ $status }}" @selected(request('status') === $status)>{{ $status }}</option>
+                <option value="{{ $status }}" @selected(request('status') === $status)>{{ \App\Support\AffiliationStatusPresenter::label($status) }}</option>
             @endforeach
         </select>
         <button class="btn-secondary">Filtrar</button>
@@ -24,7 +24,7 @@
                             @endif
                         </td>
                         <td>{{ $payment->transaction_number ?: 'Sin registrar' }}</td>
-                        <td><span class="badge">{{ $payment->status }}</span></td>
+                        <td><x-affiliation-status :status="$payment->status" size="sm" /></td>
                         <td>
                             <a class="btn-secondary" href="{{ route('affiliates.show', $payment->affiliate) }}">Ver</a>
                             @if(auth()->user()->hasRole(['administrador','cajero']) && $payment->status !== 'confirmado')

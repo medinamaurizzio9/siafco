@@ -41,7 +41,7 @@
                     <tr>
                         <td>{{ $payment->affiliate->full_name }}</td>
                         <td>Bs {{ number_format($payment->amount, 2) }}</td>
-                        <td><span class="badge">{{ $payment->status }}</span></td>
+                        <td><x-affiliation-status :status="$payment->status" size="sm" /></td>
                         <td>{{ $payment->created_at->format('d/m/Y') }}</td>
                     </tr>
                 @empty
