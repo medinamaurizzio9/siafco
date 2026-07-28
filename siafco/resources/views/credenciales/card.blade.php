@@ -43,6 +43,10 @@
             <h1>{{ $institutionName }}</h1>
             <p>SISTEMA INTEGRAL DE AFILIACIÓN</p>
         </div>
+        <div class="credential-header-id">
+            <span>ID AFILIADO</span>
+            <strong>#{{ $credentialData['affiliate_number'] }}</strong>
+        </div>
     </header>
 
     <main class="credential-body">
@@ -59,6 +63,15 @@
                         <span>NÚMERO DE AFILIADO</span>
                         <strong>{{ $credentialData['affiliate_number'] }}</strong>
                     </div>
+                    @if(
+                        filled($credentialData['registration_number'] ?? null) &&
+                        $credentialData['registration_number'] !== $credentialData['affiliate_number']
+                    )
+                        <div class="credential-field">
+                            <span>NÚMERO DE REGISTRO</span>
+                            <strong>{{ $credentialData['registration_number'] }}</strong>
+                        </div>
+                    @endif
                     <div class="credential-field credential-field-level-two">
                         <span>SECTOR</span>
                         <strong>{{ $credentialData['sector'] }}</strong>
@@ -75,20 +88,12 @@
                         <strong>{{ $credentialData['identity_document'] }}</strong>
                     </div>
                     <div class="credential-field">
-                        <span>NÚMERO DE REGISTRO</span>
-                        <strong>{{ $credentialData['registration_number'] }}</strong>
-                    </div>
-                    <div class="credential-field">
                         <span>REGIONAL</span>
                         <strong>{{ $credentialData['regional'] }}</strong>
                     </div>
                     <div class="credential-field credential-field-meta credential-field-date">
                         <span>FECHA DE EMISIÓN</span>
                         <strong>{{ $credentialData['issued_at'] }}</strong>
-                    </div>
-                    <div class="credential-field credential-field-meta credential-field-version">
-                        <span>VERSIÓN</span>
-                        <strong>{{ $credentialData['version'] }}</strong>
                     </div>
                 </div>
             </div>
@@ -104,8 +109,7 @@
                         <span class="credential-phone-icon" aria-hidden="true"></span>
                         ESCANEA PARA VERIFICAR
                     </strong>
-                    <p>Credencial oficial de afiliado</p>
-                    <small>Verificación en línea</small>
+                    <p>Verifica la autenticidad<br>de esta credencial.</p>
                 </div>
             </div>
         </section>
