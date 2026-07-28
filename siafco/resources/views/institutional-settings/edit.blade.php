@@ -104,6 +104,36 @@
                 <div><dt class="font-black text-slate-500">Correo</dt><dd>{{ $setting->email ?: 'Sin dato' }}</dd></div>
                 <div><dt class="font-black text-slate-500">Telefono</dt><dd>{{ $setting->phone ?: 'Sin dato' }}</dd></div>
             </dl>
+
+            <section class="mt-6 border-t border-slate-200 pt-5">
+                <p class="text-xs font-black uppercase text-[#b8942f]">Exportación de credenciales</p>
+                <dl class="mt-3 grid gap-3 text-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <dt class="font-black text-slate-600">PDF</dt>
+                        <dd class="font-bold {{ $exportCapabilities->canExportPdf() ? 'text-emerald-700' : 'text-red-700' }}">
+                            {{ $exportCapabilities->canExportPdf() ? 'Disponible' : 'No disponible' }}
+                        </dd>
+                    </div>
+                    <div class="flex items-center justify-between gap-3">
+                        <dt class="font-black text-slate-600">PNG</dt>
+                        <dd class="font-bold {{ $exportCapabilities->canExportPng() ? 'text-emerald-700' : 'text-red-700' }}">
+                            {{ $exportCapabilities->canExportPng() ? 'Disponible' : 'No disponible' }}
+                        </dd>
+                    </div>
+                    <div class="flex items-center justify-between gap-3">
+                        <dt class="font-black text-slate-600">Impresión</dt>
+                        <dd class="font-bold {{ $exportCapabilities->canPrintCredential() ? 'text-emerald-700' : 'text-red-700' }}">
+                            {{ $exportCapabilities->canPrintCredential() ? 'Disponible' : 'No disponible' }}
+                        </dd>
+                    </div>
+                    <div><dt class="font-black text-slate-500">Motor PDF</dt><dd>{{ $exportCapabilities->pdfEngine() }}</dd></div>
+                    <div><dt class="font-black text-slate-500">Motor PNG</dt><dd>{{ $exportCapabilities->pngEngine() }}</dd></div>
+                    <div><dt class="font-black text-slate-500">Motor impresión</dt><dd>Navegador</dd></div>
+                </dl>
+                @if($exportCapabilities->pngUnavailableReason())
+                    <p class="mt-3 text-xs leading-5 text-slate-600">{{ $exportCapabilities->pngUnavailableReason() }}</p>
+                @endif
+            </section>
             <img class="mt-5 h-48 w-48 rounded border object-contain" src="{{ $setting->paymentQrUrl() }}" alt="QR pago">
 
             @php($loginAppearance = $setting->loginAppearance())

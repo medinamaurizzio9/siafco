@@ -31,14 +31,15 @@
                 <p class="mt-3 rounded border border-[#d4af37]/40 bg-[#fff8df] p-3 text-sm text-slate-900">Debe confirmar su pago para habilitar su credencial digital.</p>
             @elseif($affiliate->credential)
                 <div class="mt-4 rounded border border-slate-200 bg-slate-50 p-3">
-                    <img class="mx-auto h-24 w-40 rounded object-cover shadow" src="{{ Storage::url($affiliate->credential->png_path) }}" alt="Miniatura de credencial digital">
+                    <div class="mx-auto grid aspect-[850/540] w-40 place-items-center rounded border border-[#d4af37]/50 bg-white text-center text-xs font-black text-[#0b1f3a] shadow">
+                        CREDENCIAL DIGITAL
+                    </div>
                 </div>
                 @can('viewCredential', $affiliate)
                     <a class="btn-primary mt-4 w-full" href="{{ route('credenciales.show', $affiliate) }}">Ver credencial</a>
                 @endcan
                 @can('downloadCredential', $affiliate)
                     <a class="btn-secondary mt-3 w-full" href="{{ route('credentials.pdf', $affiliate) }}">Descargar PDF</a>
-                    <a class="btn-secondary mt-3 w-full" href="{{ route('credentials.png', $affiliate) }}">Descargar PNG</a>
                 @endcan
                 @can('printCredential', $affiliate)
                     <a class="btn-secondary mt-3 w-full" href="{{ route('credentials.print', $affiliate) }}" target="_blank">Imprimir</a>

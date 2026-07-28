@@ -212,6 +212,9 @@
             @if(session('status'))
                 <div class="mb-5 rounded border border-[#d4af37]/40 bg-[#fff8df] px-4 py-3 text-sm text-slate-900">{{ session('status') }}</div>
             @endif
+            @if(session('warning'))
+                <div class="mb-5 rounded border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">{{ session('warning') }}</div>
+            @endif
             @if(isset($errors) && $errors->any())
                 <div class="mb-5 rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
                     <strong>Revise los datos ingresados.</strong>

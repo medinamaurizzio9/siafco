@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\InstitutionalSetting;
 use App\Services\AuditService;
+use App\Services\CredentialExportCapabilities;
 use App\Support\TextNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,10 +14,11 @@ use Throwable;
 
 class InstitutionalSettingController extends Controller
 {
-    public function edit()
+    public function edit(CredentialExportCapabilities $exportCapabilities)
     {
         return view('institutional-settings.edit', [
             'setting' => InstitutionalSetting::current(),
+            'exportCapabilities' => $exportCapabilities,
         ]);
     }
 

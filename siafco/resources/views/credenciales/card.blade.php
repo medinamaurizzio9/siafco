@@ -125,7 +125,9 @@
                 @endif
             </div>
             <div class="credential-status credential-status-{{ $statusTone }}">
-                <span aria-hidden="true">✓</span>
+                @if($mode !== 'pdf')
+                    <span aria-hidden="true">✓</span>
+                @endif
                 {{ $credentialData['status_label'] }}
             </div>
         </aside>

@@ -14,6 +14,7 @@ use App\Models\Person;
 use App\Models\Sector;
 use App\Models\User;
 use App\Services\InvestmentService;
+use App\Services\CredentialExportCapabilities;
 use App\Services\CredentialService;
 use App\Services\QrCodeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -227,16 +228,17 @@ class InvestmentSubsystemTest extends TestCase
                 [0, 0, 0]
             )
             ->andReturnUsing(fn (string $data, string $path, int $size, array $foreground) => $realQrService->png($data, $path, $size, $foreground));
+        $capabilities = $this->mock(CredentialExportCapabilities::class);
+        $capabilities->shouldReceive('canExportPdf')->andReturnTrue();
+        $capabilities->shouldReceive('canExportPng')->andReturnFalse();
 
         $credential = app(CredentialService::class)->generate($affiliate);
         $issuedAt = $credential->created_at->timezone(config('app.timezone'))->format('d/m/Y');
         $qrHash = hash_file('sha256', storage_path('app/public/'.$credential->qr_path));
 
         $this->assertFileExists(storage_path('app/public/'.$credential->qr_path));
-        $this->assertFileExists(storage_path('app/public/'.$credential->png_path));
         $this->assertFileExists(storage_path('app/public/'.$credential->pdf_path));
-        $pngSize = getimagesize(storage_path('app/public/'.$credential->png_path));
-        $this->assertSame([850, 540], array_slice($pngSize, 0, 2));
+        $this->assertNull($credential->png_path);
         $pdfContents = file_get_contents(storage_path('app/public/'.$credential->pdf_path));
         $this->assertMatchesRegularExpression('/\/Count\s+1\b/', $pdfContents);
         $this->assertMatchesRegularExpression('/\/MediaBox\s+\[0\.000 0\.000 242\.646 153\.014\]/', $pdfContents);

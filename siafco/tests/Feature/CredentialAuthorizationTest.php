@@ -7,6 +7,7 @@ use App\Models\AffiliationPlan;
 use App\Models\DigitalCredential;
 use App\Models\Sector;
 use App\Models\User;
+use App\Services\CredentialExportCapabilities;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -39,6 +40,8 @@ class CredentialAuthorizationTest extends TestCase
     public function test_administrator_superadministrator_and_secretary_can_export_credentials(): void
     {
         Storage::fake('public');
+        $capabilities = $this->mock(CredentialExportCapabilities::class);
+        $capabilities->shouldReceive('canExportPng')->andReturnTrue();
         [, $affiliate] = $this->affiliate('titular@test.local', 'REG-000003');
 
         foreach (['administrador', 'superadministrador', 'secretaria'] as $role) {
@@ -60,6 +63,59 @@ class CredentialAuthorizationTest extends TestCase
                 ->assertDownload('credencial-REG-000003.png');
             $this->actingAs($user)->get(route('credentials.print', $affiliate))->assertOk();
         }
+    }
+
+    public function test_png_unavailability_is_controlled_and_only_visible_to_administration(): void
+    {
+        Storage::fake('public');
+        $capabilities = $this->mock(CredentialExportCapabilities::class);
+        $capabilities->shouldReceive('canExportPng')->andReturnFalse();
+        $capabilities->shouldReceive('canExportPdf')->andReturnTrue();
+        $capabilities->shouldReceive('canPrintCredential')->andReturnTrue();
+        $capabilities->shouldReceive('pdfEngine')->andReturn('Dompdf');
+        $capabilities->shouldReceive('pngEngine')->andReturn('No disponible');
+        $capabilities->shouldReceive('pngUnavailableReason')
+            ->andReturn('Este servidor no dispone de Chrome/Chromium funcional.');
+
+        [$affiliateUser, $affiliate] = $this->affiliate('sin-png@test.local', 'REG-000005');
+        $administrator = User::create([
+            'name' => 'ADMINISTRADOR',
+            'email' => 'admin-png@test.local',
+            'role' => 'administrador',
+            'password' => Hash::make('secret123'),
+        ]);
+        $secretary = User::create([
+            'name' => 'SECRETARÍA',
+            'email' => 'secretaria-png@test.local',
+            'role' => 'secretaria',
+            'password' => Hash::make('secret123'),
+        ]);
+
+        $this->actingAs($administrator)->get(route('credentials.preview', $affiliate))
+            ->assertOk()
+            ->assertSee('PNG no disponible en este servidor.')
+            ->assertDontSee('Descargar PNG');
+        $this->actingAs($administrator)->from(route('credentials.preview', $affiliate))
+            ->get(route('credentials.png', $affiliate))
+            ->assertRedirect(route('credentials.preview', $affiliate))
+            ->assertSessionHas('warning', 'La descarga PNG no está disponible en este servidor. Utilice la descarga PDF.');
+        $this->actingAs($secretary)->from(route('credentials.preview', $affiliate))
+            ->get(route('credentials.png', $affiliate))
+            ->assertRedirect(route('credentials.preview', $affiliate))
+            ->assertSessionHas('warning', 'La descarga PNG no está disponible en este servidor. Utilice la descarga PDF.');
+        $this->actingAs($administrator)->getJson(route('credentials.png', $affiliate))
+            ->assertStatus(503)
+            ->assertJsonPath('message', 'La descarga PNG no está disponible en este servidor. Utilice la descarga PDF.');
+        $this->actingAs($administrator)->get(route('institutional-settings.edit'))
+            ->assertOk()
+            ->assertSee('Exportación de credenciales')
+            ->assertSee('Este servidor no dispone de Chrome/Chromium funcional.');
+
+        $this->actingAs($affiliateUser)->get(route('affiliate.credential.preview'))
+            ->assertOk()
+            ->assertDontSee('PNG no disponible en este servidor.')
+            ->assertDontSee('Chrome/Chromium');
+        $this->actingAs($affiliateUser)->get(route('affiliate.credential.png'))->assertForbidden();
     }
 
     public function test_consultation_user_cannot_view_or_export_credentials(): void

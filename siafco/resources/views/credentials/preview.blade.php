@@ -23,7 +23,9 @@
         <div class="credential-actions">
             @can('downloadCredential', $affiliate)
                 <a href="{{ route('credentials.pdf', $affiliate) }}" class="btn-download">Descargar PDF</a>
-                <a href="{{ route('credentials.png', $affiliate) }}" class="btn-download">Descargar PNG</a>
+                @if($exportCapabilities->canExportPng())
+                    <a href="{{ route('credentials.png', $affiliate) }}" class="btn-download">Descargar PNG</a>
+                @endif
             @endcan
 
             @can('printCredential', $affiliate)
@@ -34,6 +36,12 @@
                 <a href="{{ route('affiliate.panel') }}" class="btn-print">Volver al panel</a>
             @endif
         </div>
+
+        @can('downloadCredential', $affiliate)
+            @if(!$exportCapabilities->canExportPng())
+                <p class="credential-export-notice">PNG no disponible en este servidor.</p>
+            @endif
+        @endcan
     </div>
 
     @if(!empty($printMode))
