@@ -1,4 +1,4 @@
-<x-layouts.app title="Panel afiliado">
+<x-layouts.app title="Panel afiliado" :credential-assets="$isActive && (bool) $affiliate?->credential">
     @if(!$affiliate)
         <div class="section-card">No existe una ficha de afiliado vinculada a este usuario.</div>
     @elseif(!$isActive)
@@ -12,7 +12,7 @@
                 </div>
                 <dl class="mt-5 grid gap-4 sm:grid-cols-2">
                     <div><dt class="text-sm font-bold text-slate-500">Plan seleccionado</dt><dd class="font-bold">{{ $affiliate->plan->name }}</dd></div>
-                    <div><dt class="text-sm font-bold text-slate-500">Monto</dt><dd class="font-bold">BOB {{ number_format($application?->amount_due ?? $affiliate->payments->first()?->amount, 2) }}</dd></div>
+                    <div><dt class="text-sm font-bold text-slate-500">Monto</dt><dd class="font-bold">BOB {{ number_format($application?->amount_due ?? $latestPayment?->amount, 2) }}</dd></div>
                     <div><dt class="text-sm font-bold text-slate-500">Transacción</dt><dd>{{ $application?->payment?->transaction_number ?: 'Aún no registrada' }}</dd></div>
                     <div><dt class="text-sm font-bold text-slate-500">Comprobante</dt><dd>{{ $application?->payment?->voucher_path ? 'Enviado' : 'No enviado' }}</dd></div>
                 </dl>
@@ -45,40 +45,61 @@
             </section>
         </div>
     @else
-        <div class="space-y-7">
-            <section class="grid gap-5 lg:grid-cols-[1fr_380px]">
-                <div class="section-card">
-                    <p class="text-sm font-black uppercase text-[#b8942f]">{{ $affiliate->registration_number }}</p>
-                    <h2 class="text-3xl font-black text-[#0b1f3a]">{{ $affiliate->full_name }}</h2>
-                    <div class="mt-5 grid gap-4 sm:grid-cols-2"><div class="metric-card"><p>Estado</p><strong class="text-xl">ACTIVO</strong></div><div class="metric-card"><p>Sector</p><strong class="text-xl">{{ $affiliate->sector->name }}</strong></div></div>
+        <div class="space-y-6">
+            <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <div class="border-b-4 border-[#d4af37] bg-[#0b1f3a] px-5 py-4 text-white">
+                    <p class="text-xs font-bold uppercase text-[#d4af37]">Bienvenido a SIAFCO</p>
+                    <p class="mt-1 text-sm text-slate-300">Tu información institucional y servicios en un solo lugar.</p>
                 </div>
-                <aside class="section-card">
-                    <h3 class="font-black text-[#0b1f3a]">Credencial digital</h3>
-                    @if($affiliate->credential)
-                        <div class="mt-4 grid aspect-[850/540] w-full place-items-center rounded border border-[#d4af37]/50 bg-white text-center font-black text-[#0b1f3a] shadow-sm">CREDENCIAL DIGITAL</div>
-                        <a class="btn-primary mt-4 w-full" href="{{ route('affiliate.credential.preview') }}">VER MI CREDENCIAL</a>
-                        <p class="mt-3 text-sm text-slate-600">Esta es tu credencial digital vigente. Para solicitar una copia descargable o una impresión oficial, comunícate con la Cooperativa Tierra Bendita.</p>
-                    @else
-                        <p class="mt-3 text-sm text-slate-600">La credencial se está preparando.</p>
-                    @endif
-                </aside>
+                <div class="grid gap-5 p-5 md:grid-cols-[110px_1fr_auto] md:items-center">
+                    <div class="mx-auto h-24 w-24 overflow-hidden rounded-full border-4 border-[#f7ecc4] bg-slate-100">
+                        @if($affiliate->photo_path)<img class="h-full w-full object-cover" src="{{ Storage::disk('public')->url($affiliate->photo_path) }}" alt="Fotografía de {{ $affiliate->full_name }}">@else<div class="grid h-full place-items-center text-2xl font-black text-slate-400">{{ mb_substr($affiliate->full_name, 0, 1) }}</div>@endif
+                    </div>
+                    <div class="min-w-0 text-center md:text-left">
+                        <h2 class="break-words text-2xl font-black text-[#0b1f3a]">{{ $affiliate->full_name }}</h2>
+                        <p class="mt-1 font-bold text-[#b8942f]">{{ $affiliate->registration_number }}</p>
+                        <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                            <div><dt class="text-xs font-bold uppercase text-slate-500">Sector</dt><dd class="mt-1 break-words font-semibold text-slate-800">{{ $affiliate->sector?->name }}</dd></div>
+                            <div><dt class="text-xs font-bold uppercase text-slate-500">Regional</dt><dd class="mt-1 font-semibold text-slate-800">{{ $affiliate->regional ?: 'No registrada' }}</dd></div>
+                        </dl>
+                    </div>
+                    <div class="text-center md:text-right">
+                        <x-affiliation-status :status="$affiliate->status" size="sm" />
+                        <p class="mt-3 text-xs font-bold uppercase text-slate-500">Fecha de afiliación</p>
+                        <p class="mt-1 font-semibold text-slate-800">{{ $affiliate->created_at->format('d/m/Y') }}</p>
+                        <a class="btn-primary mt-4 w-full md:w-auto" href="{{ route('affiliate.profile.show') }}">VER MI PERFIL</a>
+                    </div>
+                </div>
             </section>
 
-            <section>
-                <h2 class="text-xl font-black text-[#0b1f3a]">Mis servicios y beneficios</h2>
-                <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    @foreach($benefits as $benefit)
-                        @php($href = $benefit->route_name && Route::has($benefit->route_name) ? route($benefit->route_name) : $benefit->external_url)
-                        <article class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                            <span class="grid h-10 w-10 place-items-center rounded bg-[#fff8df] font-black uppercase text-[#0b1f3a]">{{ mb_substr($benefit->title,0,1) }}</span>
-                            <h3 class="mt-3 font-black text-[#0b1f3a]">{{ $benefit->title }}</h3><p class="mt-1 text-sm text-slate-600">{{ $benefit->description }}</p>
-                            @if($href)<a class="mt-4 inline-block text-sm font-black text-[#0b1f3a] underline" href="{{ $href }}" @if($benefit->external_url) target="_blank" rel="noopener" @endif>Abrir</a>@else<span class="mt-4 inline-block text-xs font-black uppercase text-slate-400">Próximamente</span>@endif
-                        </article>
-                    @endforeach
-                    @if(auth()->user()->investor)
-                        <article class="rounded-lg border border-[#d4af37] bg-white p-4 shadow-sm"><span class="grid h-10 w-10 place-items-center rounded bg-[#fff8df] font-black text-[#0b1f3a]">I</span><h3 class="mt-3 font-black text-[#0b1f3a]">INVERSIONES</h3><p class="mt-1 text-sm text-slate-600">Consulta tu panel de accionista.</p><a class="mt-4 inline-block text-sm font-black underline" href="{{ route('investments.panel') }}">Abrir</a></article>
-                    @endif
+            <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"><p class="text-xs font-bold uppercase text-slate-500">Afiliación</p><p class="mt-2 font-black text-[#0b1f3a]">{{ \App\Support\AffiliationStatusPresenter::label($affiliate->status) }}</p></div>
+                <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"><p class="text-xs font-bold uppercase text-slate-500">Pagos registrados</p><p class="mt-2 text-2xl font-black text-[#0b1f3a]">{{ $affiliate->payments_count }}</p></div>
+                <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"><p class="text-xs font-bold uppercase text-slate-500">Último pago</p><p class="mt-2 font-black text-[#0b1f3a]">{{ $latestPayment ? ($latestPayment->payment_date ?: $latestPayment->created_at)->format('d/m/Y') : 'Sin pagos registrados' }}</p></div>
+                <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"><p class="text-xs font-bold uppercase text-slate-500">Credencial</p><p class="mt-2 font-black text-[#0b1f3a]">{{ $affiliate->credential ? 'Vigente' : 'En preparación' }}</p></div>
+            </section>
+
+            <section class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_390px]">
+                <div>
+                    <h2 class="text-xl font-black text-[#0b1f3a]">Mis servicios y beneficios</h2>
+                    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                        <a class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:border-[#d4af37]" href="{{ route('affiliate.profile.show') }}"><p class="text-xs font-bold uppercase text-[#b8942f]">Cuenta</p><h3 class="mt-2 font-black text-[#0b1f3a]">Mi perfil</h3><p class="mt-1 text-sm text-slate-600">Actualiza tus datos personales y fotografía.</p></a>
+                        @foreach($benefits as $benefit)
+                            @php($href = $benefit->route_name && Route::has($benefit->route_name) ? route($benefit->route_name) : $benefit->external_url)
+                            <article class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"><p class="text-xs font-bold uppercase text-[#b8942f]">Servicio</p><h3 class="mt-2 font-black text-[#0b1f3a]">{{ $benefit->title }}</h3><p class="mt-1 text-sm text-slate-600">{{ $benefit->description }}</p>@if($href)<a class="mt-3 inline-block text-sm font-black text-[#0b1f3a] underline" href="{{ $href }}" @if($benefit->external_url) target="_blank" rel="noopener" @endif>Abrir</a>@else<span class="mt-3 inline-block text-xs font-black uppercase text-slate-400">Próximamente</span>@endif</article>
+                        @endforeach
+                    </div>
                 </div>
+                <aside class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div class="flex items-center justify-between"><h2 class="font-black text-[#0b1f3a]">Credencial digital</h2><span class="text-xs font-bold uppercase text-emerald-700">{{ $affiliate->credential ? 'Vigente' : 'Pendiente' }}</span></div>
+                    @if($affiliate->credential)
+                        <div class="credential-canvas pointer-events-none mt-4" id="credential-canvas">
+                            @include('credenciales.card', ['affiliate' => $affiliate, 'credential' => $affiliate->credential, 'credentialData' => $credentialData, 'institution' => $credentialInstitution, 'mode' => 'thumbnail'])
+                        </div>
+                        <a class="btn-primary mt-4 w-full" href="{{ route('affiliate.credential.preview') }}">VER MI CREDENCIAL</a>
+                        <p class="mt-3 text-sm text-slate-600">Tu credencial digital se encuentra vigente y disponible para consulta.</p>
+                    @else<p class="mt-5 rounded bg-slate-50 p-4 text-sm text-slate-600">La credencial se está preparando.</p>@endif
+                </aside>
             </section>
         </div>
     @endif

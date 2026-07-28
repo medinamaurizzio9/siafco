@@ -175,10 +175,10 @@
                     </button>
                     <div class="nav-module-panel {{ $openModule === 'personal' ? '' : 'hidden' }}">
                         @if($user->hasRole('afiliado'))
+                            {!! $navLink('affiliate.panel', 'Panel principal', [], ['affiliate.panel']) !!}
                             {!! $navLink('affiliate.profile.show', 'Mi perfil', [], ['affiliate.profile.*']) !!}
-                        @endif
-                        @if($user->hasRole('afiliado'))
-                            {!! $navLink('affiliate.panel', 'Panel del afiliado', [], ['affiliate.panel', 'affiliate.credential.*']) !!}
+                            {!! $navLink('affiliate.credential.preview', 'Mi credencial', [], ['affiliate.credential.*']) !!}
+                            <a class="nav-link" href="{{ route('affiliate.profile.show') }}#payments" data-sidebar-link>Mis pagos</a>
                         @endif
                         @if($user->hasRole('accionista'))
                             {!! $navLink('investments.panel', 'Panel del accionista', [], ['investments.panel']) !!}

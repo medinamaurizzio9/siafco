@@ -26,8 +26,13 @@ class AffiliateProfileController extends Controller
             ->latest('created_at')
             ->paginate(10)
             ->withQueryString();
+        $paymentSummary = [
+            'count' => $affiliate->payments()->count(),
+            'total' => (float) $affiliate->payments()->selectRaw('COALESCE(SUM(COALESCE(paid_amount, amount)), 0) AS total')->value('total'),
+            'latest' => $affiliate->payments()->latest('payment_date')->latest('created_at')->first(),
+        ];
 
-        return view('affiliate-profile.show', compact('affiliate', 'payments'));
+        return view('affiliate-profile.show', compact('affiliate', 'payments', 'paymentSummary'));
     }
 
     public function update(

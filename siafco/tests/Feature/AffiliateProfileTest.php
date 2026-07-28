@@ -37,7 +37,7 @@ class AffiliateProfileTest extends TestCase
             ->assertSee($affiliate->full_name)
             ->assertSee($affiliate->ci)
             ->assertSee($affiliate->registration_number)
-            ->assertSee('Dato institucional no editable')
+            ->assertSee('solo pueden ser corregidos por Secretaría')
             ->assertSee('No tienes pagos registrados.')
             ->assertDontSee('name="full_name"', false)
             ->assertDontSee('name="ci"', false)
@@ -226,6 +226,43 @@ class AffiliateProfileTest extends TestCase
         $this->assertStringContainsString('height: 600', $script);
         $this->assertStringContainsString("'image/jpeg', 0.9", $script);
         $this->assertStringContainsString('new DataTransfer()', $script);
+    }
+
+    public function test_affiliate_panel_shows_real_summary_and_shared_credential_thumbnail(): void
+    {
+        [$user, $affiliate] = $this->affiliate();
+        AffiliationPayment::create([
+            'affiliate_id' => $affiliate->id,
+            'amount' => 120,
+            'transaction_number' => 'PAY-OLD',
+            'payment_date' => '2026-06-01',
+            'status' => 'confirmado',
+        ]);
+        AffiliationPayment::create([
+            'affiliate_id' => $affiliate->id,
+            'amount' => 150,
+            'transaction_number' => 'PAY-NEW',
+            'payment_date' => '2026-07-28',
+            'status' => 'confirmado',
+        ]);
+        DigitalCredential::create([
+            'affiliate_id' => $affiliate->id,
+            'qr_path' => 'credentials/qr/test.png',
+            'generated_at' => now(),
+        ]);
+
+        $this->actingAs($user)->get(route('affiliate.panel'))
+            ->assertOk()
+            ->assertSee($affiliate->full_name)
+            ->assertSee($affiliate->registration_number)
+            ->assertSee($affiliate->sector->name)
+            ->assertSee($affiliate->regional)
+            ->assertSee('Pagos registrados')
+            ->assertSee('28/07/2026')
+            ->assertSee('credential-card--thumbnail', false)
+            ->assertSee('VER MI CREDENCIAL')
+            ->assertSee('Panel principal')
+            ->assertSee('Mis pagos');
     }
 
     private function affiliate(
