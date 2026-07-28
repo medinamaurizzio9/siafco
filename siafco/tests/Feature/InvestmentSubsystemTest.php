@@ -244,6 +244,8 @@ class InvestmentSubsystemTest extends TestCase
             ->assertSee('AFILIADO ACTIVO')
             ->assertSee('ESCANEA PARA VERIFICAR')
             ->assertSee('FECHA DE EMISIÓN')
+            ->assertSee('NÚMERO DE REGISTRO')
+            ->assertSee('MAG-RUR-000001')
             ->assertSee($issuedAt)
             ->assertSee('2026.1-test')
             ->assertSee('www.cooperativatierrabendita.com')

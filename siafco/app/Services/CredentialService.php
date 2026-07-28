@@ -65,6 +65,7 @@ class CredentialService
         return [
             'full_name' => mb_strtoupper($affiliate->full_name),
             'affiliate_number' => $affiliate->registration_number,
+            'registration_number' => $affiliate->registration_number ?? 'NO REGISTRADO',
             'identity_document' => mb_strtoupper($affiliate->ci),
             'sector' => mb_strtoupper($affiliate->sector?->name ?? 'NO REGISTRADO'),
             'regional' => mb_strtoupper($affiliate->regional ?: 'NO REGISTRADO'),

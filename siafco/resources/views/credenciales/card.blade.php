@@ -75,6 +75,10 @@
                         <strong>{{ $credentialData['identity_document'] }}</strong>
                     </div>
                     <div class="credential-field">
+                        <span>NÚMERO DE REGISTRO</span>
+                        <strong>{{ $credentialData['registration_number'] }}</strong>
+                    </div>
+                    <div class="credential-field">
                         <span>REGIONAL</span>
                         <strong>{{ $credentialData['regional'] }}</strong>
                     </div>
