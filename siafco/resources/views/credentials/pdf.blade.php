@@ -3,9 +3,9 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @page { size: 101mm 64mm; margin: 0; }
-        html, body { width: 101mm; height: 64mm; margin: 0; padding: 0; background: #ffffff; }
-        img { display: block; width: 101mm; height: 64mm; object-fit: cover; }
+        @page { size: 85.6mm 53.98mm; margin: 0; }
+        html, body { width: 85.6mm; height: 53.98mm; margin: 0; padding: 0; background: #ffffff; }
+        img { display: block; width: 85.6mm; height: 53.98mm; object-fit: cover; }
     </style>
 </head>
 <body>

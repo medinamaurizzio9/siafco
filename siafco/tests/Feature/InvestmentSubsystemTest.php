@@ -208,7 +208,14 @@ class InvestmentSubsystemTest extends TestCase
         $this->assertFileExists(storage_path('app/public/'.$credential->qr_path));
         $this->assertFileExists(storage_path('app/public/'.$credential->png_path));
         $this->assertFileExists(storage_path('app/public/'.$credential->pdf_path));
+        $pngSize = getimagesize(storage_path('app/public/'.$credential->png_path));
+        $this->assertSame([850, 540], array_slice($pngSize, 0, 2));
         $this->get(route('credentials.pdf', $affiliate))->assertOk();
+        $this->get(route('credentials.preview', $affiliate))
+            ->assertOk()
+            ->assertSee('CREDENCIAL DE AFILIADO')
+            ->assertSee('AFILIADO ACTIVO')
+            ->assertSee('ESCANEA PARA VERIFICAR');
         $this->get(route('reports.pdf'))->assertOk();
 
         $lot = app(InvestmentService::class)->createLot($this->investor(), [

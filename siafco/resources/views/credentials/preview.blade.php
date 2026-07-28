@@ -1,13 +1,15 @@
 <x-layouts.app title="Credencial digital" :credential-assets="true">
     <div class="credential-wrapper">
-        @include('credenciales.card', [
-            'affiliate' => $affiliate,
-            'credential' => $credential,
-            'institution' => $institution,
-            'logoSrc' => $institution->logoUrl(),
-            'photoSrc' => $affiliate->photo_path ? Storage::url($affiliate->photo_path) : null,
-            'qrSrc' => Storage::url($credential->qr_path),
-        ])
+        <div class="credential-canvas" id="credential-canvas">
+            @include('credenciales.card', [
+                'affiliate' => $affiliate,
+                'credential' => $credential,
+                'institution' => $institution,
+                'logoSrc' => $institution->logoUrl(),
+                'photoSrc' => $affiliate->photo_path ? Storage::url($affiliate->photo_path) : null,
+                'qrSrc' => Storage::url($credential->qr_path),
+            ])
+        </div>
 
         <div class="credential-actions">
             @if(auth()->user()->role === 'afiliado')

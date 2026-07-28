@@ -1,80 +1,101 @@
 @php
+    use App\Support\AffiliationStatusPresenter;
+
     $logoSrc = $logoSrc ?? ($institution->logoUrl() ?: null);
     $photoSrc = $photoSrc ?? ($affiliate->photo_path ? Storage::url($affiliate->photo_path) : null);
     $qrSrc = $qrSrc ?? ($credential?->qr_path ? Storage::url($credential->qr_path) : null);
-    $institutionName = mb_strtoupper($institution->institution_name ?: 'COOPERATIVA TIERRA BENDITA R.L.');
-    $institutionLines = preg_split('/\s+(?=TIERRA\b)/', $institutionName, 2);
+    $institutionName = mb_strtoupper($institution->institution_name ?: 'COOPERATIVA TIERRA BENDITA');
     $affiliateName = mb_strtoupper($affiliate->full_name);
-    $nameLength = mb_strlen($affiliateName);
-    $nameClass = $nameLength > 34 ? 'affiliate-name-small' : ($nameLength > 24 ? 'affiliate-name-medium' : 'affiliate-name-normal');
+    $statusLabel = mb_strtoupper(AffiliationStatusPresenter::label($affiliate->status));
+    $statusTone = match (strtolower($affiliate->status)) {
+        'activo', 'active', 'confirmado', 'confirmed' => 'active',
+        'suspendido', 'suspended' => 'suspended',
+        default => 'pending',
+    };
 @endphp
 
 <div
     id="credential-card"
-    class="affiliate-card"
-    style="--navy: {{ $institution->primary_color ?: '#211d50' }}; --navy-dark: {{ $institution->primary_color ?: '#0c0d50' }}; --gold: {{ $institution->secondary_color ?: '#d49300' }};"
+    class="credential-card"
+    style="--credential-navy: {{ $institution->primary_color ?: '#0B1F3A' }}; --credential-gold: {{ $institution->secondary_color ?: '#D8A928' }};"
 >
-    <div class="top-navy-wave"></div>
-    <div class="top-gold-wave gold-wave-one"></div>
-    <div class="top-gold-wave gold-wave-two"></div>
+    <div class="credential-watermark" aria-hidden="true">SIAFCO</div>
 
-    <header class="affiliate-card-header">
-        <div class="affiliate-logo-box">
+    <header class="credential-header">
+        <div class="credential-logo">
             @if($logoSrc)
-                <img src="{{ $logoSrc }}" alt="Logo institucional" class="affiliate-logo">
+                <img src="{{ $logoSrc }}" alt="Logo institucional">
             @else
-                <div class="affiliate-logo-placeholder">SIAFCO</div>
+                <span>SIAFCO</span>
             @endif
         </div>
-
-        <div class="affiliate-institution">
-            <h1>
-                @foreach($institutionLines as $line)
-                    <span>{{ $line }}</span>
-                @endforeach
-            </h1>
+        <div class="credential-institution">
+            <h1>{{ $institutionName }}</h1>
+            <p>SISTEMA INTEGRAL DE AFILIACIÓN</p>
         </div>
     </header>
 
-    <div class="affiliate-card-content">
-        <section class="affiliate-data">
-            <div class="affiliate-title">CARNET DE AFILIADO</div>
+    <div class="credential-body">
+        <section class="credential-information">
+            <div class="credential-title">CREDENCIAL DE AFILIADO</div>
 
-            <div class="affiliate-fields">
-                <div class="affiliate-row">
-                    <span class="affiliate-label">NOMBRE</span>
-                    <span class="affiliate-colon">:</span>
-                    <span class="affiliate-value affiliate-name {{ $nameClass }}">{{ $affiliateName }}</span>
+            <div class="credential-fields">
+                <div class="credential-field credential-field-wide">
+                    <span>NOMBRE COMPLETO</span>
+                    <strong>{{ $affiliateName }}</strong>
                 </div>
-
-                <div class="affiliate-row">
-                    <span class="affiliate-label">ID</span>
-                    <span class="affiliate-colon">:</span>
-                    <span class="affiliate-value">{{ $affiliate->registration_number }}</span>
+                <div class="credential-field">
+                    <span>NÚMERO DE AFILIADO</span>
+                    <strong>{{ $affiliate->registration_number }}</strong>
                 </div>
-
-                <div class="affiliate-row">
-                    <span class="affiliate-label">C.I.</span>
-                    <span class="affiliate-colon">:</span>
-                    <span class="affiliate-value">{{ $affiliate->ci }}</span>
+                <div class="credential-field">
+                    <span>CÉDULA DE IDENTIDAD</span>
+                    <strong>{{ mb_strtoupper($affiliate->ci) }}</strong>
+                </div>
+                <div class="credential-field">
+                    <span>SECTOR</span>
+                    <strong>{{ mb_strtoupper($affiliate->sector?->name ?? 'NO REGISTRADO') }}</strong>
+                </div>
+                <div class="credential-field">
+                    <span>REGIONAL</span>
+                    <strong>{{ mb_strtoupper($affiliate->regional ?: 'NO REGISTRADO') }}</strong>
+                </div>
+                <div class="credential-field credential-field-wide">
+                    <span>INSTITUCIÓN</span>
+                    <strong>{{ mb_strtoupper($affiliate->institution ?: $institution->institution_name ?: 'NO REGISTRADO') }}</strong>
                 </div>
             </div>
 
-            <div class="affiliate-qr-box">
-                @if($qrSrc)
-                    <img src="{{ $qrSrc }}" alt="QR de verificacion publica">
-                @endif
+            <div class="credential-verification">
+                <div class="credential-qr">
+                    @if($qrSrc)
+                        <img src="{{ $qrSrc }}" alt="Código QR de verificación pública">
+                    @endif
+                </div>
+                <div>
+                    <p class="credential-qr-title">ESCANEA PARA VERIFICAR</p>
+                    <p class="credential-qr-text">Consulta la validez de esta credencial en línea.</p>
+                </div>
             </div>
         </section>
 
-        <aside class="affiliate-photo-box">
-            @if($photoSrc)
-                <img src="{{ $photoSrc }}" alt="Foto del afiliado" class="affiliate-photo">
-            @else
-                <div class="affiliate-photo-placeholder">SIN FOTO</div>
-            @endif
+        <aside class="credential-photo-column">
+            <div class="credential-photo-frame">
+                @if($photoSrc)
+                    <img src="{{ $photoSrc }}" alt="Fotografía del afiliado" class="credential-photo">
+                @else
+                    <div class="credential-photo-placeholder">SIN FOTO</div>
+                @endif
+            </div>
+            <div class="credential-status credential-status-{{ $statusTone }}">
+                <span aria-hidden="true">✓</span>
+                {{ $statusLabel }}
+            </div>
         </aside>
     </div>
 
-    <div class="affiliate-bottom-bar"></div>
+    <footer class="credential-footer">
+        <span>Válida mientras la afiliación permanezca activa.</span>
+        <span>siafco.viankagold.com</span>
+    </footer>
 </div>
