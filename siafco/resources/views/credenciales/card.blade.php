@@ -5,6 +5,12 @@
     $photoSrc = $photoSrc ?? ($affiliate->photo_path ? Storage::url($affiliate->photo_path) : null);
     $qrSrc = $qrSrc ?? ($credential?->qr_path ? Storage::url($credential->qr_path) : null);
     $mode = $mode ?? 'web';
+    $hasDistinctRegistration = filled($credentialData['registration_number'] ?? null)
+        && $credentialData['registration_number'] !== $credentialData['affiliate_number'];
+    $sectorLength = mb_strlen($credentialData['sector']);
+    $sectorTextClass = $sectorLength > 65
+        ? 'credential-text--very-long'
+        : ($sectorLength > 35 ? 'credential-text--long' : 'credential-text--normal');
     $institutionName = mb_strtoupper($institution->institution_name ?: 'COOPERATIVA TIERRA BENDITA');
     $statusTone = match (strtolower($affiliate->status)) {
         'activo', 'active', 'confirmado', 'confirmed' => 'active',
@@ -15,7 +21,7 @@
 
 <div
     id="credential-card"
-    class="credential-card credential-card--{{ $mode }}"
+    class="credential-card credential-card--{{ $mode }} {{ $hasDistinctRegistration ? 'credential-card--has-registration' : '' }}"
     style="--credential-navy: {{ $institution->primary_color ?: '#0B1F3A' }}; --credential-gold: {{ $institution->secondary_color ?: '#D8A928' }};"
 >
     <div class="credential-security-border" aria-hidden="true">
@@ -56,43 +62,40 @@
 
             <div class="credential-data-grid">
                 <div class="credential-primary-data">
-                    <div class="credential-field credential-field-name">
+                    <div class="credential-field credential-field-name credential-field--name">
                         <span>NOMBRE COMPLETO</span>
                         <strong>{{ $credentialData['full_name'] }}</strong>
                     </div>
-                    <div class="credential-field credential-field-level-two">
+                    <div class="credential-field credential-field-level-two credential-field--affiliate-number">
                         <span>NÚMERO DE AFILIADO</span>
                         <strong>{{ $credentialData['affiliate_number'] }}</strong>
                     </div>
-                    @if(
-                        filled($credentialData['registration_number'] ?? null) &&
-                        $credentialData['registration_number'] !== $credentialData['affiliate_number']
-                    )
-                        <div class="credential-field">
+                    @if($hasDistinctRegistration)
+                        <div class="credential-field credential-field--registration-number">
                             <span>NÚMERO DE REGISTRO</span>
                             <strong>{{ $credentialData['registration_number'] }}</strong>
                         </div>
                     @endif
-                    <div class="credential-field credential-field-level-two">
+                    <div class="credential-field credential-field-level-two credential-field--sector">
                         <span>SECTOR</span>
-                        <strong>{{ $credentialData['sector'] }}</strong>
+                        <strong class="{{ $sectorTextClass }}">{{ $credentialData['sector'] }}</strong>
                     </div>
-                    <div class="credential-field">
+                    <div class="credential-field credential-field--institution">
                         <span>INSTITUCIÓN</span>
                         <strong>{{ $credentialData['institution'] }}</strong>
                     </div>
                 </div>
 
                 <div class="credential-secondary-data">
-                    <div class="credential-field credential-field-level-two">
+                    <div class="credential-field credential-field-level-two credential-field--identity">
                         <span>CÉDULA DE IDENTIDAD</span>
                         <strong>{{ $credentialData['identity_document'] }}</strong>
                     </div>
-                    <div class="credential-field">
+                    <div class="credential-field credential-field--regional">
                         <span>REGIONAL</span>
                         <strong>{{ $credentialData['regional'] }}</strong>
                     </div>
-                    <div class="credential-field credential-field-meta credential-field-date">
+                    <div class="credential-field credential-field-meta credential-field-date credential-field--issued-at">
                         <span>FECHA DE EMISIÓN</span>
                         <strong>{{ $credentialData['issued_at'] }}</strong>
                     </div>

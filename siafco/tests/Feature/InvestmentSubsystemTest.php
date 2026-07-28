@@ -183,7 +183,12 @@ class InvestmentSubsystemTest extends TestCase
             'siafco.institutional_website' => 'www.cooperativatierrabendita.com',
         ]);
 
-        $sector = Sector::create(['name' => 'Rural', 'code' => 'MAG-RUR', 'current_sequence' => 1, 'is_active' => true]);
+        $sector = Sector::create([
+            'name' => 'Confederación Nacional de Maestros de Educación Rural de Bolivia',
+            'code' => 'MAG-RUR',
+            'current_sequence' => 4,
+            'is_active' => true,
+        ]);
         $plan = AffiliationPlan::create(['name' => 'Inicial', 'affiliation_fee' => 100, 'credential_fee' => 30, 'is_active' => true]);
         Storage::disk('public')->put(
             'institutional/test-logo.png',
@@ -199,7 +204,7 @@ class InvestmentSubsystemTest extends TestCase
         InstitutionalSetting::clearCurrentCache();
 
         $affiliateUser = User::create([
-            'name' => 'Afiliado Activo',
+            'name' => 'Claudia Marisela Pacheco Toro',
             'email' => 'activo@test.local',
             'role' => 'afiliado',
             'password' => Hash::make('secret'),
@@ -209,10 +214,10 @@ class InvestmentSubsystemTest extends TestCase
             'user_id' => $affiliateUser->id,
             'sector_id' => $sector->id,
             'affiliation_plan_id' => $plan->id,
-            'full_name' => 'Afiliado Activo',
+            'full_name' => 'Claudia Marisela Pacheco Toro',
             'ci' => '990011',
             'email' => 'activo@test.local',
-            'registration_number' => 'MAG-RUR-000001',
+            'registration_number' => 'MAG-RUR-000004',
             'status' => 'activo',
             'verification_token' => 'test-token-credential',
         ]);
@@ -223,7 +228,7 @@ class InvestmentSubsystemTest extends TestCase
             ->once()
             ->with(
                 route('verify.show', 'test-token-credential'),
-                'credentials/qr/MAG-RUR-000001.png',
+                'credentials/qr/MAG-RUR-000004.png',
                 360,
                 [0, 0, 0]
             )
@@ -257,6 +262,7 @@ class InvestmentSubsystemTest extends TestCase
         )))->render();
         $this->assertStringContainsString('<meta charset="UTF-8">', $exportHtml);
         $this->assertStringContainsString('credential-card--image', $exportHtml);
+        $this->assertMatchesRegularExpression('/credential-text--(?:long|very-long)/', $exportHtml);
         $this->assertStringContainsString('AFILIACIÓN', $exportHtml);
         $this->assertStringContainsString('CÉDULA', $exportHtml);
         $this->assertStringContainsString('NÚMERO', $exportHtml);
@@ -267,11 +273,11 @@ class InvestmentSubsystemTest extends TestCase
         $this->get(route('credentials.preview', $affiliate))
             ->assertOk()
             ->assertSee('CREDENCIAL DE AFILIADO')
-            ->assertSee('AFILIADO ACTIVO')
+            ->assertSee('CLAUDIA MARISELA PACHECO TORO')
             ->assertSee('ESCANEA PARA VERIFICAR')
             ->assertSee('FECHA DE EMISIÓN')
             ->assertDontSee('NÚMERO DE REGISTRO')
-            ->assertSee('MAG-RUR-000001')
+            ->assertSee('MAG-RUR-000004')
             ->assertSee($issuedAt)
             ->assertSee('2026.1-test')
             ->assertSee('www.cooperativatierrabendita.com')

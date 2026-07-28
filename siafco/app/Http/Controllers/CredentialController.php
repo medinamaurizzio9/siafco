@@ -90,23 +90,19 @@ class CredentialController extends Controller
 
     public function print(
         Affiliate $affiliate,
-        CredentialService $credentialService,
-        CredentialExportCapabilities $exportCapabilities
+        CredentialService $credentialService
     )
     {
         Gate::authorize('printCredential', $affiliate);
         $credential = $credentialService->generate($affiliate);
         $credentialData = $credentialService->presentationData($affiliate, $credential);
         $institution = InstitutionalSetting::current();
-        $printMode = true;
 
-        return view('credentials.preview', compact(
+        return view('credentials.print', compact(
             'affiliate',
             'credential',
             'credentialData',
-            'institution',
-            'printMode',
-            'exportCapabilities'
+            'institution'
         ));
     }
 

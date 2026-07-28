@@ -61,7 +61,20 @@ class CredentialAuthorizationTest extends TestCase
                 ->assertDownload('credencial-REG-000003.pdf');
             $this->actingAs($user)->get(route('credentials.png', $affiliate))
                 ->assertDownload('credencial-REG-000003.png');
-            $this->actingAs($user)->get(route('credentials.print', $affiliate))->assertOk();
+            $printResponse = $this->actingAs($user)->get(route('credentials.print', $affiliate));
+            $printResponse->assertOk();
+            if ($role === 'administrador') {
+                $printResponse
+                    ->assertSee('@page {', false)
+                    ->assertSee('size: 85.6mm 53.98mm', false)
+                    ->assertSee('credential-print-page', false)
+                    ->assertSee('credential-card--print', false)
+                    ->assertSee('document.fonts?.ready', false)
+                    ->assertDontSee('data-sidebar-shell', false)
+                    ->assertDontSee('min-height: 100vh', false)
+                    ->assertDontSee('transform: scale(', false)
+                    ->assertDontSee('class="credential-actions"', false);
+            }
         }
     }
 
