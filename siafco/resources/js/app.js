@@ -25,6 +25,60 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    const appearanceEditor = document.querySelector('[data-login-appearance-editor]');
+    if (appearanceEditor) {
+        const preview = document.querySelector('[data-login-preview]');
+        const previewLogo = document.querySelector('[data-login-preview-logo]');
+        const previewFallback = document.querySelector('[data-login-preview-logo-fallback]');
+
+        appearanceEditor.querySelectorAll('[data-login-image-input]').forEach((input) => {
+            input.addEventListener('change', () => {
+                const file = input.files?.[0];
+                if (!file) return;
+
+                const url = URL.createObjectURL(file);
+                const target = input.dataset.loginImageInput;
+                appearanceEditor.querySelector(`[data-login-remove-input="${target}"]`).value = '0';
+
+                if (target === 'background') {
+                    preview.style.backgroundImage = `url("${url}")`;
+                } else if (previewLogo) {
+                    previewLogo.src = url;
+                    previewLogo.classList.remove('hidden');
+                    previewFallback?.classList.add('hidden');
+                }
+            });
+        });
+
+        appearanceEditor.querySelectorAll('[data-login-remove]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const target = button.dataset.loginRemove;
+                appearanceEditor.querySelector(`[data-login-remove-input="${target}"]`).value = '1';
+                const input = appearanceEditor.querySelector(`[data-login-image-input="${target}"]`);
+                input.value = '';
+
+                if (target === 'background') {
+                    preview.style.backgroundImage = 'none';
+                } else {
+                    previewLogo?.classList.add('hidden');
+                    previewFallback?.classList.remove('hidden');
+                }
+            });
+        });
+
+        appearanceEditor.querySelectorAll('[data-login-copy]').forEach((input) => {
+            input.addEventListener('input', () => {
+                document.querySelector(`[data-login-preview-${input.dataset.loginCopy}]`).textContent = input.value;
+            });
+        });
+
+        const opacityInput = appearanceEditor.querySelector('[data-login-opacity]');
+        opacityInput?.addEventListener('input', () => {
+            document.querySelector('[data-login-opacity-output]').textContent = `${opacityInput.value}%`;
+            document.querySelector('[data-login-preview-overlay]').style.opacity = String(Number(opacityInput.value) / 100);
+        });
+    }
+
     const sidebar = document.querySelector('[data-sidebar]');
     const backdrop = document.querySelector('[data-sidebar-backdrop]');
     const accordion = document.querySelector('[data-sidebar-accordion]');

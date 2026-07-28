@@ -23,7 +23,18 @@ class InstitutionalSetting extends Model
         'payment_holder',
         'payment_account',
         'payment_instructions',
+        'login_background_path',
+        'login_logo_path',
+        'login_title',
+        'login_institution_name',
+        'login_affiliate_message',
+        'login_overlay_opacity',
     ];
+
+    protected function casts(): array
+    {
+        return ['login_overlay_opacity' => 'integer'];
+    }
 
     public static function current(): self
     {
@@ -83,5 +94,35 @@ class InstitutionalSetting extends Model
     public function paymentQrAbsolutePath(): string
     {
         return storage_path('app/public/'.$this->paymentQrPath());
+    }
+
+    public function loginBackgroundUrl(): string
+    {
+        if ($this->login_background_path && Storage::disk('public')->exists($this->login_background_path)) {
+            return Storage::url($this->login_background_path);
+        }
+
+        return asset('images/login/default-login-background.webp');
+    }
+
+    public function loginLogoUrl(): ?string
+    {
+        $path = $this->login_logo_path ?: $this->logo_path;
+
+        return $path && Storage::disk('public')->exists($path) ? Storage::url($path) : null;
+    }
+
+    public function loginAppearance(): array
+    {
+        $defaultMessage = 'Bienvenido a nuestra plataforma institucional. Ingresa para consultar tu afiliación, descargar tu credencial y acceder a los servicios y beneficios disponibles para nuestros afiliados.';
+
+        return [
+            'background_url' => $this->loginBackgroundUrl(),
+            'logo_url' => $this->loginLogoUrl(),
+            'title' => $this->login_title ?: 'SISTEMA DE AFILIACIÓN',
+            'institution_name' => $this->login_institution_name ?: 'COOPERATIVA TIERRA BENDITA',
+            'affiliate_message' => $this->login_affiliate_message ?: $defaultMessage,
+            'overlay_opacity' => min(0.9, max(0.2, ((int) ($this->login_overlay_opacity ?: 65)) / 100)),
+        ];
     }
 }
