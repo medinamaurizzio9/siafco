@@ -30,7 +30,7 @@
                 request()->routeIs('credits.*') => 'credits',
                 request()->routeIs('administration.*') => 'administration',
                 request()->routeIs('institutional-settings.*', 'settings.*') => 'general-settings',
-                request()->routeIs('affiliate.*', 'investments.panel', 'profile.*') => 'personal',
+                request()->routeIs('affiliate.*', 'investments.panel') => 'personal',
                 default => 'home',
             };
 
@@ -174,7 +174,9 @@
                         <span>Panel personal</span><span class="nav-chevron">⌄</span>
                     </button>
                     <div class="nav-module-panel {{ $openModule === 'personal' ? '' : 'hidden' }}">
-                        {!! $soon('profile.show', 'Mi perfil') !!}
+                        @if($user->hasRole('afiliado'))
+                            {!! $navLink('affiliate.profile.show', 'Mi perfil', [], ['affiliate.profile.*']) !!}
+                        @endif
                         @if($user->hasRole('afiliado'))
                             {!! $navLink('affiliate.panel', 'Panel del afiliado', [], ['affiliate.panel', 'affiliate.credential.*']) !!}
                         @endif

@@ -3,6 +3,7 @@
 use App\Http\Controllers\AffiliateController;
 use App\Http\Controllers\AffiliateBenefitController;
 use App\Http\Controllers\AffiliatePanelController;
+use App\Http\Controllers\AffiliateProfileController;
 use App\Http\Controllers\AffiliationPlanController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CredentialController;
@@ -50,7 +51,12 @@ Route::middleware('throttle:30,1')->prefix('afiliacion')->name('public-affiliati
 
 Route::middleware(['auth', 'affiliate.active-access'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-    Route::get('/mi-perfil', PlaceholderController::class)->defaults('title', 'Mi perfil')->defaults('message', 'Edicion de perfil personal preparada para una fase posterior.')->name('profile.show');
+    Route::middleware('role:afiliado')->group(function () {
+        Route::get('/mi-perfil', [AffiliateProfileController::class, 'show'])->name('affiliate.profile.show');
+        Route::patch('/mi-perfil', [AffiliateProfileController::class, 'update'])->name('affiliate.profile.update');
+        Route::get('/mi-perfil/pagos/{payment}/comprobante', [AffiliateProfileController::class, 'showPaymentReceipt'])
+            ->name('affiliate.profile.payments.receipt');
+    });
 
     Route::get('/panel-afiliado', [AffiliatePanelController::class, 'index'])
         ->middleware('role:afiliado')
