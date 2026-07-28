@@ -16,7 +16,7 @@
         @php
             $user = auth()->user();
             $canManageAffiliation = $user->hasRole(['administrador', 'administrador_sector', 'secretaria']);
-            $canViewAffiliation = $user->hasRole(['administrador', 'administrador_sector', 'secretaria', 'cajero', 'consulta']);
+            $canViewAffiliation = $user->hasRole(['administrador', 'superadministrador', 'administrador_sector', 'secretaria', 'cajero', 'consulta']);
             $canManageInvestments = $user->hasRole(['administrador', 'caja', 'cajero', 'contabilidad']);
             $canViewCredits = $user->hasRole(['administrador', 'administrador_sector', 'secretaria', 'cajero', 'caja', 'contabilidad', 'consulta']);
             $canAdmin = $user->hasRole('administrador');

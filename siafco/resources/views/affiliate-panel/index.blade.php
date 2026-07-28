@@ -56,7 +56,8 @@
                     <h3 class="font-black text-[#0b1f3a]">Credencial digital</h3>
                     @if($affiliate->credential)
                         <img class="mt-4 w-full rounded border shadow-sm" src="{{ Storage::url($affiliate->credential->png_path) }}" alt="Credencial digital">
-                        <div class="mt-4 grid gap-2"><a class="btn-primary" href="{{ route('affiliate.credential.pdf') }}">Descargar PDF</a><a class="btn-secondary" href="{{ route('affiliate.credential.png') }}">Descargar PNG</a><a class="btn-secondary" href="{{ route('affiliate.credential.preview') }}">Ver e imprimir</a></div>
+                        <a class="btn-primary mt-4 w-full" href="{{ route('affiliate.credential.preview') }}">VER MI CREDENCIAL</a>
+                        <p class="mt-3 text-sm text-slate-600">Esta es tu credencial digital vigente. Para solicitar una copia descargable o una impresión oficial, comunícate con la Cooperativa Tierra Bendita.</p>
                     @else
                         <p class="mt-3 text-sm text-slate-600">La credencial se está preparando.</p>
                     @endif

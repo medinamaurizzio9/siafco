@@ -4,6 +4,7 @@
     $logoSrc = $logoSrc ?? ($institution->logoUrl() ?: null);
     $photoSrc = $photoSrc ?? ($affiliate->photo_path ? Storage::url($affiliate->photo_path) : null);
     $qrSrc = $qrSrc ?? ($credential?->qr_path ? Storage::url($credential->qr_path) : null);
+    $mode = $mode ?? 'web';
     $institutionName = mb_strtoupper($institution->institution_name ?: 'COOPERATIVA TIERRA BENDITA');
     $statusTone = match (strtolower($affiliate->status)) {
         'activo', 'active', 'confirmado', 'confirmed' => 'active',
@@ -14,7 +15,7 @@
 
 <div
     id="credential-card"
-    class="credential-card"
+    class="credential-card credential-card--{{ $mode }}"
     style="--credential-navy: {{ $institution->primary_color ?: '#0B1F3A' }}; --credential-gold: {{ $institution->secondary_color ?: '#D8A928' }};"
 >
     <div class="credential-security-border" aria-hidden="true">

@@ -189,7 +189,7 @@ class PublicAffiliationTest extends TestCase
         $this->get(route('investments.panel'))->assertRedirect(route('affiliate.panel'));
     }
 
-    public function test_active_user_sees_full_panel_and_can_download_existing_credential(): void
+    public function test_active_user_sees_full_panel_but_cannot_download_existing_credential(): void
     {
         Storage::fake('public');
         [$sector, $plan] = $this->catalog();
@@ -210,9 +210,15 @@ class PublicAffiliationTest extends TestCase
         AffiliateBenefit::create(['title' => 'SOPORTE', 'icon' => 'support', 'active' => true, 'visible_when_pending' => true, 'order' => 1]);
 
         $this->actingAs($user)->get(route('affiliate.panel'))->assertOk()
-            ->assertSee('Descargar PDF')->assertSee('Mis servicios y beneficios')
+            ->assertSee('VER MI CREDENCIAL')->assertDontSee('Descargar PDF')
+            ->assertDontSee('Descargar PNG')->assertDontSee('Ver e imprimir')
+            ->assertSee('Mis servicios y beneficios')
             ->assertDontSee('Bloqueado');
-        $this->actingAs($user)->get(route('affiliate.credential.pdf'))->assertDownload('credencial-SAL-000001.pdf');
+        $this->actingAs($user)->get(route('affiliate.credential.preview'))->assertOk()
+            ->assertSee('MI CREDENCIAL')->assertDontSee('Descargar PDF')
+            ->assertDontSee('Descargar PNG')->assertDontSee('Imprimir credencial');
+        $this->actingAs($user)->get(route('affiliate.credential.pdf'))->assertForbidden();
+        $this->actingAs($user)->get(route('affiliate.credential.png'))->assertForbidden();
     }
 
     public function test_administrative_public_requests_show_translated_statuses(): void

@@ -1,0 +1,1 @@
+document.addEventListener("DOMContentLoaded",()=>{const n=document.getElementById("credential-card"),e=document.getElementById("credential-canvas"),t=()=>{!n||!e||n.style.setProperty("--credential-scale",String(e.clientWidth/850))};t(),e&&"ResizeObserver"in window?new ResizeObserver(t).observe(e):window.addEventListener("resize",t)});

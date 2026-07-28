@@ -11,7 +11,9 @@ use App\Models\User;
 use App\Services\AuditService;
 use App\Support\TextNormalizer;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -138,6 +140,41 @@ class AffiliateController extends Controller
         AuditService::record('afiliado.actualizado', $affiliate);
 
         return redirect()->route('affiliates.show', $affiliate)->with('status', 'Afiliado actualizado.');
+    }
+
+    public function destroy(Request $request, Affiliate $affiliate): RedirectResponse
+    {
+        Gate::authorize('delete', $affiliate);
+
+        $data = $request->validate([
+            'confirmation' => ['required', 'in:ELIMINAR'],
+            'deletion_reason' => ['required', 'string', 'min:5', 'max:500'],
+        ], [
+            'confirmation.in' => 'Escriba ELIMINAR exactamente para confirmar.',
+            'deletion_reason.required' => 'Debe indicar el motivo de eliminación.',
+        ]);
+
+        DB::transaction(function () use ($affiliate, $data) {
+            $affiliate->loadMissing('user');
+            $user = $affiliate->user;
+
+            $affiliate->delete();
+            $user?->delete();
+
+            AuditService::record('afiliado.eliminado', $affiliate, [
+                'affiliate_id' => $affiliate->id,
+                'full_name' => $affiliate->full_name,
+                'affiliate_number' => $affiliate->registration_number,
+                'registration_number' => $affiliate->registration_number,
+                'ci' => $affiliate->ci,
+                'reason' => $data['deletion_reason'],
+                'linked_user_id' => $user?->id,
+            ]);
+        });
+
+        return redirect()
+            ->route('affiliates.index')
+            ->with('status', 'El afiliado fue eliminado correctamente.');
     }
 
     private function validated(Request $request, ?Affiliate $affiliate = null): array

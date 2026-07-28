@@ -8,6 +8,7 @@ use App\Models\InstitutionalSetting;
 use App\Support\AffiliationStatusPresenter;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\Process\Process;
 
 class CredentialService
 {
@@ -41,7 +42,13 @@ class CredentialService
         $this->generatePng($affiliate, $institution, $credentialData, storage_path('app/public/'.$qrPath), $pngPath);
         $pdf = Pdf::loadView('credentials.pdf', [
             'cardImageDataUri' => $this->dataUri(storage_path('app/public/'.$pngPath)),
-        ])->setPaper([0, 0, 242.65, 153.01]);
+        ], [], 'UTF-8')
+            ->setPaper([0, 0, 242.65, 153.01])
+            ->addInfo([
+                'Title' => 'Credencial oficial de afiliado',
+                'Subject' => 'AFILIACIÓN · CÉDULA · NÚMERO · INSTITUCIÓN · VERSIÓN · EDUCACIÓN',
+                'Author' => 'Cooperativa Tierra Bendita - SIAFCO',
+            ]);
 
         Storage::disk('public')->put($pdfPath, $pdf->output());
 
@@ -77,6 +84,17 @@ class CredentialService
         ];
     }
 
+    public function exportImageSources(Affiliate $affiliate, InstitutionalSetting $institution, string $qrAbsolutePath): array
+    {
+        return [
+            'logoSrc' => $this->dataUri($institution->logoAbsolutePath()),
+            'photoSrc' => $this->dataUri(
+                $affiliate->photo_path ? storage_path('app/public/'.$affiliate->photo_path) : ''
+            ),
+            'qrSrc' => $this->dataUri($qrAbsolutePath),
+        ];
+    }
+
     private function shouldRegenerate(DigitalCredential $credential, Affiliate $affiliate, InstitutionalSetting $institution): bool
     {
         if (! $credential->pdf_path || ! $credential->png_path || ! $credential->qr_path) {
@@ -101,6 +119,123 @@ class CredentialService
     }
 
     private function generatePng(Affiliate $affiliate, InstitutionalSetting $institution, array $credentialData, string $qrAbsolutePath, string $pngPath): void
+    {
+        if ($this->generatePngWithBrowser($affiliate, $institution, $credentialData, $qrAbsolutePath, $pngPath)) {
+            return;
+        }
+
+        $this->generatePngFallback($affiliate, $institution, $credentialData, $qrAbsolutePath, $pngPath);
+    }
+
+    private function generatePngWithBrowser(Affiliate $affiliate, InstitutionalSetting $institution, array $credentialData, string $qrAbsolutePath, string $pngPath): bool
+    {
+        $browser = $this->browserBinary();
+        if (! $browser) {
+            return false;
+        }
+
+        $temporaryDirectory = storage_path('framework/cache/credential-export-'.bin2hex(random_bytes(6)));
+        if (! mkdir($temporaryDirectory, 0775, true) && ! is_dir($temporaryDirectory)) {
+            return false;
+        }
+
+        $htmlPath = $temporaryDirectory.DIRECTORY_SEPARATOR.'credential.html';
+        $imagePath = $temporaryDirectory.DIRECTORY_SEPARATOR.'credential.png';
+        $html = view('credentials.export', array_merge([
+            'affiliate' => $affiliate,
+            'credentialData' => $credentialData,
+            'institution' => $institution,
+        ], $this->exportImageSources($affiliate, $institution, $qrAbsolutePath)))->render();
+
+        file_put_contents($htmlPath, $html);
+
+        $process = new Process([
+            $browser,
+            '--headless=new',
+            '--disable-gpu',
+            '--disable-breakpad',
+            '--disable-crash-reporter',
+            '--disable-extensions',
+            '--disable-background-networking',
+            '--hide-scrollbars',
+            '--no-sandbox',
+            '--no-first-run',
+            '--no-default-browser-check',
+            '--allow-file-access-from-files',
+            '--force-device-scale-factor=1',
+            '--window-size=850,540',
+            '--user-data-dir='.$temporaryDirectory.DIRECTORY_SEPARATOR.'profile',
+            '--screenshot='.$imagePath,
+            'file:///'.str_replace('\\', '/', $htmlPath),
+        ]);
+        $process->setTimeout(15);
+
+        try {
+            try {
+                $process->run();
+            } catch (\Throwable) {
+                $process->stop(0);
+            }
+
+            $dimensions = is_file($imagePath) ? getimagesize($imagePath) : false;
+            if (! $dimensions || [$dimensions[0], $dimensions[1]] !== [850, 540]) {
+                return false;
+            }
+
+            Storage::disk('public')->put($pngPath, file_get_contents($imagePath));
+
+            return true;
+        } finally {
+            $this->removeDirectory($temporaryDirectory);
+        }
+    }
+
+    private function browserBinary(): ?string
+    {
+        $configured = config('siafco.credential_browser_path');
+        $candidates = array_filter([
+            $configured,
+            'C:\Program Files\Google\Chrome\Application\chrome.exe',
+            'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
+            '/usr/bin/google-chrome',
+            '/usr/bin/chromium',
+            '/usr/bin/chromium-browser',
+        ]);
+
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private function removeDirectory(string $directory): void
+    {
+        if (! is_dir($directory)) {
+            return;
+        }
+
+        for ($attempt = 0; $attempt < 5 && is_dir($directory); $attempt++) {
+            if ($attempt > 0) {
+                usleep(100000);
+            }
+
+            $items = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($directory, \FilesystemIterator::SKIP_DOTS),
+                \RecursiveIteratorIterator::CHILD_FIRST
+            );
+
+            foreach ($items as $item) {
+                $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
+            }
+
+            @rmdir($directory);
+        }
+    }
+
+    private function generatePngFallback(Affiliate $affiliate, InstitutionalSetting $institution, array $credentialData, string $qrAbsolutePath, string $pngPath): void
     {
         $width = 850;
         $height = 540;
@@ -156,7 +291,6 @@ class CredentialService
         $this->labelBlock($image, 'CÉDULA DE IDENTIDAD', $credentialData['identity_document'], 375, 153, 225, 12, 1, $muted, $navy, $fontBold);
         $this->labelBlock($image, 'REGIONAL', $credentialData['regional'], 375, 207, 225, 12, 1, $muted, $navy, $fontBold);
         $this->labelBlock($image, 'FECHA DE EMISIÓN', $credentialData['issued_at'], 375, 261, 225, 12, 1, $muted, $navy, $fontBold);
-        $this->labelBlock($image, 'VERSIÓN', $credentialData['version'], 375, 315, 225, 12, 1, $muted, $navy, $fontBold);
 
         imagefilledrectangle($image, 24, 348, 178, 502, $white);
         imagerectangle($image, 24, 348, 178, 502, $soft);
@@ -200,7 +334,8 @@ class CredentialService
         );
 
         imagefilledrectangle($image, 0, 506, $width, $height, $navy);
-        $this->text($image, 'Válida mientras la afiliación permanezca activa.', 24, 528, 8, $white, $font);
+        $this->text($image, 'Versión: '.$credentialData['version'], 24, 528, 8, $white, $font);
+        $this->text($image, 'Válida mientras la afiliación permanezca activa.', 260, 528, 8, $white, $font);
         $this->textFit($image, $credentialData['institutional_website'], 650, 528, 176, 8, $white, $font, 7);
 
         Storage::disk('public')->makeDirectory(dirname($pngPath));

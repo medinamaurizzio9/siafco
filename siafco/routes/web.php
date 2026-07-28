@@ -65,12 +65,15 @@ Route::middleware(['auth', 'affiliate.active-access'])->group(function () {
     Route::get('/credenciales', PlaceholderController::class)->defaults('title', 'Credenciales')->defaults('message', 'Las credenciales se generan desde la ficha de cada afiliado activo.')->middleware('role:administrador,administrador_sector,secretaria')->name('credentials.index');
     Route::get('/credenciales/{affiliate}', [CredentialController::class, 'preview'])->name('credenciales.show');
     Route::get('/credenciales/{affiliate}/pdf', [CredentialController::class, 'adminPdf'])->name('credenciales.pdf');
+    Route::delete('/afiliados/{affiliate}', [AffiliateController::class, 'destroy'])
+        ->middleware('role:administrador,superadministrador')
+        ->name('affiliates.destroy');
 
     Route::post('/pagos/{payment}/comprobante', [PaymentController::class, 'updateProof'])
         ->middleware('role:afiliado,secretaria,administrador,administrador_sector,cajero')
         ->name('payments.proof');
 
-    Route::middleware('role:administrador,administrador_sector,secretaria,cajero,consulta')->group(function () {
+    Route::middleware('role:administrador,superadministrador,administrador_sector,secretaria,cajero,consulta')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
         Route::get('/afiliados', [AffiliateController::class, 'index'])->name('affiliates.index');
         Route::get('/afiliados/{affiliate}', [AffiliateController::class, 'show'])->name('affiliates.show');
@@ -102,12 +105,13 @@ Route::middleware(['auth', 'affiliate.active-access'])->group(function () {
         Route::post('/qr-institucional', [InstitutionalQrController::class, 'update'])->name('institutional-qr.update');
     });
 
-    Route::middleware('role:administrador,secretaria')->group(function () {
+    Route::middleware('role:administrador,superadministrador,secretaria')->group(function () {
         Route::get('/admin/configuracion-institucional', [InstitutionalSettingController::class, 'edit'])->name('institutional-settings.edit');
         Route::put('/admin/configuracion-institucional', [InstitutionalSettingController::class, 'update'])->name('institutional-settings.update');
         Route::get('/admin/credenciales/{affiliate}/preview', [CredentialController::class, 'preview'])->name('credentials.preview');
         Route::get('/admin/credenciales/{affiliate}/pdf', [CredentialController::class, 'adminPdf'])->name('credentials.pdf');
         Route::get('/admin/credenciales/{affiliate}/png', [CredentialController::class, 'adminPng'])->name('credentials.png');
+        Route::get('/admin/credenciales/{affiliate}/imprimir', [CredentialController::class, 'print'])->name('credentials.print');
     });
 
     Route::middleware('role:administrador,cajero')->group(function () {

@@ -237,6 +237,30 @@ class InvestmentSubsystemTest extends TestCase
         $this->assertFileExists(storage_path('app/public/'.$credential->pdf_path));
         $pngSize = getimagesize(storage_path('app/public/'.$credential->png_path));
         $this->assertSame([850, 540], array_slice($pngSize, 0, 2));
+        $pdfContents = file_get_contents(storage_path('app/public/'.$credential->pdf_path));
+        $this->assertMatchesRegularExpression('/\/Count\s+1\b/', $pdfContents);
+        $this->assertMatchesRegularExpression('/\/MediaBox\s+\[0\.000 0\.000 242\.646 153\.014\]/', $pdfContents);
+
+        $credentialService = app(CredentialService::class);
+        $credentialData = $credentialService->presentationData($affiliate, $credential);
+        $institution = InstitutionalSetting::current();
+        $exportHtml = view('credentials.export', array_merge([
+            'affiliate' => $affiliate,
+            'credentialData' => $credentialData,
+            'institution' => $institution,
+        ], $credentialService->exportImageSources(
+            $affiliate,
+            $institution,
+            storage_path('app/public/'.$credential->qr_path)
+        )))->render();
+        $this->assertStringContainsString('<meta charset="UTF-8">', $exportHtml);
+        $this->assertStringContainsString('credential-card--image', $exportHtml);
+        $this->assertStringContainsString('AFILIACIÓN', $exportHtml);
+        $this->assertStringContainsString('CÉDULA', $exportHtml);
+        $this->assertStringContainsString('NÚMERO', $exportHtml);
+        $this->assertStringContainsString('INSTITUCIÓN', $exportHtml);
+        $this->assertStringContainsString('Versión:', $exportHtml);
+        $this->assertStringNotContainsString('AFILIACIÃ', $exportHtml);
         $this->get(route('credentials.pdf', $affiliate))->assertOk();
         $this->get(route('credentials.preview', $affiliate))
             ->assertOk()
