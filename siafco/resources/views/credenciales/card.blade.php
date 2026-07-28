@@ -5,8 +5,6 @@
     $photoSrc = $photoSrc ?? ($affiliate->photo_path ? Storage::url($affiliate->photo_path) : null);
     $qrSrc = $qrSrc ?? ($credential?->qr_path ? Storage::url($credential->qr_path) : null);
     $institutionName = mb_strtoupper($institution->institution_name ?: 'COOPERATIVA TIERRA BENDITA');
-    $affiliateName = mb_strtoupper($affiliate->full_name);
-    $statusLabel = mb_strtoupper(AffiliationStatusPresenter::label($affiliate->status));
     $statusTone = match (strtolower($affiliate->status)) {
         'activo', 'active', 'confirmado', 'confirmed' => 'active',
         'suspendido', 'suspended' => 'suspended',
@@ -19,7 +17,19 @@
     class="credential-card"
     style="--credential-navy: {{ $institution->primary_color ?: '#0B1F3A' }}; --credential-gold: {{ $institution->secondary_color ?: '#D8A928' }};"
 >
-    <div class="credential-watermark" aria-hidden="true">SIAFCO</div>
+    <div class="credential-security-border" aria-hidden="true">
+        COOPERATIVA TIERRA BENDITA • SIAFCO • CREDENCIAL OFICIAL • COOPERATIVA TIERRA BENDITA • SIAFCO • CREDENCIAL OFICIAL
+    </div>
+    <span class="credential-corner credential-corner-top-left" aria-hidden="true"></span>
+    <span class="credential-corner credential-corner-top-right" aria-hidden="true"></span>
+    <span class="credential-corner credential-corner-bottom-left" aria-hidden="true"></span>
+    <span class="credential-corner credential-corner-bottom-right" aria-hidden="true"></span>
+
+    @if($logoSrc)
+        <div class="credential-watermark" aria-hidden="true">
+            <img src="{{ $logoSrc }}" alt="">
+        </div>
+    @endif
 
     <header class="credential-header">
         <div class="credential-logo">
@@ -35,34 +45,47 @@
         </div>
     </header>
 
-    <div class="credential-body">
+    <main class="credential-body">
         <section class="credential-information">
             <div class="credential-title">CREDENCIAL DE AFILIADO</div>
 
-            <div class="credential-fields">
-                <div class="credential-field credential-field-wide">
-                    <span>NOMBRE COMPLETO</span>
-                    <strong>{{ $affiliateName }}</strong>
+            <div class="credential-data-grid">
+                <div class="credential-primary-data">
+                    <div class="credential-field credential-field-name">
+                        <span>NOMBRE COMPLETO</span>
+                        <strong>{{ $credentialData['full_name'] }}</strong>
+                    </div>
+                    <div class="credential-field credential-field-level-two">
+                        <span>NÚMERO DE AFILIADO</span>
+                        <strong>{{ $credentialData['affiliate_number'] }}</strong>
+                    </div>
+                    <div class="credential-field credential-field-level-two">
+                        <span>SECTOR</span>
+                        <strong>{{ $credentialData['sector'] }}</strong>
+                    </div>
+                    <div class="credential-field">
+                        <span>INSTITUCIÓN</span>
+                        <strong>{{ $credentialData['institution'] }}</strong>
+                    </div>
                 </div>
-                <div class="credential-field">
-                    <span>NÚMERO DE AFILIADO</span>
-                    <strong>{{ $affiliate->registration_number }}</strong>
-                </div>
-                <div class="credential-field">
-                    <span>CÉDULA DE IDENTIDAD</span>
-                    <strong>{{ mb_strtoupper($affiliate->ci) }}</strong>
-                </div>
-                <div class="credential-field">
-                    <span>SECTOR</span>
-                    <strong>{{ mb_strtoupper($affiliate->sector?->name ?? 'NO REGISTRADO') }}</strong>
-                </div>
-                <div class="credential-field">
-                    <span>REGIONAL</span>
-                    <strong>{{ mb_strtoupper($affiliate->regional ?: 'NO REGISTRADO') }}</strong>
-                </div>
-                <div class="credential-field credential-field-wide">
-                    <span>INSTITUCIÓN</span>
-                    <strong>{{ mb_strtoupper($affiliate->institution ?: $institution->institution_name ?: 'NO REGISTRADO') }}</strong>
+
+                <div class="credential-secondary-data">
+                    <div class="credential-field credential-field-level-two">
+                        <span>CÉDULA DE IDENTIDAD</span>
+                        <strong>{{ $credentialData['identity_document'] }}</strong>
+                    </div>
+                    <div class="credential-field">
+                        <span>REGIONAL</span>
+                        <strong>{{ $credentialData['regional'] }}</strong>
+                    </div>
+                    <div class="credential-field credential-field-meta credential-field-date">
+                        <span>FECHA DE EMISIÓN</span>
+                        <strong>{{ $credentialData['issued_at'] }}</strong>
+                    </div>
+                    <div class="credential-field credential-field-meta credential-field-version">
+                        <span>VERSIÓN</span>
+                        <strong>{{ $credentialData['version'] }}</strong>
+                    </div>
                 </div>
             </div>
 
@@ -72,14 +95,19 @@
                         <img src="{{ $qrSrc }}" alt="Código QR de verificación pública">
                     @endif
                 </div>
-                <div>
-                    <p class="credential-qr-title">ESCANEA PARA VERIFICAR</p>
-                    <p class="credential-qr-text">Consulta la validez de esta credencial en línea.</p>
+                <div class="credential-qr-copy">
+                    <strong class="credential-qr-heading">
+                        <span class="credential-phone-icon" aria-hidden="true"></span>
+                        ESCANEA PARA VERIFICAR
+                    </strong>
+                    <p>Credencial oficial de afiliado</p>
+                    <small>Verificación en línea</small>
                 </div>
             </div>
         </section>
 
         <aside class="credential-photo-column">
+            <div class="credential-photo-label">FOTOGRAFÍA</div>
             <div class="credential-photo-frame">
                 @if($photoSrc)
                     <img src="{{ $photoSrc }}" alt="Fotografía del afiliado" class="credential-photo">
@@ -89,13 +117,26 @@
             </div>
             <div class="credential-status credential-status-{{ $statusTone }}">
                 <span aria-hidden="true">✓</span>
-                {{ $statusLabel }}
+                {{ $credentialData['status_label'] }}
             </div>
         </aside>
+    </main>
+
+    <div class="credential-hologram" aria-hidden="true">
+        @if($logoSrc)
+            <img src="{{ $logoSrc }}" alt="">
+        @else
+            <span>✓</span>
+        @endif
+    </div>
+
+    <div class="credential-microtext" aria-hidden="true">
+        COOPERATIVA TIERRA BENDITA · COOPERATIVA TIERRA BENDITA · COOPERATIVA TIERRA BENDITA · COOPERATIVA TIERRA BENDITA
     </div>
 
     <footer class="credential-footer">
-        <span>Válida mientras la afiliación permanezca activa.</span>
-        <span>siafco.viankagold.com</span>
+        <span class="credential-footer-version">Versión: {{ $credentialData['version'] }}</span>
+        <span class="credential-footer-validity">Válida mientras la afiliación permanezca activa.</span>
+        <span class="credential-footer-website">{{ $credentialData['institutional_website'] }}</span>
     </footer>
 </div>

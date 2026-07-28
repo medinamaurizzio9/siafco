@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Affiliate;
+use App\Models\InstitutionalSetting;
 use App\Services\CredentialService;
 use Illuminate\Support\Facades\Storage;
 
@@ -12,8 +13,10 @@ class CredentialController extends Controller
     {
         $this->authorizeCredential($affiliate);
         $credential = $credentialService->generate($affiliate);
+        $credentialData = $credentialService->presentationData($affiliate, $credential);
+        $institution = InstitutionalSetting::current();
 
-        return view('credentials.preview', compact('affiliate', 'credential'));
+        return view('credentials.preview', compact('affiliate', 'credential', 'credentialData', 'institution'));
     }
 
     public function adminPdf(Affiliate $affiliate, CredentialService $credentialService)

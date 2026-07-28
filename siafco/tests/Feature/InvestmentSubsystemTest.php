@@ -15,8 +15,10 @@ use App\Models\Sector;
 use App\Models\User;
 use App\Services\InvestmentService;
 use App\Services\CredentialService;
+use App\Services\QrCodeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -175,14 +177,25 @@ class InvestmentSubsystemTest extends TestCase
 
     public function test_pdf_qr_and_storage_assets_are_generated(): void
     {
+        config([
+            'siafco.credential_version' => '2026.1-test',
+            'siafco.institutional_website' => 'www.cooperativatierrabendita.com',
+        ]);
+
         $sector = Sector::create(['name' => 'Rural', 'code' => 'MAG-RUR', 'current_sequence' => 1, 'is_active' => true]);
         $plan = AffiliationPlan::create(['name' => 'Inicial', 'affiliation_fee' => 100, 'credential_fee' => 30, 'is_active' => true]);
-        InstitutionalSetting::create([
+        Storage::disk('public')->put(
+            'institutional/test-logo.png',
+            base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nWQAAAAASUVORK5CYII=')
+        );
+        InstitutionalSetting::query()->firstOrNew()->fill([
             'institution_name' => 'Cooperativa Tierra Bendita',
+            'logo_path' => 'institutional/test-logo.png',
             'primary_color' => '#0b1f3a',
             'secondary_color' => '#d4af37',
             'payment_qr_path' => 'institutional/payment-qr.png',
-        ]);
+        ])->save();
+        InstitutionalSetting::clearCurrentCache();
 
         $affiliateUser = User::create([
             'name' => 'Afiliado Activo',
@@ -203,7 +216,21 @@ class InvestmentSubsystemTest extends TestCase
             'verification_token' => 'test-token-credential',
         ]);
 
+        $realQrService = new QrCodeService();
+        $this->mock(QrCodeService::class)
+            ->shouldReceive('png')
+            ->once()
+            ->with(
+                route('verify.show', 'test-token-credential'),
+                'credentials/qr/MAG-RUR-000001.png',
+                360,
+                [0, 0, 0]
+            )
+            ->andReturnUsing(fn (string $data, string $path, int $size, array $foreground) => $realQrService->png($data, $path, $size, $foreground));
+
         $credential = app(CredentialService::class)->generate($affiliate);
+        $issuedAt = $credential->created_at->timezone(config('app.timezone'))->format('d/m/Y');
+        $qrHash = hash_file('sha256', storage_path('app/public/'.$credential->qr_path));
 
         $this->assertFileExists(storage_path('app/public/'.$credential->qr_path));
         $this->assertFileExists(storage_path('app/public/'.$credential->png_path));
@@ -215,7 +242,17 @@ class InvestmentSubsystemTest extends TestCase
             ->assertOk()
             ->assertSee('CREDENCIAL DE AFILIADO')
             ->assertSee('AFILIADO ACTIVO')
-            ->assertSee('ESCANEA PARA VERIFICAR');
+            ->assertSee('ESCANEA PARA VERIFICAR')
+            ->assertSee('FECHA DE EMISIÓN')
+            ->assertSee($issuedAt)
+            ->assertSee('2026.1-test')
+            ->assertSee('www.cooperativatierrabendita.com')
+            ->assertSee('credential-watermark')
+            ->assertDontSee('<div class="credential-watermark" aria-hidden="true">SIAFCO', false);
+
+        $regenerated = app(CredentialService::class)->generate($affiliate->refresh());
+        $this->assertSame($issuedAt, $regenerated->created_at->timezone(config('app.timezone'))->format('d/m/Y'));
+        $this->assertSame($qrHash, hash_file('sha256', storage_path('app/public/'.$regenerated->qr_path)));
         $this->get(route('reports.pdf'))->assertOk();
 
         $lot = app(InvestmentService::class)->createLot($this->investor(), [

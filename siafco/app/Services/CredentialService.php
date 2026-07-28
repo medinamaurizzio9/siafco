@@ -25,6 +25,8 @@ class CredentialService
             return $existingCredential;
         }
 
+        $issuedAt = $existingCredential?->created_at ?? now();
+
         $qrPath = $this->qrCodeService->png(
             route('verify.show', $affiliate->verification_token),
             "credentials/qr/{$affiliate->registration_number}.png",
@@ -35,7 +37,8 @@ class CredentialService
         $pdfPath = "credentials/pdf/{$affiliate->registration_number}.pdf";
         $pngPath = "credentials/png/{$affiliate->registration_number}.png";
 
-        $this->generatePng($affiliate, $institution, storage_path('app/public/'.$qrPath), $pngPath);
+        $credentialData = $this->presentationData($affiliate, $existingCredential, $issuedAt);
+        $this->generatePng($affiliate, $institution, $credentialData, storage_path('app/public/'.$qrPath), $pngPath);
         $pdf = Pdf::loadView('credentials.pdf', [
             'cardImageDataUri' => $this->dataUri(storage_path('app/public/'.$pngPath)),
         ])->setPaper([0, 0, 242.65, 153.01]);
@@ -51,6 +54,26 @@ class CredentialService
                 'generated_at' => now(),
             ]
         );
+    }
+
+    public function presentationData(Affiliate $affiliate, ?DigitalCredential $credential = null, $issuedAt = null): array
+    {
+        $affiliate->loadMissing('sector');
+        $institution = InstitutionalSetting::current();
+        $date = $issuedAt ?? $credential?->created_at ?? $affiliate->created_at;
+
+        return [
+            'full_name' => mb_strtoupper($affiliate->full_name),
+            'affiliate_number' => $affiliate->registration_number,
+            'identity_document' => mb_strtoupper($affiliate->ci),
+            'sector' => mb_strtoupper($affiliate->sector?->name ?? 'NO REGISTRADO'),
+            'regional' => mb_strtoupper($affiliate->regional ?: 'NO REGISTRADO'),
+            'institution' => mb_strtoupper($affiliate->institution ?: $institution->institution_name ?: 'NO REGISTRADO'),
+            'issued_at' => $date?->timezone(config('app.timezone'))->format('d/m/Y') ?? 'NO REGISTRADA',
+            'version' => config('siafco.credential_version', '2026.1'),
+            'institutional_website' => config('siafco.institutional_website', 'www.cooperativatierrabendita.com'),
+            'status_label' => mb_strtoupper(AffiliationStatusPresenter::label($affiliate->status)),
+        ];
     }
 
     private function shouldRegenerate(DigitalCredential $credential, Affiliate $affiliate, InstitutionalSetting $institution): bool
@@ -76,7 +99,7 @@ class CredentialService
             || $credential->generated_at->lessThan($institution->updated_at);
     }
 
-    private function generatePng(Affiliate $affiliate, InstitutionalSetting $institution, string $qrAbsolutePath, string $pngPath): void
+    private function generatePng(Affiliate $affiliate, InstitutionalSetting $institution, array $credentialData, string $qrAbsolutePath, string $pngPath): void
     {
         $width = 850;
         $height = 540;
@@ -103,59 +126,52 @@ class CredentialService
         $fontBold = $this->fontPath('arialbd.ttf');
         $font = $this->fontPath('arial.ttf');
 
-        imagefilledrectangle($image, 0, 0, $width, 98, $navy);
-        imagefilledrectangle($image, 0, 98, $width, 103, $gold);
-        $this->pasteImage($image, $institution->logoAbsolutePath(), 28, 13, 72, 72, true, null, 'SIAFCO');
+        $this->pasteImageOpacity($image, $institution->logoAbsolutePath(), 205, 135, 350, 300, 4);
+
+        imagefilledrectangle($image, 0, 0, $width, 88, $navy);
+        imagefilledrectangle($image, 0, 88, $width, 94, $gold);
+        $this->pasteImage($image, $institution->logoAbsolutePath(), 24, 11, 66, 66, true, null, 'SIAFCO');
         $this->textFit(
             $image,
             mb_strtoupper($institution->institution_name ?: 'COOPERATIVA TIERRA BENDITA'),
-            118,
-            48,
-            680,
-            23,
+            108,
+            43,
+            700,
+            22,
             $white,
             $fontBold,
             14
         );
-        $this->text($image, 'SISTEMA INTEGRAL DE AFILIACIÓN', 118, 72, 11, $white, $fontBold);
+        $this->text($image, 'SISTEMA INTEGRAL DE AFILIACIÓN', 108, 67, 11, $white, $fontBold);
 
-        imagefilledrectangle($image, 28, 123, 246, 154, $gold);
-        $this->text($image, 'CREDENCIAL DE AFILIADO', 43, 145, 15, $navy, $fontBold);
+        imagefilledrectangle($image, 24, 108, 230, 136, $gold);
+        $this->text($image, 'CREDENCIAL DE AFILIADO', 38, 128, 14, $navy, $fontBold);
 
-        $this->labelValue($image, 'NOMBRE COMPLETO', mb_strtoupper($affiliate->full_name), 28, 173, $muted, $navy, $font, $fontBold, 13, 535);
-        $this->labelValue($image, 'NÚMERO DE AFILIADO', $affiliate->registration_number, 28, 226, $muted, $navy, $font, $fontBold, 13, 245);
-        $this->labelValue($image, 'CÉDULA DE IDENTIDAD', mb_strtoupper($affiliate->ci), 302, 226, $muted, $navy, $font, $fontBold, 13, 245);
-        $this->labelValue($image, 'SECTOR', mb_strtoupper($affiliate->sector?->name ?? 'NO REGISTRADO'), 28, 279, $muted, $navy, $font, $fontBold, 13, 245);
-        $this->labelValue($image, 'REGIONAL', mb_strtoupper($affiliate->regional ?: 'NO REGISTRADO'), 302, 279, $muted, $navy, $font, $fontBold, 13, 245);
-        $this->labelValue(
-            $image,
-            'INSTITUCIÓN',
-            mb_strtoupper($affiliate->institution ?: $institution->institution_name ?: 'NO REGISTRADO'),
-            28,
-            332,
-            $muted,
-            $navy,
-            $font,
-            $fontBold,
-            13,
-            535
-        );
+        $this->labelBlock($image, 'NOMBRE COMPLETO', $credentialData['full_name'], 24, 153, 330, 16, 2, $muted, $navy, $fontBold);
+        $this->labelBlock($image, 'NÚMERO DE AFILIADO', $credentialData['affiliate_number'], 24, 207, 330, 12, 1, $muted, $navy, $fontBold);
+        $this->labelBlock($image, 'SECTOR', $credentialData['sector'], 24, 250, 330, 11, 2, $muted, $navy, $fontBold);
+        $this->labelBlock($image, 'INSTITUCIÓN', $credentialData['institution'], 24, 307, 330, 11, 2, $muted, $navy, $fontBold);
 
-        imagefilledrectangle($image, 28, 387, 132, 491, $white);
-        imagerectangle($image, 28, 387, 132, 491, $soft);
-        $this->pasteImage($image, $qrAbsolutePath, 34, 393, 92, 92, true);
-        $this->text($image, 'ESCANEA PARA VERIFICAR', 148, 424, 11, $navy, $fontBold);
-        $this->text($image, 'Consulta la validez de esta credencial en línea.', 148, 446, 9, $muted, $font);
+        $this->labelBlock($image, 'CÉDULA DE IDENTIDAD', $credentialData['identity_document'], 375, 153, 225, 12, 1, $muted, $navy, $fontBold);
+        $this->labelBlock($image, 'REGIONAL', $credentialData['regional'], 375, 207, 225, 12, 1, $muted, $navy, $fontBold);
+        $this->labelBlock($image, 'FECHA DE EMISIÓN', $credentialData['issued_at'], 375, 261, 225, 12, 1, $muted, $navy, $fontBold);
+        $this->labelBlock($image, 'VERSIÓN', $credentialData['version'], 375, 315, 225, 12, 1, $muted, $navy, $fontBold);
 
-        imagefilledrectangle($image, 644, 126, 817, 340, $navy);
-        imagefilledrectangle($image, 646, 128, 815, 338, $gold);
+        imagefilledrectangle($image, 24, 348, 178, 502, $white);
+        imagerectangle($image, 24, 348, 178, 502, $soft);
+        $this->pasteImage($image, $qrAbsolutePath, 31, 355, 140, 140, true);
+        $this->text($image, 'ESCANEA PARA VERIFICAR', 193, 405, 10, $navy, $fontBold);
+        $this->textBlockFit($image, 'Consulta la autenticidad y el estado actual de esta credencial.', 193, 426, 185, 9, 3, $muted, $font, 8, 13);
+
+        imagefilledrectangle($image, 670, 112, 829, 308, $navy);
+        imagefilledrectangle($image, 672, 114, 827, 306, $gold);
         $this->pasteImageCover(
             $image,
             $affiliate->photo_path ? storage_path('app/public/'.$affiliate->photo_path) : null,
-            650,
-            132,
-            161,
-            202,
+            676,
+            118,
+            147,
+            184,
             $soft,
             'SIN FOTO'
         );
@@ -166,25 +182,25 @@ class CredentialService
             'suspendido', 'suspended' => [$redLight, $redDark],
             default => [$amberLight, $amberDark],
         };
-        imagefilledrectangle($image, 646, 357, 815, 390, $statusBackground);
-        imagefilledellipse($image, 663, 374, 14, 14, $statusText);
-        imageline($image, 659, 374, 662, 377, $statusBackground);
-        imageline($image, 662, 377, 667, 370, $statusBackground);
+        imagefilledrectangle($image, 670, 319, 829, 350, $statusBackground);
+        imagefilledellipse($image, 686, 335, 13, 13, $statusText);
+        imageline($image, 682, 335, 685, 338, $statusBackground);
+        imageline($image, 685, 338, 690, 331, $statusBackground);
         $this->textFit(
             $image,
-            mb_strtoupper(AffiliationStatusPresenter::label($affiliate->status)),
-            675,
-            379,
-            130,
-            10,
+            $credentialData['status_label'],
+            698,
+            340,
+            122,
+            9,
             $statusText,
             $fontBold,
             7
         );
 
-        imagefilledrectangle($image, 0, 500, $width, $height, $navy);
-        $this->text($image, 'Válida mientras la afiliación permanezca activa.', 28, 525, 9, $white, $font);
-        $this->text($image, 'siafco.viankagold.com', 697, 525, 9, $white, $font);
+        imagefilledrectangle($image, 0, 506, $width, $height, $navy);
+        $this->text($image, 'Válida mientras la afiliación permanezca activa.', 24, 528, 8, $white, $font);
+        $this->textFit($image, $credentialData['institutional_website'], 650, 528, 176, 8, $white, $font, 7);
 
         Storage::disk('public')->makeDirectory(dirname($pngPath));
         imagepng($image, storage_path('app/public/'.$pngPath), 9);
@@ -195,6 +211,64 @@ class CredentialService
     {
         $this->text($image, $label, $x, $y, 8, $labelColor, $fontBold);
         $this->textFit($image, $value, $x, $y + 25, $maxWidth, $valueSize, $valueColor, $fontBold, 9);
+    }
+
+    private function labelBlock($image, string $label, string $value, int $x, int $y, int $maxWidth, int $valueSize, int $maxLines, int $labelColor, int $valueColor, ?string $fontBold): void
+    {
+        $this->text($image, $label, $x, $y, 8, $labelColor, $fontBold);
+        $this->textBlockFit($image, $value, $x, $y + 21, $maxWidth, $valueSize, $maxLines, $valueColor, $fontBold, 8, $valueSize + 3);
+    }
+
+    private function textBlockFit($image, string $text, int $x, int $y, int $maxWidth, int $size, int $maxLines, int $color, ?string $font, int $minSize, int $lineHeight): void
+    {
+        if (! $font) {
+            $this->text($image, mb_strimwidth($text, 0, 44, '...'), $x, $y, $size, $color, null);
+
+            return;
+        }
+
+        $currentSize = $size;
+        do {
+            $lines = $this->wrapText($text, $font, $currentSize, $maxWidth);
+            if (count($lines) <= $maxLines || $currentSize <= $minSize) {
+                break;
+            }
+            $currentSize--;
+        } while ($currentSize >= $minSize);
+
+        $lines = array_slice($lines, 0, $maxLines);
+        if (count($this->wrapText($text, $font, $currentSize, $maxWidth)) > $maxLines) {
+            $lines[$maxLines - 1] = mb_strimwidth($lines[$maxLines - 1], 0, max(1, mb_strlen($lines[$maxLines - 1]) - 2), '...');
+        }
+
+        foreach ($lines as $index => $line) {
+            $this->textFit($image, $line, $x, $y + ($index * $lineHeight), $maxWidth, $currentSize, $color, $font, $minSize);
+        }
+    }
+
+    private function wrapText(string $text, string $font, int $size, int $maxWidth): array
+    {
+        $words = preg_split('/\s+/', trim($text)) ?: [];
+        $lines = [];
+        $line = '';
+
+        foreach ($words as $word) {
+            $candidate = $line === '' ? $word : $line.' '.$word;
+            $box = imagettfbbox($size, 0, $font, $candidate);
+            if (abs($box[2] - $box[0]) <= $maxWidth || $line === '') {
+                $line = $candidate;
+                continue;
+            }
+
+            $lines[] = $line;
+            $line = $word;
+        }
+
+        if ($line !== '') {
+            $lines[] = $line;
+        }
+
+        return $lines ?: [''];
     }
 
     private function dataUri(string $path): ?string
@@ -288,6 +362,36 @@ class CredentialService
         }
 
         imagecopyresampled($canvas, $source, $destX, $destY, 0, 0, $destWidth, $destHeight, $sourceWidth, $sourceHeight);
+        imagedestroy($source);
+    }
+
+    private function pasteImageOpacity($canvas, ?string $path, int $x, int $y, int $targetWidth, int $targetHeight, int $opacityPercent): void
+    {
+        $source = $this->loadImage($path);
+        if (! $source) {
+            return;
+        }
+
+        $sourceWidth = imagesx($source);
+        $sourceHeight = imagesy($source);
+        $ratio = min($targetWidth / $sourceWidth, $targetHeight / $sourceHeight);
+        $destWidth = max(1, (int) ($sourceWidth * $ratio));
+        $destHeight = max(1, (int) ($sourceHeight * $ratio));
+        $destX = $x + (int) (($targetWidth - $destWidth) / 2);
+        $destY = $y + (int) (($targetHeight - $destHeight) / 2);
+
+        $watermark = imagecreatetruecolor($destWidth, $destHeight);
+        imagealphablending($watermark, false);
+        imagesavealpha($watermark, true);
+        $transparent = imagecolorallocatealpha($watermark, 255, 255, 255, 127);
+        imagefilledrectangle($watermark, 0, 0, $destWidth, $destHeight, $transparent);
+        imagecopyresampled($watermark, $source, 0, 0, 0, 0, $destWidth, $destHeight, $sourceWidth, $sourceHeight);
+        imagefilter($watermark, IMG_FILTER_GRAYSCALE);
+        imagefilter($watermark, IMG_FILTER_COLORIZE, 90, 100, 112, 127 - (int) round(127 * ($opacityPercent / 100)));
+        imagealphablending($canvas, true);
+        imagecopy($canvas, $watermark, $destX, $destY, 0, 0, $destWidth, $destHeight);
+
+        imagedestroy($watermark);
         imagedestroy($source);
     }
 

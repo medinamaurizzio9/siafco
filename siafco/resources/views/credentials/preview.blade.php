@@ -4,6 +4,7 @@
             @include('credenciales.card', [
                 'affiliate' => $affiliate,
                 'credential' => $credential,
+                'credentialData' => $credentialData,
                 'institution' => $institution,
                 'logoSrc' => $institution->logoUrl(),
                 'photoSrc' => $affiliate->photo_path ? Storage::url($affiliate->photo_path) : null,
