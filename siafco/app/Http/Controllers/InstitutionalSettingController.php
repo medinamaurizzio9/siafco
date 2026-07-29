@@ -34,11 +34,6 @@ class InstitutionalSettingController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:80'],
             'address' => ['nullable', 'string', 'max:255'],
-            'payment_qr' => ['nullable', 'image', 'max:4096'],
-            'payment_bank' => ['nullable', 'string', 'max:120'],
-            'payment_holder' => ['nullable', 'string', 'max:255'],
-            'payment_account' => ['nullable', 'string', 'max:120'],
-            'payment_instructions' => ['nullable', 'string', 'max:2000'],
             'login_background' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'login_logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'login_title' => ['required', 'string', 'max:120'],
@@ -49,9 +44,9 @@ class InstitutionalSettingController extends Controller
             'remove_login_logo' => ['nullable', 'boolean'],
         ]);
 
-        unset($data['logo'], $data['payment_qr'], $data['login_background'], $data['login_logo']);
+        unset($data['logo'], $data['login_background'], $data['login_logo']);
         $data = TextNormalizer::fields($data, [
-            'institution_name', 'address', 'payment_bank', 'payment_holder', 'payment_instructions',
+            'institution_name', 'address',
         ]);
 
         $newPaths = [];
@@ -59,10 +54,6 @@ class InstitutionalSettingController extends Controller
 
         if ($request->hasFile('logo')) {
             $data['logo_path'] = $request->file('logo')->store('institutional/logo', 'public');
-        }
-
-        if ($request->hasFile('payment_qr')) {
-            $data['payment_qr_path'] = $request->file('payment_qr')->storeAs('institutional', 'payment-qr.png', 'public');
         }
 
         foreach (['login_background', 'login_logo'] as $field) {

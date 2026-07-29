@@ -114,11 +114,11 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         Route::post('/afiliados', [AffiliateController::class, 'store'])->name('affiliates.store');
         Route::get('/afiliados/{affiliate}/editar', [AffiliateController::class, 'edit'])->name('affiliates.edit');
         Route::put('/afiliados/{affiliate}', [AffiliateController::class, 'update'])->name('affiliates.update');
-        Route::get('/qr-institucional', [InstitutionalQrController::class, 'show'])->name('institutional-qr.show');
-        Route::post('/qr-institucional', [InstitutionalQrController::class, 'update'])->name('institutional-qr.update');
     });
 
     Route::middleware('role:administrador,superadministrador,secretaria')->group(function () {
+        Route::get('/qr-institucional', [InstitutionalQrController::class, 'show'])->name('institutional-qr.show');
+        Route::post('/qr-institucional', [InstitutionalQrController::class, 'update'])->name('institutional-qr.update');
         Route::post('/admin/afiliados/{affiliate}/restablecer-contrasena', [AffiliatePasswordController::class, 'reset'])
             ->middleware('throttle:3,1')->name('admin.affiliates.password.reset');
         Route::get('/admin/configuracion-institucional', [InstitutionalSettingController::class, 'edit'])->name('institutional-settings.edit');

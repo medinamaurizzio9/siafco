@@ -16,6 +16,7 @@
         @php
             $user = auth()->user();
             $canManageAffiliation = $user->hasRole(['administrador', 'administrador_sector', 'secretaria']);
+            $canManagePaymentQr = $user->hasRole(['administrador', 'superadministrador', 'secretaria']);
             $canViewAffiliation = $user->hasRole(['administrador', 'superadministrador', 'administrador_sector', 'secretaria', 'cajero', 'consulta']);
             $canManageInvestments = $user->hasRole(['administrador', 'caja', 'cajero', 'contabilidad']);
             $canViewCredits = $user->hasRole(['administrador', 'administrador_sector', 'secretaria', 'cajero', 'caja', 'contabilidad', 'consulta']);
@@ -91,6 +92,8 @@
                                 @if($canManageAffiliation)
                                     {!! $navLink('credentials.index', 'Credenciales', [], ['credentials.*', 'credenciales.*']) !!}
                                     {!! $navLink('public-affiliation.qr.show', 'QR publico de afiliacion', [], ['public-affiliation.qr.*']) !!}
+                                @endif
+                                @if($canManagePaymentQr)
                                     {!! $navLink('institutional-qr.show', 'QR y pago institucional', [], ['institutional-qr.*']) !!}
                                 @endif
                                 {!! $navLink('reports.index', 'Reportes de afiliacion', [], ['reports.*']) !!}

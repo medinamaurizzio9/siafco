@@ -81,19 +81,26 @@ class InstitutionalSetting extends Model
         return $this->logo_path ? storage_path('app/public/'.$this->logo_path) : null;
     }
 
-    public function paymentQrPath(): string
+    public function paymentQrPath(): ?string
     {
-        return $this->payment_qr_path ?: 'institutional/payment-qr.png';
+        return $this->payment_qr_path;
     }
 
-    public function paymentQrUrl(): string
+    public function paymentQrUrl(): ?string
     {
-        return Storage::url($this->paymentQrPath());
+        if (! $this->payment_qr_path || ! Storage::disk('public')->exists($this->payment_qr_path)) {
+            return null;
+        }
+
+        $version = $this->updated_at?->timestamp
+            ?: Storage::disk('public')->lastModified($this->payment_qr_path);
+
+        return Storage::url($this->payment_qr_path).'?v='.$version;
     }
 
-    public function paymentQrAbsolutePath(): string
+    public function paymentQrAbsolutePath(): ?string
     {
-        return storage_path('app/public/'.$this->paymentQrPath());
+        return $this->payment_qr_path ? storage_path('app/public/'.$this->payment_qr_path) : null;
     }
 
     public function loginBackgroundUrl(): string

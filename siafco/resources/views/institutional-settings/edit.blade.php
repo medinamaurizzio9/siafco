@@ -31,14 +31,11 @@
                 <label class="form-label">Logo</label>
                 <input class="form-input" type="file" name="logo" accept="image/*">
             </div>
-            <div>
-                <label class="form-label">QR bancario fijo</label>
-                <input class="form-input" type="file" name="payment_qr" accept="image/png,image/jpeg,image/webp">
-            </div>
-            <div><label class="form-label">Banco</label><input class="form-input" name="payment_bank" value="{{ old('payment_bank',$setting->payment_bank) }}" data-uppercase></div>
-            <div><label class="form-label">Titular</label><input class="form-input" name="payment_holder" value="{{ old('payment_holder',$setting->payment_holder) }}" data-uppercase></div>
-            <div><label class="form-label">Cuenta (opcional)</label><input class="form-input" name="payment_account" value="{{ old('payment_account',$setting->payment_account) }}"></div>
-            <div class="md:col-span-2"><label class="form-label">Instrucciones de pago</label><textarea class="form-input" name="payment_instructions" rows="3" data-uppercase>{{ old('payment_instructions',$setting->payment_instructions) }}</textarea></div>
+            <section class="rounded border border-[#d4af37]/40 bg-[#fff8df] p-4 md:col-span-2">
+                <p class="text-xs font-black uppercase text-[#b8942f]">QR institucional de pago</p>
+                <p class="mt-2 text-sm text-slate-700">Administrado desde Afiliación &gt; QR y pago institucional.</p>
+                <a class="btn-secondary mt-3" href="{{ route('institutional-qr.show') }}">GESTIONAR QR DE PAGO</a>
+            </section>
 
             <section class="grid gap-4 border-t border-slate-200 pt-6 md:col-span-2 md:grid-cols-2" data-login-appearance-editor>
                 <div class="md:col-span-2">
@@ -134,8 +131,6 @@
                     <p class="mt-3 text-xs leading-5 text-slate-600">{{ $exportCapabilities->pngUnavailableReason() }}</p>
                 @endif
             </section>
-            <img class="mt-5 h-48 w-48 rounded border object-contain" src="{{ $setting->paymentQrUrl() }}" alt="QR pago">
-
             @php($loginAppearance = $setting->loginAppearance())
             <div
                 class="relative mt-6 aspect-video overflow-hidden rounded border border-slate-200 bg-[#0b1f3a] bg-cover bg-center"

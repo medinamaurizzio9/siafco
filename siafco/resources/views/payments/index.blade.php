@@ -19,7 +19,7 @@
                         <td>{{ $payment->affiliate->registration_number }}</td>
                         <td>Bs {{ number_format($payment->amount, 2) }}</td>
                         <td>
-                            @if($payment->status === 'pendiente')
+                            @if($payment->status === 'pendiente' && $institution->paymentQrUrl())
                                 <img class="h-16 w-16 rounded border object-contain" src="{{ $institution->paymentQrUrl() }}" alt="QR pago">
                             @endif
                         </td>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Affiliate;
 use App\Models\AffiliationPayment;
 use App\Models\AffiliationPlan;
+use App\Models\InstitutionalSetting;
 use App\Models\Person;
 use App\Models\Sector;
 use App\Models\User;
@@ -91,7 +92,7 @@ class AffiliateController extends Controller
             AffiliationPayment::create([
                 'affiliate_id' => $affiliate->id,
                 'amount' => $plan->total_amount,
-                'institutional_qr_path' => 'institutional/payment-qr.png',
+                'institutional_qr_path' => InstitutionalSetting::current()->payment_qr_path,
                 'status' => 'pendiente',
             ]);
 

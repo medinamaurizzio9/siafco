@@ -3,7 +3,11 @@
         <section class="section-card">
             <p class="text-sm font-bold text-slate-500">{{ $application->request_code }}</p>
             <h1 class="mt-1 text-2xl font-black text-[#0b1f3a]">Realiza la transferencia</h1>
-            <img class="mx-auto mt-5 w-full max-w-sm border border-slate-200" src="{{ $institution->paymentQrUrl() }}" alt="QR bancario institucional">
+            @if($institution->paymentQrUrl())
+                <img class="mx-auto mt-5 w-full max-w-sm border border-slate-200" src="{{ $institution->paymentQrUrl() }}" alt="QR bancario institucional">
+            @else
+                <p class="mt-5 rounded border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">No existe un QR institucional de pago configurado. Comunícate con Secretaría.</p>
+            @endif
             <dl class="mt-5 grid grid-cols-2 gap-3 text-sm">
                 <dt class="font-bold">Monto exacto</dt><dd>BOB {{ number_format($application->amount_due, 2) }}</dd>
                 <dt class="font-bold">Banco</dt><dd>{{ $institution->payment_bank ?: 'Consulte con Secretaría' }}</dd>
