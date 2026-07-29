@@ -4,6 +4,14 @@ import { initPhotoCroppers } from './components/photo-cropper';
 
 document.addEventListener('DOMContentLoaded', () => {
     initPhotoCroppers();
+    const passwordResetDialog = document.querySelector('[data-password-reset-dialog]');
+    const passwordResetConfirmation = passwordResetDialog?.querySelector('[data-password-reset-confirmation]');
+    const passwordResetSubmit = passwordResetDialog?.querySelector('[data-password-reset-submit]');
+    document.querySelector('[data-password-reset-open]')?.addEventListener('click', () => passwordResetDialog?.showModal());
+    passwordResetDialog?.querySelector('[data-password-reset-close]')?.addEventListener('click', () => passwordResetDialog.close());
+    passwordResetConfirmation?.addEventListener('input', () => {
+        passwordResetSubmit.disabled = passwordResetConfirmation.value !== 'RESTABLECER';
+    });
     document.querySelectorAll('[data-password-toggle]').forEach((button) => {
         button.addEventListener('click', () => {
             const input = button.closest('label')?.querySelector('[data-password-input]');

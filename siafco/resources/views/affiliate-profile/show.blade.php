@@ -124,6 +124,36 @@
             </section>
         </form>
 
+        <section class="section-card">
+            <div class="border-b border-slate-200 pb-4">
+                <p class="text-xs font-black uppercase text-[#b8942f]">Cuenta de acceso</p>
+                <h3 class="mt-1 text-lg font-black text-[#0b1f3a]">SEGURIDAD DE LA CUENTA</h3>
+                <p class="mt-1 text-sm text-slate-600">Actualiza tu contraseña para mantener protegida tu cuenta.</p>
+            </div>
+            <form class="mt-5 grid gap-5 sm:grid-cols-2" method="post" action="{{ route('affiliate.profile.password.update') }}">
+                @csrf
+                @method('PATCH')
+                <label class="grid gap-2 text-sm font-bold text-slate-700 sm:col-span-2">
+                    Contraseña actual
+                    <input class="form-input" type="password" name="current_password" required autocomplete="current-password">
+                    @error('current_password')<span class="text-sm text-red-700">{{ $message }}</span>@enderror
+                </label>
+                <label class="grid gap-2 text-sm font-bold text-slate-700">
+                    Nueva contraseña
+                    <input class="form-input" type="password" name="password" required minlength="8" autocomplete="new-password">
+                    @error('password')<span class="text-sm text-red-700">{{ $message }}</span>@enderror
+                </label>
+                <label class="grid gap-2 text-sm font-bold text-slate-700">
+                    Confirmar nueva contraseña
+                    <input class="form-input" type="password" name="password_confirmation" required minlength="8" autocomplete="new-password">
+                </label>
+                <div class="sm:col-span-2 sm:text-right">
+                    <p class="mb-3 text-sm text-slate-500">Usa al menos 8 caracteres, incluyendo letras y números.</p>
+                    <button class="btn-primary w-full py-3 sm:w-auto" type="submit">ACTUALIZAR CONTRASEÑA</button>
+                </div>
+            </form>
+        </section>
+
         <section class="section-card" id="payments">
             <div class="border-b border-slate-200 pb-4">
                 <h3 class="text-lg font-black text-[#0b1f3a]">MIS PAGOS</h3>

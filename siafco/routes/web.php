@@ -4,6 +4,7 @@ use App\Http\Controllers\AffiliateController;
 use App\Http\Controllers\AffiliateBenefitController;
 use App\Http\Controllers\AffiliatePanelController;
 use App\Http\Controllers\AffiliateProfileController;
+use App\Http\Controllers\AffiliatePasswordController;
 use App\Http\Controllers\AffiliationPlanController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CredentialController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InstitutionalQrController;
 use App\Http\Controllers\InstitutionalSettingController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\PublicAffiliationAdminController;
 use App\Http\Controllers\PublicAffiliationController;
 use App\Http\Controllers\PublicAffiliationQrController;
@@ -49,11 +51,16 @@ Route::middleware('throttle:30,1')->prefix('afiliacion')->name('public-affiliati
     Route::get('/{application}/completado', [PublicAffiliationController::class, 'completed'])->name('completed');
 });
 
-Route::middleware(['auth', 'affiliate.active-access'])->group(function () {
+Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/cambiar-contrasena-obligatoria', [PasswordController::class, 'forceEdit'])->name('password.force.edit');
+    Route::patch('/cambiar-contrasena-obligatoria', [PasswordController::class, 'forceUpdate'])
+        ->middleware('throttle:5,1')->name('password.force.update');
     Route::middleware('role:afiliado')->group(function () {
         Route::get('/mi-perfil', [AffiliateProfileController::class, 'show'])->name('affiliate.profile.show');
         Route::patch('/mi-perfil', [AffiliateProfileController::class, 'update'])->name('affiliate.profile.update');
+        Route::patch('/mi-perfil/contrasena', [PasswordController::class, 'updateOwn'])
+            ->middleware('throttle:5,1')->name('affiliate.profile.password.update');
         Route::get('/mi-perfil/pagos/{payment}/comprobante', [AffiliateProfileController::class, 'showPaymentReceipt'])
             ->name('affiliate.profile.payments.receipt');
     });
@@ -112,6 +119,8 @@ Route::middleware(['auth', 'affiliate.active-access'])->group(function () {
     });
 
     Route::middleware('role:administrador,superadministrador,secretaria')->group(function () {
+        Route::post('/admin/afiliados/{affiliate}/restablecer-contrasena', [AffiliatePasswordController::class, 'reset'])
+            ->middleware('throttle:3,1')->name('admin.affiliates.password.reset');
         Route::get('/admin/configuracion-institucional', [InstitutionalSettingController::class, 'edit'])->name('institutional-settings.edit');
         Route::put('/admin/configuracion-institucional', [InstitutionalSettingController::class, 'update'])->name('institutional-settings.update');
         Route::get('/admin/credenciales/{affiliate}/preview', [CredentialController::class, 'preview'])->name('credentials.preview');

@@ -32,4 +32,10 @@ class AffiliatePolicy
     {
         return $user->hasRole(['administrador', 'superadministrador']);
     }
+
+    public function resetPassword(User $user, Affiliate $affiliate): bool
+    {
+        return ! $affiliate->trashed()
+            && $user->hasRole(['administrador', 'superadministrador', 'secretaria']);
+    }
 }

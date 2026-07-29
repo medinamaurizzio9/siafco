@@ -53,6 +53,35 @@
         </aside>
     </div>
 
+    @can('resetPassword', $affiliate)
+        <section class="mt-6 rounded-lg border border-amber-200 bg-white p-5">
+            <p class="text-xs font-black uppercase text-amber-700">Seguridad</p>
+            <div class="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div><h3 class="font-black text-[#0b1f3a]">Cuenta de acceso</h3><p class="mt-1 text-sm text-slate-600">Restablece el acceso únicamente cuando el afiliado lo solicite.</p></div>
+                <button class="rounded border border-amber-400 bg-amber-50 px-4 py-2 font-black text-amber-950" type="button" data-password-reset-open>RESTABLECER CONTRASEÑA</button>
+            </div>
+        </section>
+        <dialog class="w-[min(92vw,520px)] rounded-lg p-0 shadow-xl backdrop:bg-slate-950/70" data-password-reset-dialog>
+            <form method="post" action="{{ route('admin.affiliates.password.reset', $affiliate) }}" class="p-5">
+                @csrf
+                <h2 class="text-xl font-black text-[#0b1f3a]">RESTABLECER CONTRASEÑA</h2>
+                <p class="mt-3 text-sm text-slate-600">La contraseña temporal será el número de carnet del afiliado. Al iniciar sesión deberá cambiarla obligatoriamente.</p>
+                <dl class="mt-4 grid gap-2 rounded bg-slate-50 p-4 text-sm">
+                    <div><dt class="font-bold text-slate-500">Afiliado</dt><dd>{{ $affiliate->full_name }}</dd></div>
+                    <div><dt class="font-bold text-slate-500">CI</dt><dd>{{ $affiliate->ci }}</dd></div>
+                    <div><dt class="font-bold text-slate-500">Código</dt><dd>{{ $affiliate->registration_number }}</dd></div>
+                </dl>
+                <label class="mt-4 grid gap-2 text-sm font-bold text-slate-700">Escribe RESTABLECER para confirmar
+                    <input class="form-input" name="confirmation" autocomplete="off" required data-password-reset-confirmation>
+                </label>
+                <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button class="btn-secondary" type="button" data-password-reset-close>CANCELAR</button>
+                    <button class="rounded bg-amber-400 px-4 py-2 font-black text-[#0b1f3a] disabled:opacity-50" type="submit" disabled data-password-reset-submit>CONFIRMAR RESTABLECIMIENTO</button>
+                </div>
+            </form>
+        </dialog>
+    @endcan
+
     <section class="mt-6 overflow-hidden rounded-lg border border-slate-200 bg-white">
         <div class="border-b border-slate-200 px-4 py-3"><h3 class="font-black text-[#0b1f3a]">Pagos</h3></div>
         <div class="overflow-x-auto">
