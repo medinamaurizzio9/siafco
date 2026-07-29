@@ -20,7 +20,8 @@
             $canViewAffiliation = $user->hasRole(['administrador', 'superadministrador', 'administrador_sector', 'secretaria', 'cajero', 'consulta']);
             $canManageInvestments = $user->hasRole(['administrador', 'caja', 'cajero', 'contabilidad']);
             $canViewCredits = $user->hasRole(['administrador', 'administrador_sector', 'secretaria', 'cajero', 'caja', 'contabilidad', 'consulta']);
-            $canAdmin = $user->hasRole('administrador');
+            $canManageUsers = $user->isInternal() && $user->hasPermission('users.view');
+            $canAdmin = $user->hasRole('administrador') || $canManageUsers;
             $canGeneralSettings = $user->hasRole(['administrador', 'secretaria']);
             $isPersonalOnly = $user->hasRole(['afiliado', 'accionista']) && ! $canViewAffiliation && ! $canManageInvestments;
 
@@ -29,7 +30,7 @@
                 request()->routeIs('affiliates.*', 'affiliate-benefits.*', 'sectors.*', 'plans.*', 'payments.*', 'credentials.*', 'credenciales.*', 'institutional-qr.*', 'reports.*', 'affiliation.*', 'public-affiliation.admin.*') => 'affiliation',
                 request()->routeIs('investments.*') && ! request()->routeIs('investments.panel') => 'investments',
                 request()->routeIs('credits.*') => 'credits',
-                request()->routeIs('administration.*') => 'administration',
+                request()->routeIs('administration.*', 'admin.users.*') => 'administration',
                 request()->routeIs('institutional-settings.*', 'settings.*') => 'general-settings',
                 request()->routeIs('affiliate.*', 'investments.panel') => 'personal',
                 default => 'home',
@@ -151,9 +152,13 @@
                                 <span>Administracion</span><span class="nav-chevron">⌄</span>
                             </button>
                             <div class="nav-module-panel {{ $openModule === 'administration' ? '' : 'hidden' }}">
-                                {!! $soon('administration.users.index', 'Usuarios') !!}
-                                {!! $soon('administration.roles.index', 'Roles y permisos') !!}
-                                {!! $soon('administration.audit.index', 'Auditoria') !!}
+                                @if($canManageUsers)
+                                    {!! $navLink('admin.users.index', 'Usuarios', [], ['admin.users.*']) !!}
+                                @endif
+                                @if($user->hasRole('administrador'))
+                                    {!! $soon('administration.roles.index', 'Roles y permisos') !!}
+                                    {!! $soon('administration.audit.index', 'Auditoria') !!}
+                                @endif
                             </div>
                         </section>
                     @endif

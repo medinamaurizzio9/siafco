@@ -20,11 +20,21 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'username',
+        'ci',
+        'phone',
+        'position',
+        'area',
+        'photo_path',
         'person_id',
         'email',
         'role',
+        'user_type',
         'password',
         'must_change_password',
+        'is_active',
+        'last_login_at',
+        'last_login_ip',
     ];
 
     /**
@@ -48,6 +58,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'must_change_password' => 'boolean',
+            'is_active' => 'boolean',
+            'last_login_at' => 'datetime',
         ];
     }
 
@@ -69,5 +81,25 @@ class User extends Authenticatable
     public function hasRole(string|array $roles): bool
     {
         return in_array($this->role, (array) $roles, true);
+    }
+
+    public function hasPermission(string $permission): bool
+    {
+        return in_array($permission, config("internal_roles.roles.{$this->role}", []), true);
+    }
+
+    public function isInternal(): bool
+    {
+        return $this->user_type === 'internal';
+    }
+
+    public function roleLabel(): string
+    {
+        return config("internal_roles.labels.{$this->role}", str($this->role)->headline()->toString());
+    }
+
+    public function photoUrl(): ?string
+    {
+        return $this->photo_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($this->photo_path) : null;
     }
 }

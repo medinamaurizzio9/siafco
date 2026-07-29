@@ -11,6 +11,7 @@ use App\Http\Controllers\CredentialController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InstitutionalQrController;
 use App\Http\Controllers\InstitutionalSettingController;
+use App\Http\Controllers\InternalUserController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\PublicAffiliationAdminController;
@@ -192,8 +193,22 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         Route::get('/configuracion', PlaceholderController::class)->defaults('title', 'Configuracion de creditos')->defaults('message', 'Tasas, plazos, mora, productos, documentos y reglas de aprobacion se configuraran aqui.')->name('settings.edit');
     });
 
+    Route::prefix('administracion/usuarios')->name('admin.users.')->controller(InternalUserController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/crear', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::post('/{user}/restaurar', 'restore')->name('restore');
+        Route::get('/{user}', 'show')->name('show');
+        Route::get('/{user}/editar', 'edit')->name('edit');
+        Route::patch('/{user}', 'update')->name('update');
+        Route::post('/{user}/bloquear', 'block')->name('block');
+        Route::post('/{user}/activar', 'activate')->name('activate');
+        Route::post('/{user}/restablecer-contrasena', 'resetPassword')
+            ->middleware('throttle:3,1')->name('password.reset');
+        Route::delete('/{user}', 'destroy')->name('destroy');
+    });
+
     Route::prefix('administracion')->name('administration.')->middleware('role:administrador')->group(function () {
-        Route::get('/usuarios', PlaceholderController::class)->defaults('title', 'Usuarios')->defaults('message', 'Administracion de usuarios preparada para una fase posterior.')->name('users.index');
         Route::get('/roles-permisos', PlaceholderController::class)->defaults('title', 'Roles y permisos')->defaults('message', 'Gestion detallada de permisos por modulo pendiente de implementacion.')->name('roles.index');
         Route::get('/auditoria', PlaceholderController::class)->defaults('title', 'Auditoria')->defaults('message', 'Consulta avanzada de auditoria preparada para una fase posterior.')->name('audit.index');
     });

@@ -22,8 +22,12 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+        if (Auth::attempt([...$credentials, 'is_active' => true], $request->boolean('remember'))) {
             $request->session()->regenerate();
+            Auth::user()->forceFill([
+                'last_login_at' => now(),
+                'last_login_ip' => $request->ip(),
+            ])->save();
 
             return redirect()->intended(route(Auth::user()->role === 'afiliado' ? 'affiliate.panel' : 'admin.dashboard'));
         }

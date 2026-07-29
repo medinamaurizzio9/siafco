@@ -22,9 +22,13 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Administrador SIAFCO',
                 'role' => 'administrador',
+                'user_type' => 'internal',
+                'is_active' => true,
                 'password' => Hash::make(env('SIAFCO_ADMIN_PASSWORD', 'admin123456')),
             ]
         );
+
+        $this->call(InternalRolesSeeder::class);
 
         if ((bool) env('SIAFCO_SEED_SUPPORT_USERS', app()->environment(['local', 'testing']))) {
             foreach ([
