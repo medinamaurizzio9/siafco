@@ -76,9 +76,16 @@ class PublicAffiliationTest extends TestCase
     {
         Storage::fake('public');
         [$sector, $plan] = $this->catalog();
-        $person = Person::create(['full_name' => 'Nombre anterior', 'ci' => '7788991', 'email' => 'old@example.test']);
-
-        $this->post(route('public-affiliation.store'), $this->form($sector, $plan))->assertRedirect();
+        $person = Person::create([
+            'full_name' => 'ANA PEREZ LIMA',
+            'ci' => '7788991',
+            'email' => 'ana@example.test',
+            'birth_date' => '1990-05-10',
+        ]);
+        $this->post(route('public-affiliation.store'), $this->form($sector, $plan, [
+            'full_name' => 'Ana Perez Lima',
+            'position' => 'Medica',
+        ]))->assertRedirect();
 
         $this->assertSame(1, Person::where('ci', '7788991')->count());
         $application = PublicAffiliationRequest::firstOrFail();

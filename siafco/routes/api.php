@@ -1,10 +1,19 @@
 <?php
 
 use App\Http\Controllers\Api\Mobile\V1\AuthController;
+use App\Http\Controllers\Api\Mobile\V1\AffiliationController;
 use App\Http\Controllers\Api\Mobile\V1\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('mobile/v1')->name('api.mobile.v1.')->group(function () {
+    Route::get('/catalogs', [AffiliationController::class, 'catalogs'])
+        ->middleware('throttle:30,1')
+        ->name('catalogs');
+
+    Route::post('/affiliation-requests', [AffiliationController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('affiliation-requests.store');
+
     Route::post('/auth/login', [AuthController::class, 'login'])
         ->middleware('throttle:5,1')
         ->name('auth.login');
@@ -17,5 +26,10 @@ Route::prefix('mobile/v1')->name('api.mobile.v1.')->group(function () {
         Route::patch('/me/password', [ProfileController::class, 'updatePassword'])
             ->middleware('throttle:5,1')
             ->name('me.password.update');
+        Route::get('/me/affiliation-request', [AffiliationController::class, 'show'])
+            ->name('me.affiliation-request.show');
+        Route::post('/me/affiliation-request/payment', [AffiliationController::class, 'submitPayment'])
+            ->middleware('throttle:5,1')
+            ->name('me.affiliation-request.payment.store');
     });
 });

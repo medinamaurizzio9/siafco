@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
+use Illuminate\Validation\ValidationException;
 use App\Http\Responses\MobileApiResponse;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -40,6 +41,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (ThrottleRequestsException $exception, $request) {
             if ($request->is('api/mobile/v1/*')) {
                 return MobileApiResponse::error('Demasiados intentos. Intenta nuevamente más tarde.', 429);
+            }
+
+            return null;
+        });
+
+        $exceptions->render(function (ValidationException $exception, $request) {
+            if ($request->is('api/mobile/v1/*')) {
+                return MobileApiResponse::error('Los datos enviados no son válidos.', 422, $exception->errors());
             }
 
             return null;

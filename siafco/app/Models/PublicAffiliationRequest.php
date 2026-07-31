@@ -10,7 +10,9 @@ class PublicAffiliationRequest extends Model
         'person_id', 'affiliate_id', 'user_id', 'sector_id', 'affiliation_plan_id',
         'public_token', 'request_code', 'amount_due', 'status', 'submitted_at',
         'payment_submitted_at', 'reviewed_at', 'reviewed_by', 'rejection_reason',
-        'observations', 'ip_address', 'user_agent',
+        'observations', 'ip_address', 'user_agent', 'terms_accepted_at',
+        'privacy_accepted_at', 'terms_version', 'privacy_version',
+        'acceptance_ip', 'acceptance_user_agent',
     ];
 
     protected function casts(): array
@@ -20,6 +22,8 @@ class PublicAffiliationRequest extends Model
             'submitted_at' => 'datetime',
             'payment_submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
+            'terms_accepted_at' => 'datetime',
+            'privacy_accepted_at' => 'datetime',
         ];
     }
 
