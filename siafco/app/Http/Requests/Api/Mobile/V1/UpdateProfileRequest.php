@@ -14,7 +14,7 @@ class UpdateProfileRequest extends MobileFormRequest
         'status', 'sector_id', 'institution_id', 'institution', 'regional_id',
         'regional', 'position', 'affiliation_plan_id', 'verification_token',
         'approved_at', 'created_at', 'updated_at', 'deleted_at', 'role',
-        'user_type', 'is_active', 'must_change_password',
+        'user_type', 'is_active', 'must_change_password', 'photo',
     ];
 
     public function authorize(): bool
@@ -49,16 +49,15 @@ class UpdateProfileRequest extends MobileFormRequest
         $affiliate = $this->user()?->affiliate;
 
         return [
-            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120', 'dimensions:min_width=300,min_height=300'],
-            'phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+().\s-]*$/'],
+            'phone' => ['sometimes', 'nullable', 'string', 'max:30', 'regex:/^[0-9+().\s-]*$/'],
             'email' => [
-                'required', 'email:rfc', 'max:150',
+                'sometimes', 'required', 'email:rfc', 'max:150',
                 Rule::unique('affiliates', 'email')->ignore($affiliate?->id),
                 Rule::unique('users', 'email')->ignore($this->user()?->id),
             ],
-            'address' => ['nullable', 'string', 'max:255'],
-            'birth_date' => ['nullable', 'date', 'before:today'],
-            'marital_status' => ['nullable', 'string', 'max:50'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'birth_date' => ['sometimes', 'nullable', 'date', 'before:today'],
+            'marital_status' => ['sometimes', 'nullable', 'string', 'max:50'],
         ];
     }
 
@@ -68,6 +67,10 @@ class UpdateProfileRequest extends MobileFormRequest
             function (Validator $validator): void {
                 if ($this->containsProtectedFields()) {
                     $validator->errors()->add('profile', 'No tienes autorización para modificar datos administrativos.');
+                }
+
+                if (! $this->hasAnyEditableField()) {
+                    $validator->errors()->add('profile', 'Debes enviar al menos un campo editable.');
                 }
             },
         ];
@@ -85,6 +88,12 @@ class UpdateProfileRequest extends MobileFormRequest
         }
 
         parent::failedValidation($validator);
+    }
+
+    private function hasAnyEditableField(): bool
+    {
+        return collect(['phone', 'email', 'address', 'birth_date', 'marital_status'])
+            ->contains(fn ($field) => $this->exists($field));
     }
 
     private function containsProtectedFields(): bool

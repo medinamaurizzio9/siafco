@@ -22,7 +22,12 @@ Route::prefix('mobile/v1')->name('api.mobile.v1.')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::post('/auth/logout-all', [AuthController::class, 'logoutAll'])->name('auth.logout-all');
         Route::get('/me', [ProfileController::class, 'show'])->name('me.show');
-        Route::patch('/me/profile', [ProfileController::class, 'update'])->name('me.profile.update');
+        Route::patch('/me/profile', [ProfileController::class, 'update'])
+            ->middleware('throttle:10,1')
+            ->name('me.profile.update');
+        Route::post('/me/profile/photo', [ProfileController::class, 'updatePhoto'])
+            ->middleware('throttle:3,1')
+            ->name('me.profile.photo.update');
         Route::patch('/me/password', [ProfileController::class, 'updatePassword'])
             ->middleware('throttle:5,1')
             ->name('me.password.update');
