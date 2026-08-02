@@ -163,7 +163,7 @@
                                     {!! $navLink('admin.store.categories.index', 'Categorías', [], ['admin.store.categories.*']) !!}
                                 @endif
                                 @if($canManageStoreShipping)
-                                    {!! $navLink('admin.store.dashboard', 'Tarifas de envío', [], ['admin.store.shipping-rates.*']) !!}
+                                    {!! $navLink('admin.store.shipping-rates.index', 'Tarifas de envío', [], ['admin.store.shipping-rates.*']) !!}
                                 @endif
                                 @if($canManageStoreSettings)
                                     {!! $navLink('admin.store.settings.edit', 'Configuración', [], ['admin.store.settings.*']) !!}

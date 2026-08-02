@@ -27,6 +27,7 @@ use App\Http\Controllers\Admin\Store\CategoryController as StoreCategoryControll
 use App\Http\Controllers\Admin\Store\ProductController as StoreProductController;
 use App\Http\Controllers\Admin\Store\ProductVariantController as StoreProductVariantController;
 use App\Http\Controllers\Admin\Store\ProductImageController as StoreProductImageController;
+use App\Http\Controllers\Admin\Store\ShippingRateController as StoreShippingRateController;
 use App\Http\Controllers\Investments\DashboardController as InvestmentDashboardController;
 use App\Http\Controllers\Investments\InvestmentLotController;
 use App\Http\Controllers\Investments\InvestorController;
@@ -230,6 +231,7 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
             Route::post('imagenes/{image}/principal', [StoreProductImageController::class, 'makePrimary'])->name('images.primary');
             Route::delete('imagenes/{image}', [StoreProductImageController::class, 'destroy'])->name('images.destroy');
         });
+        Route::resource('tarifas-envio', StoreShippingRateController::class)->except('show')->parameters(['tarifas-envio' => 'shippingRate'])->names('shipping-rates');
         Route::get('/configuracion', [StoreSettingController::class, 'edit'])->name('settings.edit');
         Route::put('/configuracion', [StoreSettingController::class, 'update'])->name('settings.update');
     });
