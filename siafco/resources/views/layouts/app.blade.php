@@ -23,6 +23,10 @@
             $canManageUsers = $user->isInternal() && $user->hasPermission('users.view');
             $canAdmin = $user->hasRole('administrador') || $canManageUsers;
             $canGeneralSettings = $user->hasRole(['administrador', 'secretaria']);
+            $canViewStore = $user->isInternal() && $user->hasPermission('store.view');
+            $canManageStoreProducts = $user->isInternal() && $user->hasPermission('store.manage-products');
+            $canManageStoreSettings = $user->isInternal() && $user->hasPermission('store.manage-settings');
+            $canManageStoreShipping = $user->isInternal() && $user->hasPermission('store.manage-shipping');
             $isPersonalOnly = $user->hasRole(['afiliado', 'accionista']) && ! $canViewAffiliation && ! $canManageInvestments;
 
             $openModule = match (true) {
@@ -30,6 +34,7 @@
                 request()->routeIs('affiliates.*', 'affiliate-benefits.*', 'sectors.*', 'plans.*', 'payments.*', 'credentials.*', 'credenciales.*', 'institutional-qr.*', 'reports.*', 'affiliation.*', 'public-affiliation.admin.*') => 'affiliation',
                 request()->routeIs('investments.*') && ! request()->routeIs('investments.panel') => 'investments',
                 request()->routeIs('credits.*') => 'credits',
+                request()->routeIs('admin.store.*') => 'store',
                 request()->routeIs('administration.*', 'admin.users.*') => 'administration',
                 request()->routeIs('institutional-settings.*', 'settings.*') => 'general-settings',
                 request()->routeIs('affiliate.*', 'investments.panel') => 'personal',
@@ -142,6 +147,27 @@
                                 {!! $soon('credits.late-fees.index', 'Mora') !!}
                                 {!! $soon('credits.reports.index', 'Reportes de creditos') !!}
                                 {!! $soon('credits.settings.edit', 'Configuracion de creditos') !!}
+                            </div>
+                        </section>
+                    @endif
+
+                    @if($canViewStore)
+                        <section class="nav-module" data-accordion-module="store">
+                            <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'store' ? 'true' : 'false' }}">
+                                <span>Mini tienda</span><span class="nav-chevron">⌄</span>
+                            </button>
+                            <div class="nav-module-panel {{ $openModule === 'store' ? '' : 'hidden' }}">
+                                {!! $navLink('admin.store.dashboard', 'Resumen', [], ['admin.store.dashboard']) !!}
+                                @if($canManageStoreProducts)
+                                    {!! $navLink('admin.store.dashboard', 'Productos', [], ['admin.store.products.*']) !!}
+                                    {!! $navLink('admin.store.dashboard', 'Categorías', [], ['admin.store.categories.*']) !!}
+                                @endif
+                                @if($canManageStoreShipping)
+                                    {!! $navLink('admin.store.dashboard', 'Tarifas de envío', [], ['admin.store.shipping-rates.*']) !!}
+                                @endif
+                                @if($canManageStoreSettings)
+                                    {!! $navLink('admin.store.settings.edit', 'Configuración', [], ['admin.store.settings.*']) !!}
+                                @endif
                             </div>
                         </section>
                     @endif

@@ -21,6 +21,8 @@ use App\Http\Controllers\PlaceholderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\VerificationController;
+use App\Http\Controllers\Admin\Store\DashboardController as StoreDashboardController;
+use App\Http\Controllers\Admin\Store\SettingController as StoreSettingController;
 use App\Http\Controllers\Investments\DashboardController as InvestmentDashboardController;
 use App\Http\Controllers\Investments\InvestmentLotController;
 use App\Http\Controllers\Investments\InvestorController;
@@ -211,6 +213,12 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
     Route::prefix('administracion')->name('administration.')->middleware('role:administrador')->group(function () {
         Route::get('/roles-permisos', PlaceholderController::class)->defaults('title', 'Roles y permisos')->defaults('message', 'Gestion detallada de permisos por modulo pendiente de implementacion.')->name('roles.index');
         Route::get('/auditoria', PlaceholderController::class)->defaults('title', 'Auditoria')->defaults('message', 'Consulta avanzada de auditoria preparada para una fase posterior.')->name('audit.index');
+    });
+
+    Route::prefix('admin/mini-tienda')->name('admin.store.')->middleware('role:superadministrador,administrador,gerente,secretaria,cajero,consulta')->group(function () {
+        Route::get('/', StoreDashboardController::class)->name('dashboard');
+        Route::get('/configuracion', [StoreSettingController::class, 'edit'])->name('settings.edit');
+        Route::put('/configuracion', [StoreSettingController::class, 'update'])->name('settings.update');
     });
 
     Route::prefix('configuracion-general')->name('settings.')->middleware('role:administrador,secretaria')->group(function () {
