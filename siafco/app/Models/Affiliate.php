@@ -69,4 +69,19 @@ class Affiliate extends Model
     {
         return $this->hasOne(PublicAffiliationRequest::class)->latestOfMany();
     }
+
+    public function storeOrders()
+    {
+        return $this->hasMany(StoreOrder::class);
+    }
+
+    public function storeCouponUsages()
+    {
+        return $this->hasMany(StoreCouponUsage::class);
+    }
+
+    public function benefitRedemptions()
+    {
+        return $this->hasMany(AffiliateBenefitRedemption::class);
+    }
 }

@@ -79,6 +79,16 @@ class User extends Authenticatable
         return $this->hasOne(Investor::class, 'person_id', 'person_id');
     }
 
+    public function uploadedStoreReceipts()
+    {
+        return $this->hasMany(StoreOrderReceipt::class, 'uploaded_by_user_id');
+    }
+
+    public function reviewedStoreReceipts()
+    {
+        return $this->hasMany(StoreOrderReceipt::class, 'reviewed_by_user_id');
+    }
+
     public function hasRole(string|array $roles): bool
     {
         return in_array($this->role, (array) $roles, true);
