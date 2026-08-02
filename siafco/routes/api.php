@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\Mobile\V1\CredentialController;
 use App\Http\Controllers\Api\Mobile\V1\ProfileController;
 use App\Http\Controllers\Api\Mobile\V1\Store\CatalogController as MobileStoreCatalogController;
 use App\Http\Controllers\Api\Mobile\V1\Store\OrderController as MobileStoreOrderController;
+use App\Http\Controllers\Api\Mobile\V1\Store\ReceiptController as MobileStoreReceiptController;
+use App\Http\Controllers\Api\Mobile\V1\Store\WhatsAppController as MobileStoreWhatsAppController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('mobile/v1')->name('api.mobile.v1.')->group(function () {
@@ -62,6 +64,12 @@ Route::prefix('mobile/v1')->name('api.mobile.v1.')->group(function () {
             Route::get('/orders/{orderCode}', [MobileStoreOrderController::class, 'show'])
                 ->middleware('throttle:60,1')
                 ->name('orders.show');
+            Route::post('/orders/{orderCode}/receipt', [MobileStoreReceiptController::class, 'store'])
+                ->middleware('throttle:5,1')
+                ->name('orders.receipt.store');
+            Route::post('/orders/{orderCode}/whatsapp', [MobileStoreWhatsAppController::class, 'store'])
+                ->middleware('throttle:10,1')
+                ->name('orders.whatsapp.store');
         });
     });
 });
