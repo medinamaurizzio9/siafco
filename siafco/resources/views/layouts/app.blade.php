@@ -27,6 +27,7 @@
             $canManageStoreProducts = $user->isInternal() && $user->hasPermission('store.manage-products');
             $canManageStoreSettings = $user->isInternal() && $user->hasPermission('store.manage-settings');
             $canManageStoreShipping = $user->isInternal() && $user->hasPermission('store.manage-shipping');
+            $canManageStoreCoupons = $user->isInternal() && $user->hasPermission('store.manage-coupons');
             $isPersonalOnly = $user->hasRole(['afiliado', 'accionista']) && ! $canViewAffiliation && ! $canManageInvestments;
 
             $openModule = match (true) {
@@ -161,6 +162,9 @@
                                 @if($canManageStoreProducts)
                                     {!! $navLink('admin.store.products.index', 'Productos', [], ['admin.store.products.*']) !!}
                                     {!! $navLink('admin.store.categories.index', 'Categorías', [], ['admin.store.categories.*']) !!}
+                                @endif
+                                @if($canManageStoreCoupons)
+                                    {!! $navLink('admin.store.coupons.index', 'Cupones', [], ['admin.store.coupons.*']) !!}
                                 @endif
                                 @if($canManageStoreShipping)
                                     {!! $navLink('admin.store.shipping-rates.index', 'Tarifas de envío', [], ['admin.store.shipping-rates.*']) !!}

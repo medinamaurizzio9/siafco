@@ -24,6 +24,7 @@ use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\Admin\Store\DashboardController as StoreDashboardController;
 use App\Http\Controllers\Admin\Store\SettingController as StoreSettingController;
 use App\Http\Controllers\Admin\Store\CategoryController as StoreCategoryController;
+use App\Http\Controllers\Admin\Store\CouponController as StoreCouponController;
 use App\Http\Controllers\Admin\Store\ProductController as StoreProductController;
 use App\Http\Controllers\Admin\Store\ProductVariantController as StoreProductVariantController;
 use App\Http\Controllers\Admin\Store\ProductImageController as StoreProductImageController;
@@ -224,6 +225,7 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         Route::get('/', StoreDashboardController::class)->name('dashboard');
         Route::resource('categorias', StoreCategoryController::class)->except('show')->parameters(['categorias' => 'category'])->names('categories');
         Route::resource('productos', StoreProductController::class)->except('show')->parameters(['productos' => 'product'])->names('products');
+        Route::resource('cupones', StoreCouponController::class)->except('show')->parameters(['cupones' => 'coupon'])->names('coupons');
         Route::prefix('productos/{product}')->name('products.')->group(function () {
             Route::resource('variantes', StoreProductVariantController::class)->except('index', 'show')->parameters(['variantes' => 'variant'])->names('variants');
             Route::post('imagenes', [StoreProductImageController::class, 'store'])->name('images.store');

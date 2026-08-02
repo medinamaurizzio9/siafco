@@ -27,7 +27,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(User::class, UserPolicy::class);
-        foreach (['store.view', 'store.manage-products', 'store.manage-settings', 'store.manage-shipping'] as $permission) {
+        foreach (['store.view', 'store.manage-products', 'store.manage-settings', 'store.manage-shipping', 'store.manage-coupons', 'store.manage-orders'] as $permission) {
             Gate::define($permission, fn (User $user) => $user->isInternal() && $user->hasPermission($permission));
         }
 
