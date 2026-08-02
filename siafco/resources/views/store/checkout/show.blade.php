@@ -1,4 +1,8 @@
 <x-layouts.app title="Checkout">
+    <div class="mb-4">
+        <a class="btn-secondary" href="{{ route('store.cart.show') }}">Volver al carrito</a>
+    </div>
+
     <div class="grid gap-5 lg:grid-cols-3">
         <section class="section-card lg:col-span-2">
             <h2 class="mb-4 text-xl font-black text-[#0b1f3a]">Entrega y cupón</h2>

@@ -1,4 +1,8 @@
 <x-layouts.app title="Mi carrito">
+    <div class="mb-4">
+        <a class="btn-secondary" href="{{ route('store.catalog.index') }}">Seguir comprando</a>
+    </div>
+
     @if(! $quote)
         <div class="rounded bg-white p-5 text-slate-600 shadow">Tu carrito está vacío.</div>
     @else

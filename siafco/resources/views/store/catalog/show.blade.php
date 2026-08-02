@@ -1,4 +1,8 @@
 <x-layouts.app title="{{ $product->name }}">
+    <div class="mb-4">
+        <a class="btn-secondary" href="{{ route('store.catalog.index') }}">Volver a tienda</a>
+    </div>
+
     <div class="grid gap-6 lg:grid-cols-2">
         <section class="grid gap-3">
             @forelse($product->images as $image)

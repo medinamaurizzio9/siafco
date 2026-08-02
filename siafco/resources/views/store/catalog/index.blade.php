@@ -1,4 +1,8 @@
 <x-layouts.app title="Mini tienda">
+    <div class="mb-4">
+        <a class="btn-secondary" href="{{ route('affiliate.panel') }}">Volver al panel</a>
+    </div>
+
     <section class="mb-6 rounded bg-[#0b1f3a] p-5 text-white shadow">
         <p class="text-sm font-bold uppercase text-[#d4af37]">SIAFCO</p>
         <h2 class="text-2xl font-black">Mini tienda para afiliados</h2>

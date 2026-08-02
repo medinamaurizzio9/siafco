@@ -1,13 +1,18 @@
 <x-layouts.app title="Pedido {{ $order->code }}">
+    <div class="mb-4">
+        <a class="btn-secondary" href="{{ route('store.orders.index') }}">Volver a Mis pedidos</a>
+    </div>
+
     <section class="section-card">
         <p class="text-sm font-bold uppercase text-[#b8942f]">{{ $order->status }}</p>
         <h2 class="text-2xl font-black text-[#0b1f3a]">{{ $order->code }}</h2>
         <p class="mt-2">Total: <strong>Bs {{ number_format((float) $order->total, 2) }}</strong></p>
         <p class="text-sm text-slate-600">Entrega: {{ $order->delivery_method }}</p>
-        <form class="mt-4" method="post" action="{{ route('store.orders.whatsapp', $order) }}">
+        <form class="mt-4" method="post" action="{{ route('store.orders.whatsapp', $order) }}" target="_blank" rel="noopener">
             @csrf
             <button class="btn-secondary">Coordinar por WhatsApp</button>
         </form>
+        <p class="mt-2 text-xs text-slate-500">Si WhatsApp no se abre, permite ventanas emergentes para este sitio.</p>
     </section>
 
     <section class="mt-5 grid gap-3">

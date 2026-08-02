@@ -29,7 +29,11 @@ class AuthController extends Controller
                 'last_login_ip' => $request->ip(),
             ])->save();
 
-            return redirect()->intended(route(Auth::user()->role === 'afiliado' ? 'affiliate.panel' : 'admin.dashboard'));
+            if (Auth::user()->role === 'afiliado') {
+                return redirect()->route('affiliate.panel');
+            }
+
+            return redirect()->intended(route('admin.dashboard'));
         }
 
         return back()->withErrors(['email' => 'Las credenciales no son validas.'])->onlyInput('email');
