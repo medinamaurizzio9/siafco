@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\InstitutionalSetting;
 use App\Models\User;
 use App\Policies\UserPolicy;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
@@ -27,10 +28,33 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(User::class, UserPolicy::class);
 
-        $institution = Schema::hasTable('institutional_settings')
+        $institution = $this->hasInstitutionalSettingsTable()
             ? InstitutionalSetting::current()
             : InstitutionalSetting::fallback();
 
         View::share('institution', $institution);
+    }
+
+    private function hasInstitutionalSettingsTable(): bool
+    {
+        try {
+            return Schema::hasTable('institutional_settings');
+        } catch (QueryException $exception) {
+            if ($this->app->runningInConsole() && $this->isConsoleDatabaseBootstrapException($exception)) {
+                return false;
+            }
+
+            throw $exception;
+        }
+    }
+
+    private function isConsoleDatabaseBootstrapException(QueryException $exception): bool
+    {
+        $previousCode = (string) ($exception->getPrevious()?->getCode() ?? '');
+        $message = $exception->getMessage();
+
+        return in_array($previousCode, ['1049', '2002', '2006'], true)
+            || str_contains($message, 'Unknown database')
+            || str_contains($message, 'Connection refused');
     }
 }
