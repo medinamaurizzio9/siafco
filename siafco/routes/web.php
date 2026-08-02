@@ -22,6 +22,8 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\Store\CartController as StoreCartController;
 use App\Http\Controllers\Store\CatalogController as StoreCatalogController;
+use App\Http\Controllers\Store\CheckoutController as StoreCheckoutController;
+use App\Http\Controllers\Store\OrderController as StoreWebOrderController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\Admin\Store\DashboardController as StoreDashboardController;
 use App\Http\Controllers\Admin\Store\SettingController as StoreSettingController;
@@ -89,6 +91,10 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         Route::patch('/carrito/{lineKey}', [StoreCartController::class, 'update'])->name('cart.update');
         Route::delete('/carrito/{lineKey}', [StoreCartController::class, 'destroy'])->name('cart.destroy');
         Route::delete('/carrito', [StoreCartController::class, 'clear'])->name('cart.clear');
+        Route::get('/checkout', [StoreCheckoutController::class, 'show'])->name('checkout.show');
+        Route::post('/pedidos', [StoreCheckoutController::class, 'store'])->middleware('throttle:6,1')->name('orders.store');
+        Route::get('/mis-pedidos', [StoreWebOrderController::class, 'index'])->name('orders.index');
+        Route::get('/pedidos/{order:code}', [StoreWebOrderController::class, 'show'])->name('orders.show');
     });
 
     Route::middleware('role:afiliado')->group(function () {

@@ -33,6 +33,7 @@
             <p>Total estimado con recojo: <strong>Bs {{ $quote['total'] }}</strong></p>
             <div class="mt-4 flex flex-wrap gap-3">
                 <a class="btn-primary" href="{{ route('store.catalog.index') }}">Seguir comprando</a>
+                <a class="btn-primary" href="{{ route('store.checkout.show') }}">Ir a checkout</a>
                 <form method="post" action="{{ route('store.cart.clear') }}">@csrf @method('delete')<button class="btn-secondary">Vaciar carrito</button></form>
             </div>
         </section>

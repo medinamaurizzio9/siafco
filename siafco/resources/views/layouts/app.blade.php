@@ -221,6 +221,7 @@
                             @if($user->user_type === 'affiliate' && $user->is_active && $user->affiliate?->status === 'activo')
                                 {!! $navLink('store.catalog.index', 'Mini tienda', [], ['store.catalog.*']) !!}
                                 {!! $navLink('store.cart.show', 'Mi carrito ('.collect(session('store_cart.lines', []))->sum('quantity').')', [], ['store.cart.*']) !!}
+                                {!! $navLink('store.orders.index', 'Mis pedidos', [], ['store.orders.*', 'store.checkout.*']) !!}
                             @endif
                             <a class="nav-link" href="{{ route('affiliate.profile.show') }}#payments" data-sidebar-link>Mis pagos</a>
                         @endif
