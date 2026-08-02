@@ -37,13 +37,14 @@ class StoreCouponService
             throw ValidationException::withMessages(['coupon' => 'El pedido no alcanza la compra mínima del cupón.']);
         }
 
-        if ($coupon->global_limit && StoreCouponUsage::query()->where('store_coupon_id', $coupon->id)->count() >= $coupon->global_limit) {
+        if ($coupon->global_limit && StoreCouponUsage::query()->where('store_coupon_id', $coupon->id)->whereNull('released_at')->count() >= $coupon->global_limit) {
             throw ValidationException::withMessages(['coupon' => 'El cupón alcanzó su límite global.']);
         }
 
         if ($coupon->per_affiliate_limit && StoreCouponUsage::query()
             ->where('store_coupon_id', $coupon->id)
             ->where('affiliate_id', $affiliate->id)
+            ->whereNull('released_at')
             ->count() >= $coupon->per_affiliate_limit) {
             throw ValidationException::withMessages(['coupon' => 'El cupón alcanzó el límite por afiliado.']);
         }

@@ -64,6 +64,11 @@ class StoreOrder extends Model
         });
     }
 
+    public function getRouteKeyName(): string
+    {
+        return 'code';
+    }
+
     public function affiliate()
     {
         return $this->belongsTo(Affiliate::class);
@@ -82,6 +87,11 @@ class StoreOrder extends Model
     public function couponUsage()
     {
         return $this->hasOne(StoreCouponUsage::class);
+    }
+
+    public function statusHistories()
+    {
+        return $this->hasMany(StoreOrderStatusHistory::class);
     }
 
     public function transitionTo(string $status): void

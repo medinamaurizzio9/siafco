@@ -25,6 +25,7 @@ use App\Http\Controllers\Admin\Store\DashboardController as StoreDashboardContro
 use App\Http\Controllers\Admin\Store\SettingController as StoreSettingController;
 use App\Http\Controllers\Admin\Store\CategoryController as StoreCategoryController;
 use App\Http\Controllers\Admin\Store\CouponController as StoreCouponController;
+use App\Http\Controllers\Admin\Store\OrderController as StoreOrderController;
 use App\Http\Controllers\Admin\Store\ProductController as StoreProductController;
 use App\Http\Controllers\Admin\Store\ProductVariantController as StoreProductVariantController;
 use App\Http\Controllers\Admin\Store\ProductImageController as StoreProductImageController;
@@ -223,6 +224,9 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
 
     Route::prefix('admin/mini-tienda')->name('admin.store.')->middleware('role:superadministrador,administrador,gerente,secretaria,cajero,consulta')->group(function () {
         Route::get('/', StoreDashboardController::class)->name('dashboard');
+        Route::get('pedidos', [StoreOrderController::class, 'index'])->name('orders.index');
+        Route::get('pedidos/{order:code}', [StoreOrderController::class, 'show'])->name('orders.show');
+        Route::patch('pedidos/{order:code}/estado', [StoreOrderController::class, 'updateStatus'])->name('orders.status');
         Route::resource('categorias', StoreCategoryController::class)->except('show')->parameters(['categorias' => 'category'])->names('categories');
         Route::resource('productos', StoreProductController::class)->except('show')->parameters(['productos' => 'product'])->names('products');
         Route::resource('cupones', StoreCouponController::class)->except('show')->parameters(['cupones' => 'coupon'])->names('coupons');
