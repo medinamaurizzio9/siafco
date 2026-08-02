@@ -30,4 +30,64 @@
             <a class="btn-secondary" href="{{ route('admin.store.products.index') }}">Volver</a>
         </div>
     </form>
+
+    @if($product->exists)
+        <section class="mt-6 grid gap-6 lg:grid-cols-2">
+            <div class="section-card">
+                <div class="mb-4 flex items-center justify-between">
+                    <h2 class="text-xl font-black text-[#0b1f3a]">Variantes</h2>
+                    <a class="btn-primary" href="{{ route('admin.store.products.variants.create', $product) }}">Nueva variante</a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="table min-w-full">
+                        <thead><tr><th>Orden</th><th>Tipo</th><th>Nombre</th><th>Diferencia</th><th></th></tr></thead>
+                        <tbody>
+                        @forelse($product->variants as $variant)
+                            <tr>
+                                <td>{{ $variant->order }}</td>
+                                <td>{{ $variant->type }}</td>
+                                <td>{{ $variant->name }}<br><span class="text-xs text-slate-500">{{ $variant->active ? 'Activa' : 'Inactiva' }}</span></td>
+                                <td>Bs {{ number_format((float) $variant->price_delta, 2) }}</td>
+                                <td class="text-right"><a class="btn-secondary" href="{{ route('admin.store.products.variants.edit', [$product, $variant]) }}">Editar</a></td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="5">Sin variantes.</td></tr>
+                        @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <h2 class="text-xl font-black text-[#0b1f3a]">Imágenes</h2>
+                <form class="mt-4 grid gap-3" method="post" action="{{ route('admin.store.products.images.store', $product) }}" enctype="multipart/form-data">
+                    @csrf
+                    <input class="form-input" type="file" name="image" accept="image/jpeg,image/png,image/webp" required>
+                    <input class="form-input" name="alt" placeholder="Texto alternativo">
+                    <input class="form-input" type="number" name="order" value="0" min="0" max="9999" required>
+                    <label class="flex items-center gap-2"><input type="checkbox" name="is_primary" value="1"> Marcar como principal</label>
+                    <button class="btn-primary">Agregar imagen</button>
+                </form>
+                <div class="mt-5 grid gap-3">
+                    @forelse($product->images as $image)
+                        <article class="rounded border border-slate-200 p-3">
+                            <div class="flex gap-3">
+                                <img class="h-20 w-20 rounded object-cover" src="{{ Storage::disk('public')->url($image->path) }}" alt="{{ $image->alt ?: $product->name }}">
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-bold text-[#0b1f3a]">{{ $image->is_primary ? 'Principal' : 'Imagen' }} · Orden {{ $image->order }}</p>
+                                    <p class="truncate text-sm text-slate-600">{{ $image->alt ?: 'Sin texto alternativo' }}</p>
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                        <form method="post" action="{{ route('admin.store.products.images.primary', [$product, $image]) }}">@csrf<button class="btn-secondary">Principal</button></form>
+                                        <form method="post" action="{{ route('admin.store.products.images.destroy', [$product, $image]) }}">@csrf @method('delete')<button class="btn-danger" onclick="return confirm('¿Eliminar imagen?')">Eliminar</button></form>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    @empty
+                        <p class="rounded bg-slate-50 p-4 text-sm text-slate-600">Sin imágenes.</p>
+                    @endforelse
+                </div>
+            </div>
+        </section>
+    @endif
 </x-layouts.app>

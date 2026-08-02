@@ -3,12 +3,16 @@
 namespace App\Models;
 
 use App\Support\StoreAvailabilityStatus;
+use App\Models\Concerns\HasPublicUuid;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class StoreProduct extends Model
 {
+    use HasPublicUuid;
     use SoftDeletes;
+
+    public const PUBLIC_UUID_COLUMN = 'public_code';
 
     protected $fillable = [
         'store_category_id',

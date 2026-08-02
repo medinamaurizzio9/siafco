@@ -70,7 +70,7 @@ class ProductController extends Controller
     {
         Gate::authorize('store.manage-products');
 
-        return $this->form($product);
+        return $this->form($product->load(['variants' => fn ($q) => $q->orderBy('order'), 'images' => fn ($q) => $q->orderBy('order')]));
     }
 
     public function update(StoreProductRequest $request, StoreProduct $product)

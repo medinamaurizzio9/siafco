@@ -25,6 +25,8 @@ use App\Http\Controllers\Admin\Store\DashboardController as StoreDashboardContro
 use App\Http\Controllers\Admin\Store\SettingController as StoreSettingController;
 use App\Http\Controllers\Admin\Store\CategoryController as StoreCategoryController;
 use App\Http\Controllers\Admin\Store\ProductController as StoreProductController;
+use App\Http\Controllers\Admin\Store\ProductVariantController as StoreProductVariantController;
+use App\Http\Controllers\Admin\Store\ProductImageController as StoreProductImageController;
 use App\Http\Controllers\Investments\DashboardController as InvestmentDashboardController;
 use App\Http\Controllers\Investments\InvestmentLotController;
 use App\Http\Controllers\Investments\InvestorController;
@@ -221,6 +223,13 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         Route::get('/', StoreDashboardController::class)->name('dashboard');
         Route::resource('categorias', StoreCategoryController::class)->except('show')->parameters(['categorias' => 'category'])->names('categories');
         Route::resource('productos', StoreProductController::class)->except('show')->parameters(['productos' => 'product'])->names('products');
+        Route::prefix('productos/{product}')->name('products.')->group(function () {
+            Route::resource('variantes', StoreProductVariantController::class)->except('index', 'show')->parameters(['variantes' => 'variant'])->names('variants');
+            Route::post('imagenes', [StoreProductImageController::class, 'store'])->name('images.store');
+            Route::patch('imagenes/{image}', [StoreProductImageController::class, 'update'])->name('images.update');
+            Route::post('imagenes/{image}/principal', [StoreProductImageController::class, 'makePrimary'])->name('images.primary');
+            Route::delete('imagenes/{image}', [StoreProductImageController::class, 'destroy'])->name('images.destroy');
+        });
         Route::get('/configuracion', [StoreSettingController::class, 'edit'])->name('settings.edit');
         Route::put('/configuracion', [StoreSettingController::class, 'update'])->name('settings.update');
     });
