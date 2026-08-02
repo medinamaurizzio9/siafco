@@ -19,7 +19,7 @@ class AffiliateResource extends JsonResource
             'address' => $this->address,
             'birth_date' => $this->birth_date?->toDateString(),
             'marital_status' => $this->marital_status,
-            'photo_url' => $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null,
+            'photo_url' => $this->photoUrl(),
             'registration_number' => $this->registration_number,
             'status' => $this->status,
             'status_label' => AffiliationStatusPresenter::label($this->status),
@@ -40,5 +40,15 @@ class AffiliateResource extends JsonResource
                 'total_amount' => $this->plan ? $this->plan->total_amount : null,
             ]),
         ];
+    }
+
+    private function photoUrl(): ?string
+    {
+        if (! $this->photo_path || ! Storage::disk('public')->exists($this->photo_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($this->photo_path)
+            .'?v='.Storage::disk('public')->lastModified($this->photo_path);
     }
 }

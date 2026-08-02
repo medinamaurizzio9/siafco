@@ -175,7 +175,22 @@ class MobileApiPhaseOneTest extends TestCase
         $affiliate = $user->affiliate()->first();
         $this->assertSame('new-affiliate@siafco.test', $user->email);
         $this->assertSame('76543210', $affiliate->phone);
+        $this->assertSame('Nueva direccion', $affiliate->address);
+        $this->assertSame('1990-05-15', $affiliate->birth_date->toDateString());
+        $this->assertSame('CASADO', $affiliate->marital_status);
+        $this->assertSame('76543210', $affiliate->person->phone);
         $this->assertSame('new-affiliate@siafco.test', $affiliate->person->email);
+        $this->assertSame('Nueva direccion', $affiliate->person->address);
+        $this->assertSame('1990-05-15', $affiliate->person->birth_date->toDateString());
+        $this->assertSame('CASADO', $affiliate->person->marital_status);
+        $this->withToken($token)->getJson('/api/mobile/v1/me')
+            ->assertOk()
+            ->assertJsonPath('data.profile.affiliate.phone', '76543210')
+            ->assertJsonPath('data.profile.affiliate.marital_status', 'CASADO');
+        $this->actingAs($user)->get(route('affiliate.profile.show'))
+            ->assertOk()
+            ->assertSee('76543210')
+            ->assertSee('CASADO');
         $this->assertDatabaseHas('audit_logs', ['action' => 'mobile_affiliate_profile_updated']);
     }
 
@@ -196,11 +211,15 @@ class MobileApiPhaseOneTest extends TestCase
         $this->assertNotNull($affiliate->photo_path);
         $this->assertSame($affiliate->photo_path, $affiliate->person->photo);
         Storage::disk('public')->assertExists($affiliate->photo_path);
+        $response->assertJsonPath('data.profile.affiliate.photo_url', fn ($url) => is_string($url)
+            && str_contains($url, '/storage/affiliates/photos/')
+            && str_contains($url, '?v='));
         $this->assertDatabaseHas('audit_logs', ['action' => 'mobile_affiliate_photo_updated']);
     }
 
     public function test_profile_rejects_duplicate_email_requires_editable_field_and_invalid_photo_mime(): void
     {
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
         Storage::fake('public');
         $user = $this->affiliateUser(status: 'activo', email: 'one@siafco.test', ci: '90021001');
         $other = $this->affiliateUser(status: 'activo', email: 'two@siafco.test', ci: '90021002');
@@ -217,7 +236,19 @@ class MobileApiPhaseOneTest extends TestCase
             ->assertJsonPath('success', false)
             ->assertJsonStructure(['errors' => ['profile']]);
 
-        $this->withToken($token)->post('/api/mobile/v1/me/profile/photo', [
+        $beforeMaritalStatus = $user->affiliate->marital_status;
+        $beforePersonMaritalStatus = $user->affiliate->person->marital_status;
+        $this->withToken($token)->patchJson('/api/mobile/v1/me/profile', [
+            'email' => $user->email,
+            'marital_status' => 'casado',
+        ])->assertUnprocessable()
+            ->assertJsonPath('success', false)
+            ->assertJsonStructure(['errors' => ['marital_status']]);
+        $this->assertSame($beforeMaritalStatus, $user->affiliate->fresh()->marital_status);
+        $this->assertSame($beforePersonMaritalStatus, $user->affiliate->person->fresh()->marital_status);
+
+        $photoUser = $this->affiliateUser(status: 'activo', email: 'photo-invalid@siafco.test', ci: '90021003');
+        $this->withToken($this->tokenFor($photoUser))->post('/api/mobile/v1/me/profile/photo', [
             'photo' => UploadedFile::fake()->create('avatar.svg', 10, 'image/svg+xml'),
         ])->assertUnprocessable()
             ->assertJsonPath('success', false)

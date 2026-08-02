@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Services\AuditService;
+use App\Support\PublicAffiliationCatalogs;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -57,7 +58,7 @@ class UpdateOwnAffiliateProfileRequest extends FormRequest
             ],
             'address' => ['nullable', 'string', 'max:255'],
             'birth_date' => ['nullable', 'date', 'before:today'],
-            'marital_status' => ['nullable', 'string', 'max:50'],
+            'marital_status' => ['nullable', 'string', 'max:50', Rule::in(PublicAffiliationCatalogs::MARITAL_STATUSES)],
         ];
     }
 

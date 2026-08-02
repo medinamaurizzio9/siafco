@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Mobile\V1;
 
 use App\Services\AuditService;
+use App\Support\PublicAffiliationCatalogs;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -57,7 +58,7 @@ class UpdateProfileRequest extends MobileFormRequest
             ],
             'address' => ['sometimes', 'nullable', 'string', 'max:255'],
             'birth_date' => ['sometimes', 'nullable', 'date', 'before:today'],
-            'marital_status' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'marital_status' => ['sometimes', 'nullable', 'string', 'max:50', Rule::in(PublicAffiliationCatalogs::MARITAL_STATUSES)],
         ];
     }
 

@@ -108,7 +108,7 @@
                         Estado civil
                         <select class="form-input" name="marital_status">
                             <option value="">No especificado</option>
-                            @foreach(['Soltero/a', 'Casado/a', 'Divorciado/a', 'Viudo/a', 'Unión libre'] as $option)
+                            @foreach(\App\Support\PublicAffiliationCatalogs::MARITAL_STATUSES as $option)
                                 <option value="{{ $option }}" @selected(old('marital_status', $affiliate->marital_status) === $option)>{{ $option }}</option>
                             @endforeach
                         </select>

@@ -79,7 +79,7 @@ class MobileApiCredentialTest extends TestCase
     public function test_active_affiliate_gets_own_mobile_credential_json(): void
     {
         Storage::fake('public');
-        [$user, $affiliate] = $this->affiliate(status: 'activo', credential: true);
+        [$user, $affiliate] = $this->affiliate(status: 'activo', credential: true, photo: true);
 
         $response = $this->withToken($this->tokenFor($user))
             ->getJson('/api/mobile/v1/me/credential?affiliate_id=999&user_id=999&ci=ignore-me');
@@ -100,6 +100,7 @@ class MobileApiCredentialTest extends TestCase
                         'status',
                         'status_label',
                         'issued_at',
+                        'photo_url',
                         'verification_url',
                         'qr_image',
                     ],
@@ -112,6 +113,8 @@ class MobileApiCredentialTest extends TestCase
 
         $payload = $response->json();
         $this->assertStringStartsWith('data:image/png;base64,', $payload['data']['credential']['qr_image']);
+        $this->assertStringContainsString('/storage/affiliates/photos/', $payload['data']['credential']['photo_url']);
+        $this->assertStringContainsString('?v=', $payload['data']['credential']['photo_url']);
         $this->assertCredentialPayloadDoesNotExposeSensitiveFields($payload, $affiliate);
     }
 
@@ -156,6 +159,7 @@ class MobileApiCredentialTest extends TestCase
             ->assertJsonMissingPath('data.credential.birth_date')
             ->assertJsonMissingPath('data.credential.verification_token')
             ->assertJsonMissingPath('data.credential.public_token')
+            ->assertJsonMissingPath('data.credential.photo_path')
             ->assertJsonMissingPath('data.credential.qr_path')
             ->assertJsonMissingPath('data.credential.pdf_path')
             ->assertJsonMissingPath('data.credential.png_path');
@@ -203,7 +207,8 @@ class MobileApiCredentialTest extends TestCase
         string $registrationNumber = 'REG-A',
         string $status = 'activo',
         bool $credential = true,
-        bool $qrFile = true
+        bool $qrFile = true,
+        bool $photo = false
     ): array {
         $sector = Sector::create([
             'name' => 'Magisterio Rural',
@@ -225,6 +230,11 @@ class MobileApiCredentialTest extends TestCase
             'is_active' => true,
         ]);
 
+        $photoPath = $photo ? "affiliates/photos/{$registrationNumber}.jpg" : null;
+        if ($photoPath) {
+            Storage::disk('public')->put($photoPath, $this->png());
+        }
+
         $affiliate = Affiliate::create([
             'user_id' => $user->id,
             'sector_id' => $sector->id,
@@ -234,6 +244,7 @@ class MobileApiCredentialTest extends TestCase
             'phone' => '70000000',
             'email' => $email,
             'address' => 'Direccion privada',
+            'photo_path' => $photoPath,
             'institution' => 'Institucion educativa',
             'regional' => 'La Paz',
             'registration_number' => $registrationNumber,

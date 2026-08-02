@@ -44,10 +44,21 @@ class CredentialController extends Controller
                 'status' => $affiliate->status,
                 'status_label' => $credentialData['status_label'],
                 'issued_at' => $credentialData['issued_at'],
+                'photo_url' => $this->photoUrl($affiliate->photo_path),
                 'verification_url' => route('verify.show', $affiliate->verification_token),
                 'qr_image' => $this->dataUri($credential->qr_path),
             ],
         ], 'Credencial movil disponible.');
+    }
+
+    private function photoUrl(?string $path): ?string
+    {
+        if (! $path || ! Storage::disk('public')->exists($path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($path)
+            .'?v='.Storage::disk('public')->lastModified($path);
     }
 
     private function dataUri(?string $path): ?string
