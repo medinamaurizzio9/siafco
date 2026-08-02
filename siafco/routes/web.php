@@ -24,12 +24,14 @@ use App\Http\Controllers\Store\CartController as StoreCartController;
 use App\Http\Controllers\Store\CatalogController as StoreCatalogController;
 use App\Http\Controllers\Store\CheckoutController as StoreCheckoutController;
 use App\Http\Controllers\Store\OrderController as StoreWebOrderController;
+use App\Http\Controllers\Store\ReceiptController as StoreReceiptController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\Admin\Store\DashboardController as StoreDashboardController;
 use App\Http\Controllers\Admin\Store\SettingController as StoreSettingController;
 use App\Http\Controllers\Admin\Store\CategoryController as StoreCategoryController;
 use App\Http\Controllers\Admin\Store\CouponController as StoreCouponController;
 use App\Http\Controllers\Admin\Store\OrderController as StoreOrderController;
+use App\Http\Controllers\Admin\Store\OrderReceiptController as StoreAdminOrderReceiptController;
 use App\Http\Controllers\Admin\Store\ProductController as StoreProductController;
 use App\Http\Controllers\Admin\Store\ProductVariantController as StoreProductVariantController;
 use App\Http\Controllers\Admin\Store\ProductImageController as StoreProductImageController;
@@ -95,6 +97,8 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         Route::post('/pedidos', [StoreCheckoutController::class, 'store'])->middleware('throttle:6,1')->name('orders.store');
         Route::get('/mis-pedidos', [StoreWebOrderController::class, 'index'])->name('orders.index');
         Route::get('/pedidos/{order:code}', [StoreWebOrderController::class, 'show'])->name('orders.show');
+        Route::post('/pedidos/{order:code}/comprobante', [StoreReceiptController::class, 'store'])->middleware('throttle:5,1')->name('orders.receipts.store');
+        Route::get('/pedidos/{order:code}/comprobante/{receipt:public_id}', [StoreReceiptController::class, 'show'])->name('orders.receipts.show');
     });
 
     Route::middleware('role:afiliado')->group(function () {
@@ -245,6 +249,9 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         Route::get('pedidos', [StoreOrderController::class, 'index'])->name('orders.index');
         Route::get('pedidos/{order:code}', [StoreOrderController::class, 'show'])->name('orders.show');
         Route::patch('pedidos/{order:code}/estado', [StoreOrderController::class, 'updateStatus'])->name('orders.status');
+        Route::get('pedidos/{order:code}/comprobantes/{receipt:public_id}', [StoreAdminOrderReceiptController::class, 'show'])->name('orders.receipts.show');
+        Route::post('pedidos/{order:code}/comprobantes/{receipt:public_id}/confirmar', [StoreAdminOrderReceiptController::class, 'confirm'])->name('orders.receipts.confirm');
+        Route::post('pedidos/{order:code}/comprobantes/{receipt:public_id}/rechazar', [StoreAdminOrderReceiptController::class, 'reject'])->name('orders.receipts.reject');
         Route::resource('categorias', StoreCategoryController::class)->except('show')->parameters(['categorias' => 'category'])->names('categories');
         Route::resource('productos', StoreProductController::class)->except('show')->parameters(['productos' => 'product'])->names('products');
         Route::resource('cupones', StoreCouponController::class)->except('show')->parameters(['cupones' => 'coupon'])->names('coupons');

@@ -12,7 +12,7 @@ $permissions = [
     'audit.view', 'credits.view', 'credits.create', 'credits.update', 'credits.approve',
     'investors.view', 'investors.create', 'investors.update',
     'store.view', 'store.manage-products', 'store.manage-settings', 'store.manage-shipping',
-    'store.manage-coupons', 'store.manage-orders',
+    'store.manage-coupons', 'store.manage-orders', 'store.verify-receipts',
 ];
 
 return [
@@ -40,7 +40,7 @@ return [
             'affiliates.approve', 'affiliates.reject', 'affiliates.reset-password',
             'payments.view', 'payments.create', 'payments.update', 'payments.receipt',
             'credentials.view', 'credentials.download', 'credentials.print',
-            'reports.view', 'settings.view', 'store.view', 'store.manage-products', 'store.manage-shipping', 'store.manage-coupons',
+            'reports.view', 'settings.view', 'store.view', 'store.manage-products', 'store.manage-shipping', 'store.manage-coupons', 'store.verify-receipts',
         ],
         'cajero' => [
             'affiliates.view', 'payments.view', 'payments.create', 'payments.update',

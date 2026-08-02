@@ -33,10 +33,10 @@ final class StoreOrderStatus
     ];
 
     private const TRANSITIONS = [
-        self::PENDING => [self::WAITING_PAYMENT, self::RESERVED, self::CANCELLED],
+        self::PENDING => [self::WAITING_PAYMENT, self::RESERVED, self::PAYMENT_REVIEW, self::CANCELLED],
         self::RESERVED => [self::WAITING_PAYMENT, self::CONFIRMED, self::CANCELLED],
         self::WAITING_PAYMENT => [self::PAYMENT_REVIEW, self::CANCELLED],
-        self::PAYMENT_REVIEW => [self::CONFIRMED, self::REJECTED, self::CANCELLED],
+        self::PAYMENT_REVIEW => [self::CONFIRMED, self::WAITING_PAYMENT, self::REJECTED, self::CANCELLED],
         self::CONFIRMED => [self::PREPARING, self::CANCELLED],
         self::PREPARING => [self::READY_FOR_PICKUP, self::SHIPPED],
         self::SHIPPED => [self::DELIVERED],
