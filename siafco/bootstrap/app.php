@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'affiliate.active-access' => \App\Http\Middleware\RestrictPendingAffiliateAccess::class,
             'affiliate.store.active' => \App\Http\Middleware\EnsureActiveStoreAffiliate::class,
+            'mobile.affiliate.active' => \App\Http\Middleware\EnsureActiveMobileStoreAffiliate::class,
             'password.changed' => \App\Http\Middleware\EnsurePasswordIsChanged::class,
             'mobile.affiliate' => \App\Http\Middleware\EnsureMobileAffiliateAccess::class,
         ]);
