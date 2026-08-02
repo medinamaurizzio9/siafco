@@ -25,6 +25,7 @@ use App\Http\Controllers\Store\CatalogController as StoreCatalogController;
 use App\Http\Controllers\Store\CheckoutController as StoreCheckoutController;
 use App\Http\Controllers\Store\OrderController as StoreWebOrderController;
 use App\Http\Controllers\Store\ReceiptController as StoreReceiptController;
+use App\Http\Controllers\Store\WhatsAppController as StoreWhatsAppController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\Admin\Store\DashboardController as StoreDashboardController;
 use App\Http\Controllers\Admin\Store\SettingController as StoreSettingController;
@@ -99,6 +100,7 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         Route::get('/pedidos/{order:code}', [StoreWebOrderController::class, 'show'])->name('orders.show');
         Route::post('/pedidos/{order:code}/comprobante', [StoreReceiptController::class, 'store'])->middleware('throttle:5,1')->name('orders.receipts.store');
         Route::get('/pedidos/{order:code}/comprobante/{receipt:public_id}', [StoreReceiptController::class, 'show'])->name('orders.receipts.show');
+        Route::post('/pedidos/{order:code}/whatsapp', [StoreWhatsAppController::class, 'store'])->middleware('throttle:6,1')->name('orders.whatsapp');
     });
 
     Route::middleware('role:afiliado')->group(function () {

@@ -4,6 +4,10 @@
         <h2 class="text-2xl font-black text-[#0b1f3a]">{{ $order->code }}</h2>
         <p class="mt-2">Total: <strong>Bs {{ number_format((float) $order->total, 2) }}</strong></p>
         <p class="text-sm text-slate-600">Entrega: {{ $order->delivery_method }}</p>
+        <form class="mt-4" method="post" action="{{ route('store.orders.whatsapp', $order) }}">
+            @csrf
+            <button class="btn-secondary">Coordinar por WhatsApp</button>
+        </form>
     </section>
 
     <section class="mt-5 grid gap-3">
