@@ -9,7 +9,10 @@ use App\Models\User;
 use App\Support\StoreAvailabilityStatus;
 use App\Support\StoreDeliveryMethod;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class MiniStoreCatalogAdminTest extends TestCase
@@ -108,6 +111,83 @@ class MiniStoreCatalogAdminTest extends TestCase
         $this->actingAs($admin)->delete(route('admin.store.products.destroy', $product))
             ->assertRedirect();
         $this->assertSoftDeleted($product);
+    }
+
+    public function test_store_products_receive_non_editable_unique_public_codes_and_keep_safe_image_paths(): void
+    {
+        Storage::fake('public');
+        $admin = $this->admin();
+        $category = StoreCategory::create(['name' => 'Productos', 'slug' => 'productos', 'active' => true]);
+
+        $payload = [
+            'store_category_id' => $category->id,
+            'sku' => 'PUB-001',
+            'slug' => 'producto-publico',
+            'name' => 'Producto publico',
+            'regular_price' => '100.00',
+            'affiliate_price' => '90.00',
+            'availability_status' => StoreAvailabilityStatus::AVAILABLE,
+            'delivery_modes' => [StoreDeliveryMethod::PICKUP],
+            'max_quantity_per_order' => 3,
+            'active' => '1',
+            'order' => 1,
+            'public_code' => '11111111-1111-1111-1111-111111111111',
+        ];
+
+        $this->actingAs($admin)->post(route('admin.store.products.store'), $payload)
+            ->assertRedirect(route('admin.store.products.index'));
+
+        $first = StoreProduct::firstOrFail();
+        $this->assertTrue(Str::isUuid($first->public_code));
+        $this->assertNotSame('11111111-1111-1111-1111-111111111111', $first->public_code);
+
+        $this->actingAs($admin)->post(route('admin.store.products.store'), array_merge($payload, [
+            'sku' => 'PUB-002',
+            'slug' => 'producto-publico-dos',
+            'name' => 'Producto publico dos',
+            'public_code' => $first->public_code,
+        ]))->assertRedirect(route('admin.store.products.index'));
+
+        $second = StoreProduct::query()->where('sku', 'PUB-002')->firstOrFail();
+        $this->assertTrue(Str::isUuid($second->public_code));
+        $this->assertNotSame($first->public_code, $second->public_code);
+
+        $this->actingAs($admin)->put(route('admin.store.products.update', $first), array_merge($payload, [
+            'sku' => 'PUB-001-A',
+            'public_code' => '22222222-2222-2222-2222-222222222222',
+        ]))->assertRedirect(route('admin.store.products.index'));
+
+        $this->assertSame($first->public_code, $first->fresh()->public_code);
+        $this->assertFalse(Schema::hasColumn('store_products', 'stock_quantity'));
+
+        $this->actingAs($admin)->post(route('admin.store.products.images.store', $first), [
+            'image' => \Illuminate\Http\UploadedFile::fake()->image('producto.jpg', 800, 800),
+            'order' => 1,
+        ])->assertRedirect();
+
+        $this->assertStringStartsWith('store/products/'.$first->public_code.'/', $first->images()->firstOrFail()->path);
+    }
+
+    public function test_public_code_migration_backfills_existing_products_without_code(): void
+    {
+        $product = $this->product(StoreCategory::create([
+            'name' => 'Backfill',
+            'slug' => 'backfill',
+            'active' => true,
+        ]));
+
+        DB::table('store_products')->where('id', $product->id)->update(['public_code' => null]);
+        $this->assertNull(StoreProduct::find($product->id)->public_code);
+
+        (require database_path('migrations/2026_08_02_000005_ensure_public_code_on_store_products_table.php'))->up();
+
+        $product->refresh();
+        $this->assertTrue(Str::isUuid($product->public_code));
+        $this->assertSame(0, DB::table('store_products')->whereNull('public_code')->count());
+        $this->assertSame(
+            DB::table('store_products')->count(),
+            DB::table('store_products')->distinct()->count('public_code')
+        );
     }
 
     public function test_catalog_lists_are_paginated_filterable_and_readable_by_consulta(): void
