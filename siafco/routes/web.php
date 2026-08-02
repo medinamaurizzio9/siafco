@@ -23,6 +23,8 @@ use App\Http\Controllers\SectorController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\Admin\Store\DashboardController as StoreDashboardController;
 use App\Http\Controllers\Admin\Store\SettingController as StoreSettingController;
+use App\Http\Controllers\Admin\Store\CategoryController as StoreCategoryController;
+use App\Http\Controllers\Admin\Store\ProductController as StoreProductController;
 use App\Http\Controllers\Investments\DashboardController as InvestmentDashboardController;
 use App\Http\Controllers\Investments\InvestmentLotController;
 use App\Http\Controllers\Investments\InvestorController;
@@ -217,6 +219,8 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
 
     Route::prefix('admin/mini-tienda')->name('admin.store.')->middleware('role:superadministrador,administrador,gerente,secretaria,cajero,consulta')->group(function () {
         Route::get('/', StoreDashboardController::class)->name('dashboard');
+        Route::resource('categorias', StoreCategoryController::class)->except('show')->parameters(['categorias' => 'category'])->names('categories');
+        Route::resource('productos', StoreProductController::class)->except('show')->parameters(['productos' => 'product'])->names('products');
         Route::get('/configuracion', [StoreSettingController::class, 'edit'])->name('settings.edit');
         Route::put('/configuracion', [StoreSettingController::class, 'update'])->name('settings.update');
     });

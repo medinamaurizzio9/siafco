@@ -159,8 +159,8 @@
                             <div class="nav-module-panel {{ $openModule === 'store' ? '' : 'hidden' }}">
                                 {!! $navLink('admin.store.dashboard', 'Resumen', [], ['admin.store.dashboard']) !!}
                                 @if($canManageStoreProducts)
-                                    {!! $navLink('admin.store.dashboard', 'Productos', [], ['admin.store.products.*']) !!}
-                                    {!! $navLink('admin.store.dashboard', 'Categorías', [], ['admin.store.categories.*']) !!}
+                                    {!! $navLink('admin.store.products.index', 'Productos', [], ['admin.store.products.*']) !!}
+                                    {!! $navLink('admin.store.categories.index', 'Categorías', [], ['admin.store.categories.*']) !!}
                                 @endif
                                 @if($canManageStoreShipping)
                                     {!! $navLink('admin.store.dashboard', 'Tarifas de envío', [], ['admin.store.shipping-rates.*']) !!}
