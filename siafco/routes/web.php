@@ -8,7 +8,7 @@ use App\Http\Controllers\AffiliatePasswordController;
 use App\Http\Controllers\AffiliationPlanController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CredentialController;
-use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HomeRedirectController;
 use App\Http\Controllers\InstitutionalQrController;
 use App\Http\Controllers\InstitutionalSettingController;
 use App\Http\Controllers\InternalUserController;
@@ -49,7 +49,7 @@ use App\Http\Controllers\Investments\SettingController as InvestmentSettingContr
 use App\Http\Controllers\Investments\ShareReservationController;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/login');
+Route::get('/', [HomeRedirectController::class, 'root']);
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -120,8 +120,9 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         ->middleware('role:afiliado,secretaria,administrador,administrador_sector,cajero')
         ->name('payments.proof');
 
+    Route::get('/dashboard', [HomeRedirectController::class, 'dashboard'])->name('admin.dashboard');
+
     Route::middleware('role:administrador,superadministrador,administrador_sector,secretaria,cajero,consulta')->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
         Route::get('/afiliados', [AffiliateController::class, 'index'])->name('affiliates.index');
         Route::get('/afiliados/{affiliate}', [AffiliateController::class, 'show'])->name('affiliates.show');
         Route::get('/pagos', [PaymentController::class, 'index'])->name('payments.index');

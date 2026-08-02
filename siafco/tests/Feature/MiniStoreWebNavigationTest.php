@@ -52,6 +52,77 @@ class MiniStoreWebNavigationTest extends TestCase
             ->assertRedirect(route('admin.dashboard'));
     }
 
+    public function test_root_and_dashboard_redirect_by_authenticated_user_type(): void
+    {
+        $affiliate = $this->affiliate();
+        $admin = User::create([
+            'name' => 'Administrador',
+            'email' => 'admin-root@test.local',
+            'role' => 'administrador',
+            'user_type' => 'internal',
+            'password' => Hash::make('secret-password'),
+            'is_active' => true,
+        ]);
+
+        $this->get('/')->assertRedirect(route('login'));
+
+        $this->actingAs($affiliate->user)->get('/')->assertRedirect(route('affiliate.panel'));
+        $this->actingAs($affiliate->user)->get(route('admin.dashboard'))->assertRedirect(route('affiliate.panel'));
+        $this->followingRedirects()->actingAs($affiliate->user)->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertDontSee('Dashboard general');
+
+        auth()->logout();
+
+        $this->actingAs($admin)->get('/')->assertRedirect(route('admin.dashboard'));
+        $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk()
+            ->assertSee('Dashboard general');
+    }
+
+    public function test_affiliate_store_access_remains_available_and_admin_paths_remain_blocked(): void
+    {
+        $affiliate = $this->affiliate();
+
+        $this->actingAs($affiliate->user)->get(route('store.catalog.index'))->assertOk();
+        $this->actingAs($affiliate->user)->get('/admin/mini-tienda')->assertForbidden();
+    }
+
+    public function test_inactive_affiliate_cannot_login_into_affiliate_panel(): void
+    {
+        $affiliate = $this->affiliate();
+        $affiliate->user->forceFill(['is_active' => false])->save();
+
+        $this->post(route('login.post'), [
+            'email' => $affiliate->user->email,
+            'password' => 'secret-password',
+        ])->assertSessionHasErrors('email');
+
+        $this->assertGuest();
+    }
+
+    public function test_affiliate_login_rejects_admin_and_external_intended_urls(): void
+    {
+        $affiliate = $this->affiliate();
+
+        $this->withSession(['url.intended' => route('admin.dashboard')])
+            ->post(route('login.post'), [
+                'email' => $affiliate->user->email,
+                'password' => 'secret-password',
+            ])
+            ->assertRedirect(route('affiliate.panel'));
+
+        auth()->logout();
+        session()->invalidate();
+        session()->regenerateToken();
+
+        $this->withSession(['url.intended' => 'https://example.test/dashboard'])
+            ->post(route('login.post'), [
+                'email' => $affiliate->user->email,
+                'password' => 'secret-password',
+            ])
+            ->assertRedirect(route('affiliate.panel'));
+    }
+
     public function test_store_affiliate_pages_use_explicit_non_admin_navigation_targets(): void
     {
         $affiliate = $this->affiliate();
