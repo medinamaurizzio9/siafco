@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Mobile\V1\AuthController;
 use App\Http\Controllers\Api\Mobile\V1\AffiliationController;
+use App\Http\Controllers\Api\Mobile\V1\CredentialController;
 use App\Http\Controllers\Api\Mobile\V1\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -33,6 +34,9 @@ Route::prefix('mobile/v1')->name('api.mobile.v1.')->group(function () {
             ->name('me.password.update');
         Route::get('/me/affiliation-request', [AffiliationController::class, 'show'])
             ->name('me.affiliation-request.show');
+        Route::get('/me/credential', [CredentialController::class, 'show'])
+            ->middleware('throttle:20,1')
+            ->name('me.credential.show');
         Route::post('/me/affiliation-request/payment', [AffiliationController::class, 'submitPayment'])
             ->middleware('throttle:5,1')
             ->name('me.affiliation-request.payment.store');

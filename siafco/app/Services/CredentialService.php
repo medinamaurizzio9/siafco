@@ -224,8 +224,12 @@ class CredentialService
             || $credential->generated_at->lessThan($institution->updated_at);
     }
 
-    private function dataUri(string $path): ?string
+    private function dataUri(?string $path): ?string
     {
+        if (! $path) {
+            return null;
+        }
+
         if (! is_file($path)) {
             return null;
         }
