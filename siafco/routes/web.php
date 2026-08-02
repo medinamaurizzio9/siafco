@@ -20,6 +20,8 @@ use App\Http\Controllers\PublicAffiliationQrController;
 use App\Http\Controllers\PlaceholderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SectorController;
+use App\Http\Controllers\Store\CartController as StoreCartController;
+use App\Http\Controllers\Store\CatalogController as StoreCatalogController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\Admin\Store\DashboardController as StoreDashboardController;
 use App\Http\Controllers\Admin\Store\SettingController as StoreSettingController;
@@ -78,6 +80,16 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
     Route::get('/panel-afiliado', [AffiliatePanelController::class, 'index'])
         ->middleware('role:afiliado')
         ->name('affiliate.panel');
+
+    Route::prefix('tienda')->name('store.')->middleware(['role:afiliado', 'affiliate.store.active'])->group(function () {
+        Route::get('/', [StoreCatalogController::class, 'index'])->name('catalog.index');
+        Route::get('/productos/{slug}', [StoreCatalogController::class, 'show'])->name('catalog.show');
+        Route::get('/carrito', [StoreCartController::class, 'show'])->name('cart.show');
+        Route::post('/carrito', [StoreCartController::class, 'store'])->name('cart.store');
+        Route::patch('/carrito/{lineKey}', [StoreCartController::class, 'update'])->name('cart.update');
+        Route::delete('/carrito/{lineKey}', [StoreCartController::class, 'destroy'])->name('cart.destroy');
+        Route::delete('/carrito', [StoreCartController::class, 'clear'])->name('cart.clear');
+    });
 
     Route::middleware('role:afiliado')->group(function () {
         Route::get('/afiliado/credencial', [CredentialController::class, 'affiliatePreview'])->name('affiliate.credential.preview');
