@@ -15,6 +15,7 @@ use App\Models\StoreProduct;
 use App\Models\User;
 use App\Support\StoreAvailabilityStatus;
 use App\Support\StoreDeliveryMethod;
+use App\Support\StoreOrderStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -119,6 +120,89 @@ class MobileStoreOrderApiTest extends TestCase
             ->assertJsonPath('success', false);
     }
 
+    public function test_attention_only_returns_old_pending_orders_before_pagination(): void
+    {
+        $owner = $this->affiliate();
+        $other = $this->affiliate();
+        Sanctum::actingAs($owner->user);
+
+        foreach (range(1, 16) as $index) {
+            $this->orderFor($owner, StoreOrderStatus::DELIVERED, now()->subMinutes($index));
+        }
+
+        $attentionOrders = collect([
+            StoreOrderStatus::PENDING,
+            StoreOrderStatus::RESERVED,
+            StoreOrderStatus::WAITING_PAYMENT,
+            StoreOrderStatus::PAYMENT_REVIEW,
+        ])->map(fn (string $status, int $index) => $this->orderFor($owner, $status, now()->subDays(2)->subMinutes($index)));
+
+        $otherOrder = $this->orderFor($other, StoreOrderStatus::PENDING, now()->subDay());
+
+        $response = $this->getJson('/api/mobile/v1/store/orders?attention_only=true');
+
+        $response->assertOk()
+            ->assertJsonPath('data.pagination.total', 4)
+            ->assertJsonMissing(['code' => $otherOrder->code]);
+
+        $this->assertEqualsCanonicalizing(
+            $attentionOrders->pluck('code')->all(),
+            collect($response->json('data.orders'))->pluck('code')->all()
+        );
+    }
+
+    public function test_attention_only_excludes_closed_and_unrelated_orders(): void
+    {
+        $owner = $this->affiliate();
+        $other = $this->affiliate();
+        Sanctum::actingAs($owner->user);
+
+        $included = $this->orderFor($owner, StoreOrderStatus::PAYMENT_REVIEW, now());
+        $excludedStatuses = [
+            StoreOrderStatus::CONFIRMED,
+            StoreOrderStatus::CANCELLED,
+            StoreOrderStatus::SHIPPED,
+            StoreOrderStatus::DELIVERED,
+        ];
+
+        foreach ($excludedStatuses as $index => $status) {
+            $this->orderFor($owner, $status, now()->subMinutes($index + 1));
+        }
+
+        $otherPending = $this->orderFor($other, StoreOrderStatus::PENDING, now());
+
+        $this->getJson('/api/mobile/v1/store/orders?attention_only=true')
+            ->assertOk()
+            ->assertJsonPath('data.pagination.total', 1)
+            ->assertJsonPath('data.orders.0.code', $included->code)
+            ->assertJsonMissing(['code' => $otherPending->code]);
+    }
+
+    public function test_orders_without_attention_only_keep_default_listing(): void
+    {
+        $owner = $this->affiliate();
+        Sanctum::actingAs($owner->user);
+
+        $oldPending = $this->orderFor($owner, StoreOrderStatus::PENDING, now()->subDays(3));
+        $recentDelivered = $this->orderFor($owner, StoreOrderStatus::DELIVERED, now());
+
+        $this->getJson('/api/mobile/v1/store/orders')
+            ->assertOk()
+            ->assertJsonPath('data.pagination.total', 2)
+            ->assertJsonPath('data.orders.0.code', $recentDelivered->code)
+            ->assertJsonFragment(['code' => $oldPending->code]);
+    }
+
+    public function test_attention_only_rejects_invalid_value(): void
+    {
+        $affiliate = $this->affiliate();
+        Sanctum::actingAs($affiliate->user);
+
+        $this->getJson('/api/mobile/v1/store/orders?attention_only=maybe')
+            ->assertUnprocessable()
+            ->assertJsonStructure(['errors' => ['attention_only']]);
+    }
+
     private function affiliate(): Affiliate
     {
         $sector = Sector::create(['name' => fake()->unique()->word(), 'code' => fake()->unique()->bothify('SEC-###'), 'is_active' => true]);
@@ -134,5 +218,26 @@ class MobileStoreOrderApiTest extends TestCase
         $category = StoreCategory::create(['name' => fake()->unique()->word(), 'slug' => fake()->unique()->slug(), 'active' => true]);
 
         return StoreProduct::create(['store_category_id' => $category->id, 'sku' => fake()->unique()->bothify('SKU-###'), 'slug' => fake()->unique()->slug(), 'name' => 'Producto Pedido', 'regular_price' => 100, 'affiliate_price' => 80, 'availability_status' => StoreAvailabilityStatus::AVAILABLE, 'delivery_modes' => [StoreDeliveryMethod::PICKUP], 'max_quantity_per_order' => 10, 'active' => true]);
+    }
+
+    private function orderFor(Affiliate $affiliate, string $status, \DateTimeInterface $createdAt): StoreOrder
+    {
+        $order = StoreOrder::create([
+            'affiliate_id' => $affiliate->id,
+            'status' => $status,
+            'delivery_method' => StoreDeliveryMethod::PICKUP,
+            'subtotal' => 10,
+            'discount_total' => 0,
+            'shipping_total' => 0,
+            'total' => 10,
+            'currency' => 'BOB',
+        ]);
+
+        $order->forceFill([
+            'created_at' => $createdAt,
+            'updated_at' => $createdAt,
+        ])->save();
+
+        return $order->refresh();
     }
 }

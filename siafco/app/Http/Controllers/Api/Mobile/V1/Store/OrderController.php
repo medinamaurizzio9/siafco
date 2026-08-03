@@ -12,9 +12,17 @@ use App\Http\Responses\MobileApiResponse;
 use App\Models\MobileApiIdempotencyKey;
 use App\Models\StoreOrder;
 use App\Services\Store\StoreOrderService;
+use App\Support\StoreOrderStatus;
 
 class OrderController extends Controller
 {
+    private const ATTENTION_STATUSES = [
+        StoreOrderStatus::PENDING,
+        StoreOrderStatus::RESERVED,
+        StoreOrderStatus::WAITING_PAYMENT,
+        StoreOrderStatus::PAYMENT_REVIEW,
+    ];
+
     public function store(StoreOrderRequest $request, StoreOrderService $orders)
     {
         $payload = $request->quotePayload();
@@ -43,6 +51,7 @@ class OrderController extends Controller
             ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('created_at', '>=', $date))
             ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('created_at', '<=', $date))
             ->when($filters['code'] ?? null, fn ($query, $code) => $query->where('code', 'like', "%{$code}%"))
+            ->when(($filters['attention_only'] ?? false) === true, fn ($query) => $query->whereIn('status', self::ATTENTION_STATUSES))
             ->latest()
             ->paginate($filters['per_page'] ?? 15);
 
