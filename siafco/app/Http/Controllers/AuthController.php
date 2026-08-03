@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\InstitutionalSetting;
+use App\Services\Store\StoreCartService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -39,8 +40,9 @@ class AuthController extends Controller
         return back()->withErrors(['email' => 'Las credenciales no son validas.'])->onlyInput('email');
     }
 
-    public function logout(Request $request)
+    public function logout(Request $request, StoreCartService $cart)
     {
+        $cart->clear();
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

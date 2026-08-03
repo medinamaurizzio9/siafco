@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\User;
+use App\Support\TextNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -18,8 +19,11 @@ class StoreInternalUserRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'email' => mb_strtolower(trim((string) $this->input('email'))),
+            'name' => TextNormalizer::uppercase((string) $this->input('name')),
+            'email' => TextNormalizer::lowercaseEmail((string) $this->input('email')),
             'username' => mb_strtolower(trim((string) $this->input('username'))),
+            'position' => $this->filled('position') ? TextNormalizer::uppercase((string) $this->input('position')) : null,
+            'area' => $this->filled('area') ? TextNormalizer::uppercase((string) $this->input('area')) : null,
             'use_ci_password' => $this->boolean('use_ci_password'),
             'is_active' => $this->boolean('is_active'),
         ]);

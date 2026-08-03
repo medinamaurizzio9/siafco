@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Store\StoreCartService;
 use App\Services\Store\StoreOrderService;
 use App\Support\StoreDeliveryMethod;
+use App\Support\TextNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -56,6 +57,13 @@ class CheckoutController extends Controller
         if ($data['idempotency_key'] !== session('store_checkout.idempotency_key')) {
             return back()->with('warning', 'La sesión de checkout venció. Intenta nuevamente.');
         }
+
+        $data = TextNormalizer::normalizeFields($data, [
+            'department',
+            'city',
+            'zone',
+            'delivery_address',
+        ]);
 
         try {
             $order = $orders->create($request->user()->affiliate, [

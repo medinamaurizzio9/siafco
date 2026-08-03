@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin\Store;
 
 use App\Models\StoreCategory;
+use App\Support\TextNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -16,11 +17,12 @@ class StoreCategoryRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $name = trim((string) $this->input('name'));
+        $name = TextNormalizer::uppercase((string) $this->input('name'));
         $slug = trim((string) $this->input('slug'));
 
         $this->merge([
             'name' => $name,
+            'description' => $this->filled('description') ? TextNormalizer::uppercase((string) $this->input('description')) : null,
             'slug' => Str::slug($slug !== '' ? $slug : $name),
         ]);
     }

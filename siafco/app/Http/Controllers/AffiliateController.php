@@ -197,8 +197,12 @@ class AffiliateController extends Controller
             'status' => ['nullable', 'in:pendiente_pago,activo,inactivo,observado'],
         ]);
 
-        return TextNormalizer::fields($data, [
+        $data = TextNormalizer::fields($data, [
             'full_name', 'address', 'regional', 'institution', 'position', 'marital_status',
         ]);
+        $data['email'] = TextNormalizer::lowercaseEmail($data['email'] ?? null);
+        $data['phone'] = TextNormalizer::squish($data['phone'] ?? null);
+
+        return $data;
     }
 }

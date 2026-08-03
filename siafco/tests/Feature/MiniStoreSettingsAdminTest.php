@@ -33,7 +33,7 @@ class MiniStoreSettingsAdminTest extends TestCase
             'whatsapp_number' => '7000-0000',
             'pickup_enabled' => '1',
             'shipping_enabled' => '1',
-            'pickup_instructions' => 'Recojo en oficina central',
+            'pickup_instructions' => 'Recojo  en oficina central',
             'shipping_instructions' => 'Envio nacional',
             'default_currency' => 'BOB',
             'max_receipt_size_kb' => 4096,
@@ -47,6 +47,8 @@ class MiniStoreSettingsAdminTest extends TestCase
         $this->assertSame('591*****000', $setting->whatsapp_number_hint);
         $this->assertTrue($setting->whatsapp_enabled);
         $this->assertTrue($setting->shipping_enabled);
+        $this->assertSame('RECOJO EN OFICINA CENTRAL', $setting->pickup_instructions);
+        $this->assertSame('ENVIO NACIONAL', $setting->shipping_instructions);
         $this->assertSame(1, StoreSetting::count());
 
         $audit = AuditLog::firstWhere('action', 'mini_tienda.configuracion_actualizada');

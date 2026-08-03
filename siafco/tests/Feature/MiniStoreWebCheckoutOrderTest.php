@@ -65,7 +65,7 @@ class MiniStoreWebCheckoutOrderTest extends TestCase
             'department' => 'la paz',
             'city' => 'el alto',
             'zone' => 'centro',
-            'delivery_address' => 'Direccion privada',
+            'delivery_address' => 'Direccion  privada',
         ];
 
         $this->actingAs($affiliate->user)->post(route('store.orders.store'), $payload)->assertRedirect();
@@ -73,6 +73,10 @@ class MiniStoreWebCheckoutOrderTest extends TestCase
         $this->assertSame('9.00', $order->shipping_total);
         $this->assertSame('59.00', $order->total);
         $this->assertSame('zone', $order->shipping_snapshot['scope']);
+        $this->assertSame('LA PAZ', $order->department);
+        $this->assertSame('EL ALTO', $order->city);
+        $this->assertSame('CENTRO', $order->zone);
+        $this->assertSame('DIRECCION PRIVADA', $order->delivery_address);
 
         session(['store_cart.lines' => [['line_key' => 'x', 'product_public_code' => $product->public_code, 'variant_public_code' => null, 'quantity' => 1]]]);
         session(['store_checkout.idempotency_key' => $key]);

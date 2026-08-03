@@ -6,6 +6,7 @@ use App\Models\StoreCategory;
 use App\Models\StoreProduct;
 use App\Support\StoreAvailabilityStatus;
 use App\Support\StoreDeliveryMethod;
+use App\Support\TextNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -20,11 +21,14 @@ class StoreProductRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $name = trim((string) $this->input('name'));
+        $name = TextNormalizer::uppercase((string) $this->input('name'));
         $slug = trim((string) $this->input('slug'));
         $modes = array_values(array_filter((array) $this->input('delivery_modes', [])));
 
         $this->merge([
+            'name' => $name,
+            'short_description' => $this->filled('short_description') ? TextNormalizer::uppercase((string) $this->input('short_description')) : null,
+            'description' => $this->filled('description') ? TextNormalizer::uppercase((string) $this->input('description')) : null,
             'slug' => Str::slug($slug !== '' ? $slug : $name),
             'sku' => Str::upper(trim((string) $this->input('sku'))),
             'delivery_modes' => $modes,

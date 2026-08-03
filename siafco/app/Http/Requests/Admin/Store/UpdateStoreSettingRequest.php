@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin\Store;
 
+use App\Support\TextNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateStoreSettingRequest extends FormRequest
@@ -9,6 +10,14 @@ class UpdateStoreSettingRequest extends FormRequest
     public function authorize(): bool
     {
         return $this->user()?->can('store.manage-settings') === true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge(TextNormalizer::normalizeFields($this->all(), [
+            'pickup_instructions',
+            'shipping_instructions',
+        ]));
     }
 
     public function rules(): array

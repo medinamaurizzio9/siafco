@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\StoreShippingRate;
+use App\Support\TextNormalizer;
 
 class StoreShippingRateResolver
 {
@@ -74,7 +75,7 @@ class StoreShippingRateResolver
 
     private function normalize(?string $value): ?string
     {
-        $value = str($value ?? '')->squish()->upper()->toString();
+        $value = TextNormalizer::uppercase((string) ($value ?? ''));
 
         return $value !== '' ? $value : null;
     }

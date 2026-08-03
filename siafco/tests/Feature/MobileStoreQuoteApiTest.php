@@ -74,6 +74,9 @@ class MobileStoreQuoteApiTest extends TestCase
 
         $this->postJson('/api/mobile/v1/store/quote', $payload)
             ->assertOk()
+            ->assertJsonPath('data.quote.shipping.department', 'LA PAZ')
+            ->assertJsonPath('data.quote.shipping.city', 'EL ALTO')
+            ->assertJsonPath('data.quote.shipping.zone', 'CENTRO')
             ->assertJsonPath('data.quote.shipping.amount', '9.00')
             ->assertJsonPath('data.quote.total', '89.00');
 

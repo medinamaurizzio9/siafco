@@ -11,6 +11,7 @@ use App\Models\StoreSetting;
 use App\Services\AuditService;
 use App\Services\StoreCouponCodeService;
 use App\Support\StoreOrderStatus;
+use App\Support\TextNormalizer;
 use Illuminate\Support\Facades\DB;
 
 class StoreOrderService
@@ -207,14 +208,14 @@ class StoreOrderService
 
     private function normalize(mixed $value): ?string
     {
-        $value = str($value ?? '')->squish()->upper()->toString();
+        $value = TextNormalizer::uppercase((string) ($value ?? ''));
 
         return $value !== '' ? $value : null;
     }
 
     private function normalizeAddress(mixed $value): ?string
     {
-        $value = str($value ?? '')->squish()->toString();
+        $value = TextNormalizer::uppercase((string) ($value ?? ''));
 
         return $value !== '' ? $value : null;
     }

@@ -25,12 +25,14 @@ class MiniStoreCatalogAdminTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.store.categories.store'), [
             'name' => 'Joyas SIAFCO',
-            'description' => 'Accesorios',
+            'description' => 'Accesorios  institucionales',
             'active' => '1',
             'order' => 2,
         ])->assertRedirect(route('admin.store.categories.index'));
 
         $category = StoreCategory::firstOrFail();
+        $this->assertSame('JOYAS SIAFCO', $category->name);
+        $this->assertSame('ACCESORIOS INSTITUCIONALES', $category->description);
         $this->assertSame('joyas-siafco', $category->slug);
         $this->assertTrue($category->active);
         $this->assertDatabaseHas('audit_logs', ['action' => 'mini_tienda.categoria_creada']);
@@ -64,6 +66,8 @@ class MiniStoreCatalogAdminTest extends TestCase
             'store_category_id' => $category->id,
             'sku' => ' prod-001 ',
             'name' => 'Café cooperativo',
+            'short_description' => 'Producto local',
+            'description' => 'Producto elaborado por afiliados',
             'regular_price' => '50.00',
             'affiliate_price' => '45.00',
             'availability_status' => StoreAvailabilityStatus::AVAILABLE,
@@ -80,6 +84,9 @@ class MiniStoreCatalogAdminTest extends TestCase
         $product = StoreProduct::firstOrFail();
         $this->assertSame('PROD-001', $product->sku);
         $this->assertSame('cafe-cooperativo', $product->slug);
+        $this->assertSame('CAFÉ COOPERATIVO', $product->name);
+        $this->assertSame('PRODUCTO LOCAL', $product->short_description);
+        $this->assertSame('PRODUCTO ELABORADO POR AFILIADOS', $product->description);
         $this->assertSame('45.00', $product->affiliate_price);
         $this->assertSame([StoreDeliveryMethod::PICKUP, StoreDeliveryMethod::SHIPPING], $product->delivery_modes);
         $this->assertTrue($product->featured);

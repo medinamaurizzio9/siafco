@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin\Store;
 
+use App\Support\TextNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -15,9 +16,9 @@ class StoreProductVariantRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'type' => str($this->input('type'))->squish()->upper()->toString(),
-            'name' => str($this->input('name'))->squish()->upper()->toString(),
-            'sku_suffix' => $this->filled('sku_suffix') ? str($this->input('sku_suffix'))->squish()->upper()->toString() : null,
+            'type' => TextNormalizer::uppercase((string) $this->input('type')),
+            'name' => TextNormalizer::uppercase((string) $this->input('name')),
+            'sku_suffix' => $this->filled('sku_suffix') ? TextNormalizer::uppercase((string) $this->input('sku_suffix')) : null,
         ]);
     }
 

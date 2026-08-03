@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Mobile\V1;
 
 use App\Support\StoreDeliveryMethod;
+use App\Support\TextNormalizer;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -30,10 +31,10 @@ class StoreQuoteRequest extends MobileFormRequest
         $this->merge([
             'items' => $items,
             'delivery_method' => $this->filled('delivery_method') ? trim((string) $this->input('delivery_method')) : null,
-            'department' => $this->filled('department') ? str($this->input('department'))->squish()->toString() : null,
-            'city' => $this->filled('city') ? str($this->input('city'))->squish()->toString() : null,
-            'zone' => $this->filled('zone') ? str($this->input('zone'))->squish()->toString() : null,
-            'delivery_address' => $this->filled('delivery_address') ? str($this->input('delivery_address'))->squish()->toString() : null,
+            'department' => $this->filled('department') ? TextNormalizer::uppercase((string) $this->input('department')) : null,
+            'city' => $this->filled('city') ? TextNormalizer::uppercase((string) $this->input('city')) : null,
+            'zone' => $this->filled('zone') ? TextNormalizer::uppercase((string) $this->input('zone')) : null,
+            'delivery_address' => $this->filled('delivery_address') ? TextNormalizer::uppercase((string) $this->input('delivery_address')) : null,
             'coupon_code' => $this->filled('coupon_code') ? str($this->input('coupon_code'))->squish()->upper()->toString() : null,
         ]);
     }

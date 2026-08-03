@@ -230,7 +230,7 @@
                         @endif
                         <form method="post" action="{{ route('logout') }}" class="pt-2">
                             @csrf
-                            <button class="w-full rounded bg-[#102b4c] px-3 py-2 text-left text-slate-100 hover:bg-[#163b68]" data-sidebar-link>Cerrar sesion</button>
+                            <button class="w-full rounded bg-[#102b4c] px-3 py-2 text-left text-slate-100 hover:bg-[#163b68]" data-sidebar-link>Cerrar sesión</button>
                         </form>
                     </div>
                 </section>

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin\Store;
 
 use App\Models\StoreShippingRate;
+use App\Support\TextNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -89,7 +90,7 @@ class StoreShippingRateRequest extends FormRequest
 
     private function normalize(mixed $value): ?string
     {
-        $value = str($value ?? '')->squish()->upper()->toString();
+        $value = TextNormalizer::uppercase((string) ($value ?? ''));
 
         return $value !== '' ? $value : null;
     }

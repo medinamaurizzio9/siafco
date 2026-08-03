@@ -9,6 +9,7 @@ use App\Models\StoreSetting;
 use App\Services\StoreShippingRateResolver;
 use App\Support\StoreAvailabilityStatus;
 use App\Support\StoreDeliveryMethod;
+use App\Support\TextNormalizer;
 use Illuminate\Validation\ValidationException;
 
 class StorePricingService
@@ -151,7 +152,7 @@ class StorePricingService
         $department = $this->normalize($delivery['department'] ?? null);
         $city = $this->normalize($delivery['city'] ?? null);
         $zone = $this->normalize($delivery['zone'] ?? null);
-        $address = trim((string) ($delivery['address'] ?? ''));
+        $address = TextNormalizer::uppercase((string) ($delivery['address'] ?? ''));
 
         if (! $department || ! $city || $address === '') {
             throw ValidationException::withMessages(['delivery_address' => 'El envío requiere departamento, ciudad y dirección.']);
@@ -183,7 +184,7 @@ class StorePricingService
 
     private function normalize(mixed $value): ?string
     {
-        $value = str($value ?? '')->squish()->upper()->toString();
+        $value = TextNormalizer::uppercase((string) ($value ?? ''));
 
         return $value !== '' ? $value : null;
     }
