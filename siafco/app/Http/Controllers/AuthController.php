@@ -40,6 +40,11 @@ class AuthController extends Controller
         return back()->withErrors(['email' => 'Las credenciales no son validas.'])->onlyInput('email');
     }
 
+    public function confirmLogout()
+    {
+        return view('auth.confirm-logout');
+    }
+
     public function logout(Request $request, StoreCartService $cart)
     {
         $cart->clear();

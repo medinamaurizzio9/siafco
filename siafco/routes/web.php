@@ -69,6 +69,7 @@ Route::middleware('throttle:30,1')->prefix('afiliacion')->name('public-affiliati
 });
 
 Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->group(function () {
+    Route::get('/cerrar-sesion/confirmar', [AuthController::class, 'confirmLogout'])->name('logout.confirm');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/cambiar-contrasena-obligatoria', [PasswordController::class, 'forceEdit'])->name('password.force.edit');
     Route::patch('/cambiar-contrasena-obligatoria', [PasswordController::class, 'forceUpdate'])

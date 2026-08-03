@@ -12,7 +12,7 @@ class EnsurePasswordIsChanged
     {
         if (
             $request->user()?->must_change_password
-            && ! $request->routeIs('password.force.edit', 'password.force.update', 'logout')
+            && ! $request->routeIs('password.force.edit', 'password.force.update', 'logout', 'logout.confirm')
         ) {
             return redirect()->route('password.force.edit');
         }

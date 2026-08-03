@@ -38,11 +38,14 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($exception->getStatusCode() === 419
                 && $request->isMethod('post')
                 && trim($request->path(), '/') === 'logout') {
-                Auth::logout();
-                $request->session()->invalidate();
                 $request->session()->regenerateToken();
 
-                return redirect()->route('login')->with('warning', 'Tu sesión expiró. Vuelve a iniciar sesión.');
+                if (Auth::check()) {
+                    return redirect()->route('logout.confirm')
+                        ->with('warning', 'No se pudo cerrar sesión porque el formulario expiró. Confirma nuevamente para salir.');
+                }
+
+                return redirect()->route('login')->with('warning', 'La sesión expiró.');
             }
 
             return null;

@@ -39,6 +39,27 @@ class LogoutBehaviorTest extends TestCase
         $this->assertNull(session('store_checkout.idempotency_key'));
     }
 
+    public function test_logout_with_valid_csrf_closes_session_and_clears_cart(): void
+    {
+        $affiliate = $this->affiliate();
+
+        $this->app->instance('env', 'local');
+
+        $this->withMiddleware(ValidateCsrfToken::class)
+            ->actingAs($affiliate->user)
+            ->withSession([
+                '_token' => 'valid-token',
+                'store_cart.lines' => [['line_key' => 'x', 'quantity' => 1]],
+                'store_checkout.idempotency_key' => fake()->uuid(),
+            ])
+            ->post(route('logout'), ['_token' => 'valid-token'])
+            ->assertRedirect(route('login'));
+
+        $this->assertGuest();
+        $this->assertNull(session('store_cart.lines'));
+        $this->assertNull(session('store_checkout.idempotency_key'));
+    }
+
     public function test_admin_logout_uses_post_and_user_cannot_return_to_authenticated_content(): void
     {
         $admin = User::factory()->create(['role' => 'administrador', 'user_type' => 'internal']);
@@ -62,7 +83,82 @@ class LogoutBehaviorTest extends TestCase
         $this->assertAuthenticatedAs($admin);
     }
 
-    public function test_expired_csrf_during_logout_redirects_to_login_with_controlled_message(): void
+    public function test_expired_csrf_during_logout_does_not_close_authenticated_session_or_clear_cart(): void
+    {
+        $admin = User::factory()->create(['role' => 'administrador', 'user_type' => 'internal']);
+
+        $this->app->instance('env', 'local');
+
+        $this->withMiddleware(ValidateCsrfToken::class)
+            ->actingAs($admin)
+            ->withSession([
+                '_token' => 'valid-token',
+                'store_cart.lines' => [['line_key' => 'x', 'quantity' => 1]],
+                'store_checkout.idempotency_key' => fake()->uuid(),
+            ])
+            ->post(route('logout'), ['_token' => 'expired-token'])
+            ->assertRedirect(route('logout.confirm'))
+            ->assertSessionHas('warning', 'No se pudo cerrar sesión porque el formulario expiró. Confirma nuevamente para salir.');
+
+        $this->assertAuthenticatedAs($admin);
+        $this->assertNotNull(session('store_cart.lines'));
+        $this->assertNotNull(session('store_checkout.idempotency_key'));
+    }
+
+    public function test_missing_csrf_during_logout_uses_controlled_retry_without_destructive_action(): void
+    {
+        $admin = User::factory()->create(['role' => 'administrador', 'user_type' => 'internal']);
+
+        $this->app->instance('env', 'local');
+
+        $this->withMiddleware(ValidateCsrfToken::class)
+            ->actingAs($admin)
+            ->withSession([
+                '_token' => 'valid-token',
+                'store_cart.lines' => [['line_key' => 'x', 'quantity' => 1]],
+            ])
+            ->post(route('logout'))
+            ->assertRedirect(route('logout.confirm'));
+
+        $this->assertAuthenticatedAs($admin);
+        $this->assertNotNull(session('store_cart.lines'));
+    }
+
+    public function test_logout_confirmation_contains_fresh_post_form_and_then_logs_out(): void
+    {
+        $admin = User::factory()->create(['role' => 'administrador', 'user_type' => 'internal']);
+
+        $this->actingAs($admin)
+            ->get(route('logout.confirm'))
+            ->assertOk()
+            ->assertSee('method="post"', false)
+            ->assertSee(route('logout'), false)
+            ->assertSee('name="_token"', false)
+            ->assertSee('Cerrar sesión');
+
+        $this->app->instance('env', 'local');
+
+        $this->withMiddleware(ValidateCsrfToken::class)
+            ->actingAs($admin)
+            ->withSession(['_token' => 'fresh-token'])
+            ->post(route('logout'), ['_token' => 'fresh-token'])
+            ->assertRedirect(route('login'));
+
+        $this->assertGuest();
+    }
+
+    public function test_guest_with_expired_logout_session_goes_to_login(): void
+    {
+        $this->app->instance('env', 'local');
+
+        $this->withMiddleware(ValidateCsrfToken::class)
+            ->withSession(['_token' => 'valid-token'])
+            ->post(route('logout'), ['_token' => 'expired-token'])
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('warning', 'La sesión expiró.');
+    }
+
+    public function test_external_post_without_csrf_cannot_close_session(): void
     {
         $admin = User::factory()->create(['role' => 'administrador', 'user_type' => 'internal']);
 
@@ -71,11 +167,11 @@ class LogoutBehaviorTest extends TestCase
         $this->withMiddleware(ValidateCsrfToken::class)
             ->actingAs($admin)
             ->withSession(['_token' => 'valid-token'])
-            ->post(route('logout'), ['_token' => 'expired-token'])
-            ->assertRedirect(route('login'))
-            ->assertSessionHas('warning', 'Tu sesión expiró. Vuelve a iniciar sesión.');
+            ->withHeader('Origin', 'https://externo.example')
+            ->post(route('logout'))
+            ->assertRedirect(route('logout.confirm'));
 
-        $this->assertGuest();
+        $this->assertAuthenticatedAs($admin);
     }
 
     public function test_csrf_remains_active_for_sensitive_posts(): void
