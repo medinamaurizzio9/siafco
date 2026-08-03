@@ -47,8 +47,21 @@ class MobileStoreWhatsappApiTest extends TestCase
         $url = $response->json('data.whatsapp.url');
         $message = rawurldecode(parse_url($url, PHP_URL_QUERY) ?: '');
         $this->assertStringStartsWith('https://wa.me/59170000000?text=', $url);
+        $this->assertSame('https', parse_url($url, PHP_URL_SCHEME));
+        $this->assertSame('wa.me', parse_url($url, PHP_URL_HOST));
+        $this->assertStringContainsString($affiliate->full_name, $message);
+        $this->assertStringContainsString($affiliate->registration_number, $message);
+        $this->assertStringContainsString($order->code, $message);
+        $this->assertStringContainsString('Producto WhatsApp', $message);
+        $this->assertStringContainsString('Total: Bs '.$order->total, $message);
+        $this->assertStringContainsString('Entrega: RECOJO EN OFICINA', $message);
         $this->assertStringNotContainsString($affiliate->ci, $message);
         $this->assertStringNotContainsString($affiliate->email, $message);
+        $this->assertStringNotContainsString((string) $affiliate->phone, $message);
+        $this->assertStringNotContainsString((string) $affiliate->address, $message);
+        $this->assertStringNotContainsString('affiliate_id', $message);
+        $this->assertStringNotContainsString('user_id', $message);
+        $this->assertStringNotContainsString('coupon', strtolower($message));
         $this->assertNotNull($order->fresh()->whatsapp_opened_at);
 
         $audit = json_encode(AuditLog::firstWhere('action', 'mini_tienda.whatsapp_pedido_abierto')->metadata);
@@ -85,10 +98,10 @@ class MobileStoreWhatsappApiTest extends TestCase
     {
         $sector = Sector::create(['name' => fake()->unique()->word(), 'code' => fake()->unique()->bothify('SEC-###'), 'is_active' => true]);
         $plan = AffiliationPlan::create(['name' => fake()->unique()->word(), 'affiliation_fee' => 100, 'credential_fee' => 20, 'is_active' => true]);
-        $person = Person::create(['full_name' => 'Afiliado WhatsApp', 'ci' => fake()->unique()->numerify('#######'), 'email' => fake()->unique()->safeEmail()]);
+        $person = Person::create(['full_name' => 'Afiliado WhatsApp', 'ci' => fake()->unique()->numerify('#######'), 'phone' => '70000001', 'email' => fake()->unique()->safeEmail(), 'address' => 'Direccion Secreta']);
         $user = User::create(['person_id' => $person->id, 'name' => $person->full_name, 'email' => $person->email, 'role' => 'afiliado', 'user_type' => 'affiliate', 'password' => Hash::make('secret'), 'is_active' => true]);
 
-        return Affiliate::create(['person_id' => $person->id, 'user_id' => $user->id, 'sector_id' => $sector->id, 'affiliation_plan_id' => $plan->id, 'full_name' => $person->full_name, 'ci' => $person->ci, 'email' => $person->email, 'registration_number' => fake()->unique()->bothify('REG-#####'), 'verification_token' => fake()->uuid(), 'status' => 'activo']);
+        return Affiliate::create(['person_id' => $person->id, 'user_id' => $user->id, 'sector_id' => $sector->id, 'affiliation_plan_id' => $plan->id, 'full_name' => $person->full_name, 'ci' => $person->ci, 'phone' => $person->phone, 'email' => $person->email, 'address' => $person->address, 'registration_number' => fake()->unique()->bothify('REG-#####'), 'verification_token' => fake()->uuid(), 'status' => 'activo']);
     }
 
     private function product(): StoreProduct
