@@ -4,6 +4,7 @@ namespace App\Http\Requests\Api\Mobile\V1;
 
 use App\Services\AuditService;
 use App\Support\PublicAffiliationCatalogs;
+use App\Support\TextNormalizer;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -28,17 +29,23 @@ class UpdateProfileRequest extends MobileFormRequest
     protected function prepareForValidation(): void
     {
         $normalized = [];
-        foreach (['phone', 'address', 'marital_status'] as $field) {
+        if ($this->exists('phone')) {
+            $normalized['phone'] = $this->filled('phone')
+                ? TextNormalizer::squish((string) $this->input('phone'))
+                : null;
+        }
+
+        foreach (['address', 'marital_status'] as $field) {
             if ($this->exists($field)) {
                 $normalized[$field] = $this->filled($field)
-                    ? preg_replace('/\s+/u', ' ', trim((string) $this->input($field)))
+                    ? TextNormalizer::uppercase((string) $this->input($field))
                     : null;
             }
         }
 
         if ($this->exists('email')) {
             $normalized['email'] = $this->filled('email')
-                ? mb_strtolower(trim((string) $this->input('email')))
+                ? TextNormalizer::lowercaseEmail((string) $this->input('email'))
                 : null;
         }
 

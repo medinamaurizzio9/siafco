@@ -23,6 +23,8 @@ class PublicAffiliationService
             'full_name', 'ci_complement', 'issued_in', 'address', 'regional',
             'institution', 'position', 'marital_status',
         ]);
+        $data['email'] = TextNormalizer::lowercaseEmail($data['email'] ?? null);
+        $data['phone'] = TextNormalizer::squish($data['phone'] ?? null);
 
         try {
             return DB::transaction(function () use ($data, $photoPath, $ip, $userAgent) {
@@ -191,7 +193,7 @@ class PublicAffiliationService
 
     private function normalized(?string $value): string
     {
-        return (string) str($value ?? '')->squish()->upper();
+        return TextNormalizer::uppercase($value) ?? '';
     }
 
     private function isDuplicateConstraint(QueryException $exception): bool

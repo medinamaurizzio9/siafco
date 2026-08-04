@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\InstitutionalSetting;
+use App\Services\Store\StoreCartService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -29,14 +30,24 @@ class AuthController extends Controller
                 'last_login_ip' => $request->ip(),
             ])->save();
 
-            return redirect()->intended(route(Auth::user()->role === 'afiliado' ? 'affiliate.panel' : 'admin.dashboard'));
+            if (Auth::user()->role === 'afiliado') {
+                return redirect()->route('affiliate.panel');
+            }
+
+            return redirect()->intended(route('admin.dashboard'));
         }
 
         return back()->withErrors(['email' => 'Las credenciales no son validas.'])->onlyInput('email');
     }
 
-    public function logout(Request $request)
+    public function confirmLogout()
     {
+        return view('auth.confirm-logout');
+    }
+
+    public function logout(Request $request, StoreCartService $cart)
+    {
+        $cart->clear();
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

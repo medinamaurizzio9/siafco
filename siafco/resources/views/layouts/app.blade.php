@@ -23,6 +23,12 @@
             $canManageUsers = $user->isInternal() && $user->hasPermission('users.view');
             $canAdmin = $user->hasRole('administrador') || $canManageUsers;
             $canGeneralSettings = $user->hasRole(['administrador', 'secretaria']);
+            $canViewStore = $user->isInternal() && $user->hasPermission('store.view');
+            $canManageStoreProducts = $user->isInternal() && $user->hasPermission('store.manage-products');
+            $canManageStoreSettings = $user->isInternal() && $user->hasPermission('store.manage-settings');
+            $canManageStoreShipping = $user->isInternal() && $user->hasPermission('store.manage-shipping');
+            $canManageStoreCoupons = $user->isInternal() && $user->hasPermission('store.manage-coupons');
+            $canManageStoreOrders = $user->isInternal() && $user->hasPermission('store.manage-orders');
             $isPersonalOnly = $user->hasRole(['afiliado', 'accionista']) && ! $canViewAffiliation && ! $canManageInvestments;
 
             $openModule = match (true) {
@@ -30,6 +36,7 @@
                 request()->routeIs('affiliates.*', 'affiliate-benefits.*', 'sectors.*', 'plans.*', 'payments.*', 'credentials.*', 'credenciales.*', 'institutional-qr.*', 'reports.*', 'affiliation.*', 'public-affiliation.admin.*') => 'affiliation',
                 request()->routeIs('investments.*') && ! request()->routeIs('investments.panel') => 'investments',
                 request()->routeIs('credits.*') => 'credits',
+                request()->routeIs('admin.store.*') => 'store',
                 request()->routeIs('administration.*', 'admin.users.*') => 'administration',
                 request()->routeIs('institutional-settings.*', 'settings.*') => 'general-settings',
                 request()->routeIs('affiliate.*', 'investments.panel') => 'personal',
@@ -146,6 +153,31 @@
                         </section>
                     @endif
 
+                    @if($canViewStore)
+                        <section class="nav-module" data-accordion-module="store">
+                            <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'store' ? 'true' : 'false' }}">
+                                <span>Mini tienda</span><span class="nav-chevron">⌄</span>
+                            </button>
+                            <div class="nav-module-panel {{ $openModule === 'store' ? '' : 'hidden' }}">
+                                {!! $navLink('admin.store.dashboard', 'Resumen', [], ['admin.store.dashboard']) !!}
+                                {!! $navLink('admin.store.orders.index', 'Pedidos', [], ['admin.store.orders.*']) !!}
+                                @if($canManageStoreProducts)
+                                    {!! $navLink('admin.store.products.index', 'Productos', [], ['admin.store.products.*']) !!}
+                                    {!! $navLink('admin.store.categories.index', 'Categorías', [], ['admin.store.categories.*']) !!}
+                                @endif
+                                @if($canManageStoreCoupons)
+                                    {!! $navLink('admin.store.coupons.index', 'Cupones', [], ['admin.store.coupons.*']) !!}
+                                @endif
+                                @if($canManageStoreShipping)
+                                    {!! $navLink('admin.store.shipping-rates.index', 'Tarifas de envío', [], ['admin.store.shipping-rates.*']) !!}
+                                @endif
+                                @if($canManageStoreSettings)
+                                    {!! $navLink('admin.store.settings.edit', 'Configuración', [], ['admin.store.settings.*']) !!}
+                                @endif
+                            </div>
+                        </section>
+                    @endif
+
                     @if($canAdmin)
                         <section class="nav-module" data-accordion-module="administration">
                             <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'administration' ? 'true' : 'false' }}">
@@ -186,6 +218,11 @@
                             {!! $navLink('affiliate.panel', 'Panel principal', [], ['affiliate.panel']) !!}
                             {!! $navLink('affiliate.profile.show', 'Mi perfil', [], ['affiliate.profile.*']) !!}
                             {!! $navLink('affiliate.credential.preview', 'Mi credencial', [], ['affiliate.credential.*']) !!}
+                            @if($user->user_type === 'affiliate' && $user->is_active && $user->affiliate?->status === 'activo')
+                                {!! $navLink('store.catalog.index', 'Mini tienda', [], ['store.catalog.*']) !!}
+                                {!! $navLink('store.cart.show', 'Mi carrito ('.collect(session('store_cart.lines', []))->sum('quantity').')', [], ['store.cart.*']) !!}
+                                {!! $navLink('store.orders.index', 'Mis pedidos', [], ['store.orders.*', 'store.checkout.*']) !!}
+                            @endif
                             <a class="nav-link" href="{{ route('affiliate.profile.show') }}#payments" data-sidebar-link>Mis pagos</a>
                         @endif
                         @if($user->hasRole('accionista'))
@@ -193,7 +230,7 @@
                         @endif
                         <form method="post" action="{{ route('logout') }}" class="pt-2">
                             @csrf
-                            <button class="w-full rounded bg-[#102b4c] px-3 py-2 text-left text-slate-100 hover:bg-[#163b68]" data-sidebar-link>Cerrar sesion</button>
+                            <button class="w-full rounded bg-[#102b4c] px-3 py-2 text-left text-slate-100 hover:bg-[#163b68]" data-sidebar-link>Cerrar sesión</button>
                         </form>
                     </div>
                 </section>

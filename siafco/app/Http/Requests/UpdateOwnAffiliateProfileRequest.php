@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Services\AuditService;
 use App\Support\PublicAffiliationCatalogs;
+use App\Support\TextNormalizer;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -27,17 +28,23 @@ class UpdateOwnAffiliateProfileRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $normalized = [];
-        foreach (['phone', 'address', 'marital_status'] as $field) {
+        if ($this->exists('phone')) {
+            $normalized['phone'] = $this->filled('phone')
+                ? TextNormalizer::squish((string) $this->input('phone'))
+                : null;
+        }
+
+        foreach (['address', 'marital_status'] as $field) {
             if ($this->exists($field)) {
                 $normalized[$field] = $this->filled($field)
-                    ? preg_replace('/\s+/u', ' ', trim((string) $this->input($field)))
+                    ? TextNormalizer::uppercase((string) $this->input($field))
                     : null;
             }
         }
 
         if ($this->exists('email')) {
             $normalized['email'] = $this->filled('email')
-                ? mb_strtolower(trim((string) $this->input('email')))
+                ? TextNormalizer::lowercaseEmail((string) $this->input('email'))
                 : null;
         }
 
