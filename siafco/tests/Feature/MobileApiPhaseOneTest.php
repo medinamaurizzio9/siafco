@@ -104,6 +104,26 @@ class MobileApiPhaseOneTest extends TestCase
             ->assertJsonPath('errors.status.0', 'suspendido');
     }
 
+    public function test_blocked_affiliate_account_gets_uniform_403_and_existing_token_stops_working(): void
+    {
+        $user = $this->affiliateUser(status: 'activo', password: 'Secret1234');
+        $token = $this->tokenFor($user);
+
+        $user->forceFill(['is_active' => false])->save();
+
+        $this->postJson('/api/mobile/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'Secret1234',
+        ])->assertForbidden()
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'La cuenta no está activa.');
+
+        $this->withToken($token)->getJson('/api/mobile/v1/me')
+            ->assertForbidden()
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'La cuenta no está activa.');
+    }
+
     public function test_internal_user_token_cannot_access_mobile_routes(): void
     {
         $internal = User::factory()->create([

@@ -29,8 +29,17 @@ class InternalUserManagementTest extends TestCase
 
         foreach ([$super, $manager, $secretary] as $authorized) {
             $this->actingAs($authorized)->get(route('admin.users.index'))
-                ->assertOk()->assertSee($super->name)->assertDontSee($affiliate->name);
+                ->assertOk()
+                ->assertSee('USUARIOS INTERNOS')
+                ->assertSee('Administra unicamente al personal interno')
+                ->assertSee('Ver')
+                ->assertSee($super->name)
+                ->assertDontSee($affiliate->name);
         }
+
+        $this->actingAs($super)->get(route('admin.users.index'))
+            ->assertSee('Editar')
+            ->assertSee('Restablecer');
 
         $this->actingAs($cashier)->get(route('admin.users.index'))->assertForbidden();
         $this->actingAs($affiliate)->get(route('admin.users.index'))->assertForbidden();

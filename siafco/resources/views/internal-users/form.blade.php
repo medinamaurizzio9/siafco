@@ -1,4 +1,4 @@
-<x-layouts.app :title="$internalUser->exists ? 'Editar usuario' : 'Nuevo usuario'">
+<x-layouts.app :title="$internalUser->exists ? 'Editar usuario interno' : 'Nuevo usuario interno'">
     @php($editing = $internalUser->exists)
     <form method="post" enctype="multipart/form-data" action="{{ $editing ? route('admin.users.update', $internalUser) : route('admin.users.store') }}" class="space-y-6">
         @csrf
@@ -7,7 +7,8 @@
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <p class="text-xs font-black uppercase text-[#b8942f]">Administración de accesos</p>
-                <h2 class="text-2xl font-black text-[#0b1f3a]">{{ $editing ? 'EDITAR USUARIO' : 'NUEVO USUARIO' }}</h2>
+                <h2 class="text-2xl font-black text-[#0b1f3a]">{{ $editing ? 'EDITAR USUARIO INTERNO' : 'NUEVO USUARIO INTERNO' }}</h2>
+                <p class="mt-1 text-sm text-slate-600">Este modulo administra solo personal interno. Las cuentas de afiliados se gestionan desde Afiliacion > Afiliados.</p>
             </div>
             <a class="btn-secondary" href="{{ $editing ? route('admin.users.show', $internalUser) : route('admin.users.index') }}">CANCELAR</a>
         </div>

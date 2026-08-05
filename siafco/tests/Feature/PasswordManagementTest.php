@@ -9,6 +9,7 @@ use App\Models\Sector;
 use App\Models\User;
 use App\Services\AffiliatePasswordService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -78,6 +79,7 @@ class PasswordManagementTest extends TestCase
             $this->assertTrue(Hash::check($temporary, $affiliateUser->password));
             $this->assertTrue($affiliateUser->must_change_password);
             $this->assertNotSame($oldToken, $affiliateUser->remember_token);
+            $this->assertSame(0, $affiliateUser->tokens()->count());
         }
 
         $audit = AuditLog::where('action', 'affiliate_password_reset')->firstOrFail();
@@ -114,6 +116,93 @@ class PasswordManagementTest extends TestCase
         ])->assertRedirect(route('affiliate.panel'));
         $this->assertFalse($user->fresh()->must_change_password);
         $this->get(route('affiliate.panel'))->assertOk();
+    }
+
+    public function test_affiliate_login_ignores_unauthorized_admin_intended_url(): void
+    {
+        [$user] = $this->affiliate();
+
+        $this->withSession(['url.intended' => route('admin.dashboard')])
+            ->post(route('login.post'), [
+                'email' => $user->email,
+                'password' => 'OldPassword1',
+            ])->assertRedirect(route('affiliate.panel'));
+    }
+
+    public function test_internal_forced_password_change_goes_to_admin_dashboard(): void
+    {
+        $user = User::create([
+            'name' => 'Secretaria',
+            'email' => 'secretaria@example.com',
+            'role' => 'secretaria',
+            'user_type' => 'internal',
+            'password' => Hash::make('OldPassword1'),
+            'must_change_password' => true,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)->patch(route('password.force.update'), [
+            'password' => 'ClaveInterna2026',
+            'password_confirmation' => 'ClaveInterna2026',
+        ])->assertRedirect(route('admin.dashboard'));
+
+        $this->assertFalse($user->fresh()->must_change_password);
+    }
+
+    public function test_affiliate_access_section_handles_linked_and_missing_user(): void
+    {
+        [$affiliateUser, $affiliate] = $this->affiliate();
+        $actor = $this->internalActor();
+
+        $this->actingAs($actor)->get(route('affiliates.show', $affiliate))
+            ->assertOk()
+            ->assertSee('Cuenta de acceso')
+            ->assertSee($affiliateUser->email)
+            ->assertSee('Estado de afiliacion')
+            ->assertSee('Estado de la cuenta');
+
+        $affiliate->update(['user_id' => null]);
+        $this->actingAs($actor)->get(route('affiliates.show', $affiliate->fresh()))
+            ->assertOk()
+            ->assertSee('Sin cuenta vinculada');
+    }
+
+    public function test_block_activate_and_revoke_affiliate_access_are_account_only_actions(): void
+    {
+        [$affiliateUser, $affiliate] = $this->affiliate();
+        $actor = $this->internalActor();
+        $token = $affiliateUser->createToken('Pixel 8', ['mobile'])->plainTextToken;
+        DB::table('sessions')->insert([
+            'id' => 'affiliate-session',
+            'user_id' => $affiliateUser->id,
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'PHPUnit',
+            'payload' => '',
+            'last_activity' => time(),
+        ]);
+
+        $this->actingAs($actor)->post(route('admin.affiliates.access.block', $affiliate))
+            ->assertSessionHas('status');
+
+        $affiliateUser->refresh();
+        $this->assertFalse($affiliateUser->is_active);
+        $this->assertSame('activo', $affiliate->fresh()->status);
+        $this->assertSame(0, $affiliateUser->tokens()->count());
+        $this->assertDatabaseMissing('sessions', ['user_id' => $affiliateUser->id]);
+        auth()->logout();
+        $this->withToken($token)->getJson('/api/mobile/v1/me')->assertUnauthorized();
+        $this->assertDatabaseHas('audit_logs', ['action' => 'affiliate_access_blocked', 'auditable_id' => $affiliate->id]);
+
+        $this->actingAs($actor)->post(route('admin.affiliates.access.activate', $affiliate))
+            ->assertSessionHas('status');
+        $this->assertTrue($affiliateUser->fresh()->is_active);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'affiliate_access_activated', 'auditable_id' => $affiliate->id]);
+
+        $affiliateUser->createToken('Tablet', ['mobile']);
+        $this->actingAs($actor)->post(route('admin.affiliates.access.revoke-sessions', $affiliate))
+            ->assertSessionHas('status');
+        $this->assertSame(0, $affiliateUser->fresh()->tokens()->count());
+        $this->assertDatabaseHas('audit_logs', ['action' => 'affiliate_sessions_revoked', 'auditable_id' => $affiliate->id]);
     }
 
     public function test_reset_without_linked_user_is_controlled(): void
@@ -155,5 +244,17 @@ class PasswordManagementTest extends TestCase
         ]);
 
         return [$user, $affiliate];
+    }
+
+    private function internalActor(): User
+    {
+        return User::create([
+            'name' => 'Super Admin',
+            'email' => 'super@example.com',
+            'role' => 'superadministrador',
+            'user_type' => 'internal',
+            'password' => Hash::make('Password1'),
+            'is_active' => true,
+        ]);
     }
 }

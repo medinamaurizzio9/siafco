@@ -1,20 +1,20 @@
-<x-layouts.app title="Usuarios del sistema">
+<x-layouts.app title="Usuarios internos">
     <div class="space-y-6">
         <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-black uppercase text-[#b8942f]">Administración</p>
-                <h2 class="mt-1 text-2xl font-black text-[#0b1f3a]">USUARIOS DEL SISTEMA</h2>
-                <p class="mt-1 text-sm text-slate-600">Administra el acceso del personal interno a SIAFCO.</p>
+                <h2 class="mt-1 text-2xl font-black text-[#0b1f3a]">USUARIOS INTERNOS</h2>
+                <p class="mt-1 text-sm text-slate-600">Administra unicamente al personal interno con acceso administrativo a SIAFCO. Los afiliados se gestionan desde su ficha.</p>
             </div>
             @can('create', App\Models\User::class)
-                <a class="btn-primary w-full sm:w-auto" href="{{ route('admin.users.create') }}">NUEVO USUARIO</a>
+                <a class="btn-primary w-full sm:w-auto" href="{{ route('admin.users.create') }}">NUEVO USUARIO INTERNO</a>
             @endcan
         </header>
 
         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div class="metric-card"><p>Usuarios activos</p><strong>{{ $metrics['active'] }}</strong></div>
-            <div class="metric-card"><p>Usuarios bloqueados</p><strong>{{ $metrics['blocked'] }}</strong></div>
-            <div class="metric-card"><p>Usuarios eliminados</p><strong>{{ $metrics['deleted'] }}</strong></div>
+            <div class="metric-card"><p>Internos activos</p><strong>{{ $metrics['active'] }}</strong></div>
+            <div class="metric-card"><p>Internos bloqueados</p><strong>{{ $metrics['blocked'] }}</strong></div>
+            <div class="metric-card"><p>Internos eliminados</p><strong>{{ $metrics['deleted'] }}</strong></div>
             <div class="metric-card"><p>Accesos recientes</p><strong>{{ $metrics['recent'] }}</strong></div>
         </div>
 
@@ -85,9 +85,13 @@
                                     <form method="post" action="{{ route('admin.users.restore', $internalUser->id) }}">@csrf<button class="font-bold text-[#0b1f3a] underline">Restaurar</button></form>
                                 @endcan
                             @else
-                                <div class="flex gap-3">
-                                    @can('view', $internalUser)<a class="font-bold text-[#0b1f3a] underline" href="{{ route('admin.users.show', $internalUser) }}">Ver</a>@endcan
-                                    @can('update', $internalUser)<a class="font-bold text-[#0b1f3a] underline" href="{{ route('admin.users.edit', $internalUser) }}">Editar</a>@endcan
+                                <div class="flex flex-wrap gap-2">
+                                    @can('view', $internalUser)<a class="rounded bg-slate-100 px-2 py-1 text-xs font-black text-[#0b1f3a]" href="{{ route('admin.users.show', $internalUser) }}">Ver</a>@endcan
+                                    @can('update', $internalUser)<a class="rounded bg-slate-100 px-2 py-1 text-xs font-black text-[#0b1f3a]" href="{{ route('admin.users.edit', $internalUser) }}">Editar</a>@endcan
+                                    @can('block', $internalUser)<form method="post" action="{{ route('admin.users.block', $internalUser) }}">@csrf<button class="rounded bg-red-50 px-2 py-1 text-xs font-black text-red-800">Bloquear</button></form>@endcan
+                                    @can('activate', $internalUser)<form method="post" action="{{ route('admin.users.activate', $internalUser) }}">@csrf<button class="rounded bg-emerald-50 px-2 py-1 text-xs font-black text-emerald-800">Activar</button></form>@endcan
+                                    @can('resetPassword', $internalUser)<a class="rounded bg-amber-50 px-2 py-1 text-xs font-black text-amber-900" href="{{ route('admin.users.show', $internalUser) }}#acciones-acceso">Restablecer</a>@endcan
+                                    @can('delete', $internalUser)<a class="rounded bg-red-50 px-2 py-1 text-xs font-black text-red-800" href="{{ route('admin.users.show', $internalUser) }}#acciones-acceso">Eliminar</a>@endcan
                                 </div>
                             @endif
                         </td>
@@ -117,12 +121,15 @@
                         <span class="badge {{ $internalUser->trashed() || !$internalUser->is_active ? '!bg-red-100 !text-red-800' : '!bg-emerald-100 !text-emerald-800' }}">{{ $internalUser->trashed() ? 'Eliminado' : ($internalUser->is_active ? 'Activo' : 'Bloqueado') }}</span>
                     </div>
                     <p class="mt-3 text-xs text-slate-500">Último acceso: {{ $internalUser->last_login_at?->diffForHumans() ?? 'Nunca ingresó' }}</p>
-                    <div class="mt-4 flex gap-3 border-t border-slate-100 pt-3">
+                    <div class="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
                         @if($internalUser->trashed())
                             @can('restore', $internalUser)<form method="post" action="{{ route('admin.users.restore', $internalUser->id) }}">@csrf<button class="btn-secondary">RESTAURAR</button></form>@endcan
                         @else
                             @can('view', $internalUser)<a class="btn-secondary" href="{{ route('admin.users.show', $internalUser) }}">VER</a>@endcan
                             @can('update', $internalUser)<a class="btn-primary" href="{{ route('admin.users.edit', $internalUser) }}">EDITAR</a>@endcan
+                            @can('block', $internalUser)<form method="post" action="{{ route('admin.users.block', $internalUser) }}">@csrf<button class="btn-danger">BLOQUEAR</button></form>@endcan
+                            @can('activate', $internalUser)<form method="post" action="{{ route('admin.users.activate', $internalUser) }}">@csrf<button class="btn-primary">ACTIVAR</button></form>@endcan
+                            @can('resetPassword', $internalUser)<a class="btn-secondary" href="{{ route('admin.users.show', $internalUser) }}#acciones-acceso">RESTABLECER</a>@endcan
                         @endif
                     </div>
                 </article>

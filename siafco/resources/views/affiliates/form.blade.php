@@ -13,6 +13,7 @@
         <div>
             <label class="form-label">Correo de acceso</label>
             <input class="form-input" type="email" name="email" value="{{ old('email', $affiliate->email) }}" required>
+            <p class="mt-1 text-xs text-slate-500">Este correo sera utilizado para iniciar sesion en el portal y en la aplicacion movil.</p>
         </div>
         <div>
             <label class="form-label">Celular</label>

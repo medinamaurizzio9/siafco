@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AffiliateController;
+use App\Http\Controllers\AffiliateAccessController;
 use App\Http\Controllers\AffiliateBenefitController;
 use App\Http\Controllers\AffiliatePanelController;
 use App\Http\Controllers\AffiliateProfileController;
@@ -122,6 +123,12 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         Route::post('/qr-institucional', [InstitutionalQrController::class, 'update'])->name('institutional-qr.update');
         Route::post('/admin/afiliados/{affiliate}/restablecer-contrasena', [AffiliatePasswordController::class, 'reset'])
             ->middleware('throttle:3,1')->name('admin.affiliates.password.reset');
+        Route::post('/admin/afiliados/{affiliate}/bloquear-acceso', [AffiliateAccessController::class, 'block'])
+            ->middleware('throttle:6,1')->name('admin.affiliates.access.block');
+        Route::post('/admin/afiliados/{affiliate}/activar-acceso', [AffiliateAccessController::class, 'activate'])
+            ->middleware('throttle:6,1')->name('admin.affiliates.access.activate');
+        Route::post('/admin/afiliados/{affiliate}/cerrar-sesiones', [AffiliateAccessController::class, 'revokeSessions'])
+            ->middleware('throttle:6,1')->name('admin.affiliates.access.revoke-sessions');
         Route::get('/admin/configuracion-institucional', [InstitutionalSettingController::class, 'edit'])->name('institutional-settings.edit');
         Route::put('/admin/configuracion-institucional', [InstitutionalSettingController::class, 'update'])->name('institutional-settings.update');
         Route::get('/admin/credenciales/{affiliate}/preview', [CredentialController::class, 'preview'])->name('credentials.preview');

@@ -153,7 +153,7 @@
                             </button>
                             <div class="nav-module-panel {{ $openModule === 'administration' ? '' : 'hidden' }}">
                                 @if($canManageUsers)
-                                    {!! $navLink('admin.users.index', 'Usuarios', [], ['admin.users.*']) !!}
+                                    {!! $navLink('admin.users.index', 'Usuarios internos', [], ['admin.users.*']) !!}
                                 @endif
                                 @if($user->hasRole('administrador'))
                                     {!! $soon('administration.roles.index', 'Roles y permisos') !!}

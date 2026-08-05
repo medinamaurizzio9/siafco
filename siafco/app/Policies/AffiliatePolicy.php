@@ -36,6 +36,41 @@ class AffiliatePolicy
     public function resetPassword(User $user, Affiliate $affiliate): bool
     {
         return ! $affiliate->trashed()
-            && $user->hasRole(['administrador', 'superadministrador', 'secretaria']);
+            && $this->canManageAffiliateAccess($user, $affiliate, 'affiliate_access.reset_password');
+    }
+
+    public function viewAccess(User $user, Affiliate $affiliate): bool
+    {
+        return ! $affiliate->trashed()
+            && $this->canManageAffiliateAccess($user, $affiliate, 'affiliate_access.view');
+    }
+
+    public function blockAccess(User $user, Affiliate $affiliate): bool
+    {
+        return ! $affiliate->trashed()
+            && $affiliate->user?->is_active
+            && $this->canManageAffiliateAccess($user, $affiliate, 'affiliate_access.block');
+    }
+
+    public function activateAccess(User $user, Affiliate $affiliate): bool
+    {
+        return ! $affiliate->trashed()
+            && $affiliate->user
+            && ! $affiliate->user->is_active
+            && $this->canManageAffiliateAccess($user, $affiliate, 'affiliate_access.activate');
+    }
+
+    public function revokeSessions(User $user, Affiliate $affiliate): bool
+    {
+        return ! $affiliate->trashed()
+            && $affiliate->user
+            && $this->canManageAffiliateAccess($user, $affiliate, 'affiliate_access.revoke_sessions');
+    }
+
+    private function canManageAffiliateAccess(User $user, Affiliate $affiliate, string $permission): bool
+    {
+        return ($user->isInternal() || ($user->user_type === null && $user->role !== 'afiliado'))
+            && $user->hasPermission($permission)
+            && ! ($affiliate->user && $affiliate->user->role === 'superadministrador');
     }
 }

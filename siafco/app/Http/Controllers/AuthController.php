@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\InstitutionalSetting;
+use App\Services\UserRedirectResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,7 +16,7 @@ class AuthController extends Controller
         ]);
     }
 
-    public function login(Request $request)
+    public function login(Request $request, UserRedirectResolver $redirects)
     {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
@@ -29,7 +30,7 @@ class AuthController extends Controller
                 'last_login_ip' => $request->ip(),
             ])->save();
 
-            return redirect()->intended(route(Auth::user()->role === 'afiliado' ? 'affiliate.panel' : 'admin.dashboard'));
+            return $redirects->redirectAfterLogin($request, Auth::user());
         }
 
         return back()->withErrors(['email' => 'Las credenciales no son validas.'])->onlyInput('email');

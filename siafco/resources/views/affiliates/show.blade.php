@@ -12,7 +12,10 @@
                 <div>
                     <p class="text-sm font-bold uppercase text-[#b8942f]">{{ $affiliate->registration_number }}</p>
                     <h2 class="text-3xl font-black text-[#0b1f3a]">{{ $affiliate->full_name }}</h2>
-                    <div class="mt-2 flex flex-wrap items-center gap-2"><span class="text-slate-600">{{ $affiliate->sector->name }}</span><x-affiliation-status :status="$affiliate->status" size="sm" /></div>
+                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                        <span class="text-slate-600">{{ $affiliate->sector->name }}</span>
+                        <x-affiliation-status :status="$affiliate->status" size="sm" />
+                    </div>
                     @if(auth()->user()->hasRole(['administrador','administrador_sector','secretaria']))
                         <a class="btn-secondary mt-4" href="{{ route('affiliates.edit', $affiliate) }}">Editar datos</a>
                     @endif
@@ -53,36 +56,71 @@
         </aside>
     </div>
 
-    @can('resetPassword', $affiliate)
+    @can('viewAccess', $affiliate)
+        @php($accessUser = $affiliate->user)
         <section class="mt-6 rounded-lg border border-amber-200 bg-white p-5">
-            <p class="text-xs font-black uppercase text-amber-700">Seguridad</p>
-            <div class="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div><h3 class="font-black text-[#0b1f3a]">Cuenta de acceso</h3><p class="mt-1 text-sm text-slate-600">Restablece el acceso únicamente cuando el afiliado lo solicite.</p></div>
-                <button class="rounded border border-amber-400 bg-amber-50 px-4 py-2 font-black text-amber-950" type="button" data-password-reset-open>RESTABLECER CONTRASEÑA</button>
-            </div>
-        </section>
-        <dialog class="w-[min(92vw,520px)] rounded-lg p-0 shadow-xl backdrop:bg-slate-950/70" data-password-reset-dialog>
-            <form method="post" action="{{ route('admin.affiliates.password.reset', $affiliate) }}" class="p-5">
-                @csrf
-                <h2 class="text-xl font-black text-[#0b1f3a]">RESTABLECER CONTRASEÑA</h2>
-                <p class="mt-3 text-sm text-slate-600">La contraseña temporal será el número de carnet del afiliado. Al iniciar sesión deberá cambiarla obligatoriamente.</p>
-                <dl class="mt-4 grid gap-2 rounded bg-slate-50 p-4 text-sm">
-                    <div><dt class="font-bold text-slate-500">Afiliado</dt><dd>{{ $affiliate->full_name }}</dd></div>
-                    <div><dt class="font-bold text-slate-500">CI</dt><dd>{{ $affiliate->ci }}</dd></div>
-                    <div><dt class="font-bold text-slate-500">Código</dt><dd>{{ $affiliate->registration_number }}</dd></div>
-                </dl>
-                <label class="mt-4 grid gap-2 text-sm font-bold text-slate-700">Escribe RESTABLECER para confirmar
-                    <input class="form-input" name="confirmation" autocomplete="off" required data-password-reset-confirmation>
-                </label>
-                <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                    <button class="btn-secondary" type="button" data-password-reset-close>CANCELAR</button>
-                    <button class="rounded bg-amber-400 px-4 py-2 font-black text-[#0b1f3a] disabled:opacity-50" type="submit" disabled data-password-reset-submit>CONFIRMAR RESTABLECIMIENTO</button>
+            <p class="text-xs font-black uppercase text-amber-700">Cuenta de acceso</p>
+            <div class="mt-2 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <h3 class="font-black text-[#0b1f3a]">Portal web y aplicacion movil</h3>
+                    <p class="mt-1 text-sm text-slate-600">El identificador principal de inicio de sesion del afiliado es su correo electronico.</p>
                 </div>
-            </form>
-        </dialog>
+                <div class="flex flex-wrap gap-2">
+                    @can('blockAccess', $affiliate)
+                        <form method="post" action="{{ route('admin.affiliates.access.block', $affiliate) }}">@csrf<button class="btn-danger">BLOQUEAR ACCESO</button></form>
+                    @endcan
+                    @can('activateAccess', $affiliate)
+                        <form method="post" action="{{ route('admin.affiliates.access.activate', $affiliate) }}">@csrf<button class="btn-primary">ACTIVAR ACCESO</button></form>
+                    @endcan
+                    @can('revokeSessions', $affiliate)
+                        <form method="post" action="{{ route('admin.affiliates.access.revoke-sessions', $affiliate) }}">@csrf<button class="btn-secondary">CERRAR SESIONES</button></form>
+                    @endcan
+                    @can('resetPassword', $affiliate)
+                        <button class="rounded border border-amber-400 bg-amber-50 px-4 py-2 font-black text-amber-950" type="button" data-password-reset-open>RESTABLECER CONTRASENA</button>
+                    @endcan
+                </div>
+            </div>
+
+            <dl class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div><dt class="text-xs font-black uppercase text-slate-500">Estado de afiliacion</dt><dd class="mt-1"><x-affiliation-status :status="$affiliate->status" size="sm" /></dd></div>
+                <div><dt class="text-xs font-black uppercase text-slate-500">Estado de la cuenta</dt><dd class="mt-1"><span class="badge {{ $accessUser?->is_active ? '!bg-emerald-100 !text-emerald-800' : '!bg-red-100 !text-red-800' }}">{{ $accessUser ? ($accessUser->is_active ? 'Activa' : 'Bloqueada') : 'Sin cuenta vinculada' }}</span></dd></div>
+                <div><dt class="text-xs font-black uppercase text-slate-500">Correo de acceso</dt><dd class="mt-1 break-all font-bold text-slate-900">{{ $accessUser?->email ?? $affiliate->email ?? 'Sin correo' }}</dd></div>
+                <div><dt class="text-xs font-black uppercase text-slate-500">Usuario compatible</dt><dd class="mt-1 break-all font-bold text-slate-900">{{ $accessUser?->username ?: 'Generado internamente' }}</dd></div>
+                <div><dt class="text-xs font-black uppercase text-slate-500">Cambio obligatorio</dt><dd class="mt-1 font-bold text-slate-900">{{ $accessUser?->must_change_password ? 'Pendiente' : 'No pendiente' }}</dd></div>
+                <div><dt class="text-xs font-black uppercase text-slate-500">Ultimo acceso</dt><dd class="mt-1 font-bold text-slate-900">{{ $accessUser?->last_login_at?->format('d/m/Y H:i') ?? 'Nunca ingreso' }}</dd></div>
+                <div><dt class="text-xs font-black uppercase text-slate-500">Ultima IP</dt><dd class="mt-1 font-bold text-slate-900">{{ $accessUser?->last_login_ip ?: 'No registrada' }}</dd></div>
+                <div><dt class="text-xs font-black uppercase text-slate-500">Acceso movil</dt><dd class="mt-1 font-bold text-slate-900">{{ $accessUser?->is_active ? 'Habilitado' : 'Requiere activacion' }}</dd></div>
+            </dl>
+
+            @unless($accessUser)
+                <p class="mt-4 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">Este afiliado no tiene una cuenta de acceso vinculada. La ficha se muestra sin error para permitir revision administrativa.</p>
+            @endunless
+        </section>
+
+        @can('resetPassword', $affiliate)
+            <dialog class="w-[min(92vw,520px)] rounded-lg p-0 shadow-xl backdrop:bg-slate-950/70" data-password-reset-dialog>
+                <form method="post" action="{{ route('admin.affiliates.password.reset', $affiliate) }}" class="p-5">
+                    @csrf
+                    <h2 class="text-xl font-black text-[#0b1f3a]">RESTABLECER CONTRASENA</h2>
+                    <p class="mt-3 text-sm text-slate-600">La contrasena temporal corresponde al CI del afiliado. Debera cambiarla al ingresar.</p>
+                    <dl class="mt-4 grid gap-2 rounded bg-slate-50 p-4 text-sm">
+                        <div><dt class="font-bold text-slate-500">Afiliado</dt><dd>{{ $affiliate->full_name }}</dd></div>
+                        <div><dt class="font-bold text-slate-500">CI</dt><dd>{{ $affiliate->ci }}</dd></div>
+                        <div><dt class="font-bold text-slate-500">Codigo</dt><dd>{{ $affiliate->registration_number }}</dd></div>
+                    </dl>
+                    <label class="mt-4 grid gap-2 text-sm font-bold text-slate-700">Escribe RESTABLECER para confirmar
+                        <input class="form-input" name="confirmation" autocomplete="off" required data-password-reset-confirmation>
+                    </label>
+                    <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <button class="btn-secondary" type="button" data-password-reset-close>CANCELAR</button>
+                        <button class="rounded bg-amber-400 px-4 py-2 font-black text-[#0b1f3a] disabled:opacity-50" type="submit" disabled data-password-reset-submit>CONFIRMAR RESTABLECIMIENTO</button>
+                    </div>
+                </form>
+            </dialog>
+        @endcan
     @endcan
 
-    <section class="mt-6 overflow-hidden rounded-lg border border-slate-200 bg-white">
+    <section class="mt-6 overflow-hidden rounded-lg border border-slate-200 bg-white" id="payments">
         <div class="border-b border-slate-200 px-4 py-3"><h3 class="font-black text-[#0b1f3a]">Pagos</h3></div>
         <div class="overflow-x-auto">
             <table class="table">

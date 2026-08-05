@@ -58,5 +58,7 @@ class AffiliatePasswordService
         if (config('session.driver') === 'database') {
             DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->delete();
         }
+
+        $user->tokens()->delete();
     }
 }

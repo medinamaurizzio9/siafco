@@ -6,6 +6,7 @@ use App\Http\Requests\ForcePasswordChangeRequest;
 use App\Http\Requests\UpdateOwnPasswordRequest;
 use App\Services\AffiliatePasswordService;
 use App\Services\AuditService;
+use App\Services\UserRedirectResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -24,13 +25,13 @@ class PasswordController extends Controller
             'forced' => false,
         ]);
 
-        return back()->with('status', 'Tu contraseña fue actualizada correctamente.');
+        return back()->with('status', 'Tu contrasena fue actualizada correctamente.');
     }
 
-    public function forceEdit(Request $request)
+    public function forceEdit(Request $request, UserRedirectResolver $redirects)
     {
         if (! $request->user()->must_change_password) {
-            return redirect()->route($this->homeRoute($request));
+            return $redirects->redirectHome($request);
         }
 
         return view('auth.force-password');
@@ -38,7 +39,8 @@ class PasswordController extends Controller
 
     public function forceUpdate(
         ForcePasswordChangeRequest $request,
-        AffiliatePasswordService $passwordService
+        AffiliatePasswordService $passwordService,
+        UserRedirectResolver $redirects
     ) {
         $user = $request->user();
         $passwordService->assertAllowedPassword($request->validated('password'), $user, $user->affiliate);
@@ -48,8 +50,7 @@ class PasswordController extends Controller
             'forced' => true,
         ]);
 
-        return redirect()->route($this->homeRoute($request))
-            ->with('status', 'Tu contraseña fue actualizada correctamente.');
+        return $redirects->redirectHome($request, 'Tu contrasena fue actualizada correctamente.');
     }
 
     private function savePassword(Request $request, string $password): void
@@ -68,10 +69,5 @@ class PasswordController extends Controller
         }
 
         $request->session()->regenerate();
-    }
-
-    private function homeRoute(Request $request): string
-    {
-        return $request->user()->role === 'afiliado' ? 'affiliate.panel' : 'admin.dashboard';
     }
 }

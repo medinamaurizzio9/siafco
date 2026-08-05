@@ -23,5 +23,6 @@ class UserAccessService
     {
         $user->forceFill(['remember_token' => Str::random(60)])->save();
         DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->delete();
+        $user->tokens()->delete();
     }
 }

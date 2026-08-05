@@ -1,4 +1,4 @@
-<x-layouts.app title="Detalle de usuario">
+<x-layouts.app title="Detalle de usuario interno">
     <div class="space-y-6">
         <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -11,7 +11,7 @@
             </div>
         </header>
 
-        <section class="section-card">
+        <section class="section-card" id="acciones-acceso">
             <div class="grid gap-6 lg:grid-cols-[180px_1fr]">
                 <div>
                     @if($internalUser->photoUrl())

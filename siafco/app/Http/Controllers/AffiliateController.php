@@ -10,6 +10,7 @@ use App\Models\Person;
 use App\Models\Sector;
 use App\Models\User;
 use App\Services\AuditService;
+use App\Services\AffiliatePasswordService;
 use App\Support\TextNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -74,8 +75,12 @@ class AffiliateController extends Controller
                 'person_id' => $person->id,
                 'name' => $data['full_name'],
                 'email' => $data['email'],
+                'username' => $this->uniqueAffiliateUsername($registration),
                 'role' => 'afiliado',
-                'password' => Hash::make($data['ci']),
+                'user_type' => 'affiliate',
+                'is_active' => true,
+                'must_change_password' => true,
+                'password' => Hash::make(app(AffiliatePasswordService::class)->temporaryPasswordFromCi($data['ci'])),
             ]);
 
             $affiliate = Affiliate::create($data + [
@@ -101,13 +106,14 @@ class AffiliateController extends Controller
             return $affiliate;
         });
 
-        return redirect()->route('affiliates.show', $affiliate)->with('status', 'Afiliado registrado con pago pendiente.');
+        return redirect()->route('affiliates.show', $affiliate)
+            ->with('status', 'Afiliado registrado con pago pendiente. El correo sera utilizado para iniciar sesion en el portal y en la aplicacion movil. La contrasena temporal corresponde al CI del afiliado y debera cambiarla al ingresar.');
     }
 
     public function show(Affiliate $affiliate)
     {
         return view('affiliates.show', [
-            'affiliate' => $affiliate->load('sector', 'plan', 'payments.cashier', 'credential'),
+            'affiliate' => $affiliate->load('sector', 'plan', 'payments.cashier', 'credential', 'user'),
         ]);
     }
 
@@ -200,5 +206,18 @@ class AffiliateController extends Controller
         return TextNormalizer::fields($data, [
             'full_name', 'address', 'regional', 'institution', 'position', 'marital_status',
         ]);
+    }
+
+    private function uniqueAffiliateUsername(string $registration): string
+    {
+        $base = str('afiliado_'.$registration)->lower()->replaceMatches('/[^a-z0-9]+/', '_')->trim('_')->toString();
+        $username = $base;
+        $suffix = 1;
+
+        while (User::where('username', $username)->exists()) {
+            $username = $base.'_'.$suffix++;
+        }
+
+        return $username;
     }
 }
