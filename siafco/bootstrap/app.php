@@ -5,8 +5,10 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use App\Http\Responses\MobileApiResponse;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -26,11 +28,30 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \App\Http\Middleware\PermissionMiddleware::class,
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'affiliate.active-access' => \App\Http\Middleware\RestrictPendingAffiliateAccess::class,
+            'affiliate.store.active' => \App\Http\Middleware\EnsureActiveStoreAffiliate::class,
+            'mobile.affiliate.active' => \App\Http\Middleware\EnsureActiveMobileStoreAffiliate::class,
             'password.changed' => \App\Http\Middleware\EnsurePasswordIsChanged::class,
             'mobile.affiliate' => \App\Http\Middleware\EnsureMobileAffiliateAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->render(function (HttpException $exception, $request) {
+            if ($exception->getStatusCode() === 419
+                && $request->isMethod('post')
+                && trim($request->path(), '/') === 'logout') {
+                $request->session()->regenerateToken();
+
+                if (Auth::check()) {
+                    return redirect()->route('logout.confirm')
+                        ->with('warning', 'No se pudo cerrar sesión porque el formulario expiró. Confirma nuevamente para salir.');
+                }
+
+                return redirect()->route('login')->with('warning', 'La sesión expiró.');
+            }
+
+            return null;
+        });
+
         $exceptions->render(function (AuthenticationException $exception, $request) {
             if ($request->is('api/mobile/v1/*')) {
                 return MobileApiResponse::error('No autenticado.', 401);

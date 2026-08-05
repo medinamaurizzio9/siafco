@@ -20,6 +20,8 @@ $permissions = [
     'settings.view', 'settings.update', 'reports.view', 'reports.export',
     'audit.view', 'credits.view', 'credits.create', 'credits.update', 'credits.approve',
     'investors.view', 'investors.create', 'investors.update',
+    'store.view', 'store.manage-products', 'store.manage-settings', 'store.manage-shipping',
+    'store.manage-coupons', 'store.manage-orders', 'store.verify-receipts',
 ];
 
 return [
@@ -45,7 +47,7 @@ return [
             'affiliates.manage_credential',
             'payments.confirm', 'payments.reject', 'payments.view_receipt',
             'affiliate_access.view',
-            'credits.view', 'investors.view',
+            'credits.view', 'investors.view', 'store.view',
         ],
         'secretaria' => [
             'dashboard.view', 'users.view', 'affiliates.view', 'affiliates.create', 'affiliates.update',
@@ -60,7 +62,7 @@ return [
             'payments.confirm', 'payments.reject', 'payments.receipt', 'payments.view_receipt',
             'payments.download_receipt',
             'credentials.view', 'credentials.download', 'credentials.print',
-            'reports.view', 'settings.view',
+            'reports.view', 'settings.view', 'store.view', 'store.manage-products', 'store.manage-shipping', 'store.manage-coupons', 'store.verify-receipts',
         ],
         'cajero' => [
             'dashboard.view', 'affiliates.view', 'payments.view', 'payments.create', 'payments.update',
@@ -72,6 +74,6 @@ return [
             'payments.view', 'credentials.view', 'credentials.download',
             'credentials.print', 'reports.view',
         ],
-        'consulta' => ['dashboard.view', 'affiliates.view', 'payments.view', 'reports.view', 'credits.view'],
+        'consulta' => ['dashboard.view', 'affiliates.view', 'payments.view', 'reports.view', 'credits.view', 'store.view'],
     ],
 ];

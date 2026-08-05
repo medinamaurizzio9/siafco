@@ -43,6 +43,9 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(User::class, UserPolicy::class);
         $this->registerDomainListeners();
+        foreach (['store.view', 'store.manage-products', 'store.manage-settings', 'store.manage-shipping', 'store.manage-coupons', 'store.manage-orders', 'store.verify-receipts'] as $permission) {
+            Gate::define($permission, fn (User $user) => $user->isInternal() && $user->hasPermission($permission));
+        }
 
         $institution = $this->hasInstitutionalSettingsTable()
             ? InstitutionalSetting::current()

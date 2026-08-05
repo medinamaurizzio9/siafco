@@ -182,9 +182,9 @@ class MobileApiPhaseOneTest extends TestCase
         $response = $this->withToken($token)->patchJson('/api/mobile/v1/me/profile', [
             'phone' => '76543210',
             'email' => 'new-affiliate@siafco.test',
-            'address' => 'Nueva direccion',
+            'address' => 'Nueva  direccion',
             'birth_date' => '1990-05-15',
-            'marital_status' => 'CASADO',
+            'marital_status' => 'casado',
         ]);
 
         $response->assertOk()
@@ -195,17 +195,18 @@ class MobileApiPhaseOneTest extends TestCase
         $affiliate = $user->affiliate()->first();
         $this->assertSame('new-affiliate@siafco.test', $user->email);
         $this->assertSame('76543210', $affiliate->phone);
-        $this->assertSame('Nueva direccion', $affiliate->address);
+        $this->assertSame('NUEVA DIRECCION', $affiliate->address);
         $this->assertSame('1990-05-15', $affiliate->birth_date->toDateString());
         $this->assertSame('CASADO', $affiliate->marital_status);
         $this->assertSame('76543210', $affiliate->person->phone);
         $this->assertSame('new-affiliate@siafco.test', $affiliate->person->email);
-        $this->assertSame('Nueva direccion', $affiliate->person->address);
+        $this->assertSame('NUEVA DIRECCION', $affiliate->person->address);
         $this->assertSame('1990-05-15', $affiliate->person->birth_date->toDateString());
         $this->assertSame('CASADO', $affiliate->person->marital_status);
         $this->withToken($token)->getJson('/api/mobile/v1/me')
             ->assertOk()
             ->assertJsonPath('data.profile.affiliate.phone', '76543210')
+            ->assertJsonPath('data.profile.affiliate.address', 'NUEVA DIRECCION')
             ->assertJsonPath('data.profile.affiliate.marital_status', 'CASADO');
         $this->actingAs($user)->get(route('affiliate.profile.show'))
             ->assertOk()
@@ -260,7 +261,7 @@ class MobileApiPhaseOneTest extends TestCase
         $beforePersonMaritalStatus = $user->affiliate->person->marital_status;
         $this->withToken($token)->patchJson('/api/mobile/v1/me/profile', [
             'email' => $user->email,
-            'marital_status' => 'casado',
+            'marital_status' => 'NO_VALIDO',
         ])->assertUnprocessable()
             ->assertJsonPath('success', false)
             ->assertJsonStructure(['errors' => ['marital_status']]);

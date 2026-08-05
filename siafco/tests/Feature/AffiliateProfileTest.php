@@ -59,10 +59,11 @@ class AffiliateProfileTest extends TestCase
         $affiliate->refresh();
         $this->assertSame('+591 700-12345', $affiliate->phone);
         $this->assertSame('nuevo@example.com', $affiliate->email);
-        $this->assertSame('Calle Principal 123', $affiliate->address);
+        $this->assertSame('CALLE PRINCIPAL 123', $affiliate->address);
         $this->assertSame('CASADO', $affiliate->marital_status);
         $this->assertSame('nuevo@example.com', $affiliate->user->email);
         $this->assertSame('nuevo@example.com', $affiliate->person->email);
+        $this->assertSame('CALLE PRINCIPAL 123', $affiliate->person->address);
         $this->assertSame('CASADO', $affiliate->person->marital_status);
 
         $audit = AuditLog::where('action', 'affiliate_profile_updated')->firstOrFail();
