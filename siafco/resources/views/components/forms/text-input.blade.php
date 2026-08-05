@@ -20,6 +20,6 @@
         data-validate-field data-touched="{{ $errors->has($name) ? 'true' : 'false' }}"
         {{ $attributes }}
     >
-    @if($help)<p id="{{ $name }}-help" class="mt-1 text-xs text-slate-500">{{ $help }}</p>@endif
+    @if($help)<p id="{{ $name }}-help" class="form-helper">{{ $help }}</p>@endif
     <x-forms.field-error :name="$name" />
 </label>

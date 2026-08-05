@@ -10,8 +10,8 @@
     @endif
     @stack('styles')
 </head>
-<body class="bg-slate-100 text-slate-950">
-<div class="min-h-screen lg:flex" data-sidebar-shell>
+<body class="text-siafco-text">
+<div class="ds-shell" data-sidebar-shell>
     @auth
         @php
             $user = auth()->user();
@@ -48,10 +48,10 @@
             $soon = fn (string $route, string $label) => $navLink($route, $label);
         @endphp
 
-        <aside class="fixed inset-y-0 left-0 z-40 hidden w-80 overflow-y-auto bg-[#0b1f3a] text-white shadow-xl lg:static lg:block lg:w-72 lg:shadow-none" data-sidebar>
-            <div class="flex items-center justify-between px-5 py-4">
+        <aside class="ds-sidebar" data-sidebar>
+            <div class="ds-sidebar-brand">
                 <a href="{{ $homeRoute ? route($homeRoute) : route('login') }}" class="flex items-center gap-3">
-                    <span class="grid h-12 w-12 place-items-center overflow-hidden rounded border border-[#d4af37] bg-white text-lg font-black text-[#0b1f3a]">
+                    <span class="ds-sidebar-logo">
                         @if($institution->logoUrl())
                             <img class="h-full w-full object-contain p-1" src="{{ $institution->logoUrl() }}" alt="Logo">
                         @else
@@ -59,11 +59,13 @@
                         @endif
                     </span>
                     <span>
-                        <span class="block text-lg font-black text-[#d4af37]">SIAFCO</span>
-                        <span class="block text-xs text-slate-300">{{ $institution->institution_name }}</span>
+                        <span class="ds-sidebar-title">SIAFCO</span>
+                        <span class="ds-sidebar-subtitle">{{ $institution->institution_name }}</span>
                     </span>
                 </a>
-                <button type="button" class="rounded px-2 py-1 text-sm font-black text-[#d4af37] lg:hidden" data-sidebar-close>✕</button>
+                <button type="button" class="btn-icon border-white/10 bg-white/5 text-siafco-gold-500 lg:hidden" data-sidebar-close aria-label="Cerrar menu">
+                    <x-ui.icon name="x" class="h-4 w-4" />
+                </button>
             </div>
 
             <nav class="grid gap-2 px-3 pb-4 text-sm" data-sidebar-accordion data-current-module="{{ $openModule }}">
@@ -207,7 +209,7 @@
                         @endif
                         <form method="post" action="{{ route('logout') }}" class="pt-2">
                             @csrf
-                            <button class="w-full rounded bg-[#102b4c] px-3 py-2 text-left text-slate-100 hover:bg-[#163b68]" data-sidebar-link>Cerrar sesion</button>
+                            <button class="nav-link w-full bg-white/5 text-left" data-sidebar-link>Cerrar sesion</button>
                         </form>
                     </div>
                 </section>
@@ -216,31 +218,44 @@
         <div class="fixed inset-0 z-30 hidden bg-slate-950/50 lg:hidden" data-sidebar-backdrop></div>
     @endauth
 
-    <main class="flex-1">
+    <main class="ds-main">
         @auth
-            <header class="border-b border-slate-200 bg-white px-5 py-4">
+            <header class="ds-header">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div class="flex items-start gap-3">
-                        <button type="button" class="rounded bg-[#0b1f3a] px-3 py-2 text-sm font-black text-[#d4af37] lg:hidden" data-sidebar-open>Menu</button>
+                        <button type="button" class="btn-icon bg-siafco-primary-900 text-siafco-gold-500 lg:hidden" data-sidebar-open aria-label="Abrir menu">
+                            <x-ui.icon name="menu" class="h-5 w-5" />
+                        </button>
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-[#b8942f]">{{ auth()->user()->role }}</p>
-                            <h1 class="text-2xl font-black text-slate-950">{{ $title ?? 'SIAFCO' }}</h1>
+                            <p class="ds-title-eyebrow">{{ auth()->user()->roleLabel() }}</p>
+                            <h1 class="ds-title-h1">{{ $title ?? 'SIAFCO' }}</h1>
                         </div>
                     </div>
-                    <p class="text-sm text-slate-500">{{ auth()->user()->name }}</p>
+                    <div class="flex items-center gap-3">
+                        <span class="hidden text-right sm:block">
+                            <span class="block text-xs font-bold text-siafco-muted">{{ $institution->institution_name }}</span>
+                            <span class="block text-sm font-black text-siafco-primary-900">{{ auth()->user()->name }}</span>
+                        </span>
+                        <button class="btn-icon" type="button" aria-label="Notificaciones preparadas">
+                            <x-ui.icon name="bell" class="h-5 w-5" />
+                        </button>
+                        <span class="grid h-10 w-10 place-items-center rounded-full bg-siafco-primary-900 text-sm font-black text-white" aria-hidden="true">
+                            {{ mb_substr(auth()->user()->name, 0, 1) }}
+                        </span>
+                    </div>
                 </div>
             </header>
         @endauth
 
-        <section class="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        <section class="ds-page">
             @if(session('status'))
-                <div class="mb-5 rounded border border-[#d4af37]/40 bg-[#fff8df] px-4 py-3 text-sm text-slate-900">{{ session('status') }}</div>
+                <x-ui.alert variant="success" icon="check">{{ session('status') }}</x-ui.alert>
             @endif
             @if(session('warning'))
-                <div class="mb-5 rounded border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">{{ session('warning') }}</div>
+                <x-ui.alert variant="warning">{{ session('warning') }}</x-ui.alert>
             @endif
             @if(isset($errors) && $errors->any())
-                <div class="mb-5 rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+                <div class="alert alert-danger">
                     <strong>Revise los datos ingresados.</strong>
                     <ul class="mt-2 list-disc pl-5">
                         @foreach($errors->all() as $error)
@@ -251,6 +266,12 @@
             @endif
             {{ $slot }}
         </section>
+        @auth
+            <footer class="ds-footer">
+                <span>SIAFCO · Sistema de afiliacion cooperativa</span>
+                <span>Version {{ config('app.version', 'local') }} · Build {{ app()->environment('production') ? 'production' : 'local' }} · Ambiente {{ app()->environment() }}</span>
+            </footer>
+        @endauth
     </main>
 </div>
 @stack('scripts')

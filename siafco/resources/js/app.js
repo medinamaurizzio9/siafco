@@ -4,6 +4,9 @@ import { initPhotoCroppers } from './components/photo-cropper';
 
 document.addEventListener('DOMContentLoaded', () => {
     initPhotoCroppers();
+    if (document.querySelector('[data-dashboard-charts]')) {
+        import('./dashboard').then(({ initDashboardCharts }) => initDashboardCharts());
+    }
     const passwordResetDialog = document.querySelector('[data-password-reset-dialog]');
     const passwordResetConfirmation = passwordResetDialog?.querySelector('[data-password-reset-confirmation]');
     const passwordResetSubmit = passwordResetDialog?.querySelector('[data-password-reset-submit]');

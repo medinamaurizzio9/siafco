@@ -1,6 +1,12 @@
 {
+  "node_modules/apexcharts/dist/apexcharts.esm.js": {
+    "file": "assets/apexcharts.esm-LmkCAMZ-.js",
+    "name": "apexcharts.esm",
+    "src": "node_modules/apexcharts/dist/apexcharts.esm.js",
+    "isDynamicEntry": true
+  },
   "resources/css/app.css": {
-    "file": "assets/app-Dl_Y-Nor.css",
+    "file": "assets/app-1cDni2xm.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -10,10 +16,13 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-BFfMiOQ2.js",
+    "file": "assets/app-BZ_Z-tk_.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
+    "dynamicImports": [
+      "resources/js/dashboard.js"
+    ],
     "css": [
       "assets/app-Dqszr6bn.css"
     ]
@@ -23,5 +32,17 @@
     "name": "credential",
     "src": "resources/js/credential.js",
     "isEntry": true
+  },
+  "resources/js/dashboard.js": {
+    "file": "assets/dashboard-8nvedcAO.js",
+    "name": "dashboard",
+    "src": "resources/js/dashboard.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.js"
+    ],
+    "dynamicImports": [
+      "node_modules/apexcharts/dist/apexcharts.esm.js"
+    ]
   }
 }
