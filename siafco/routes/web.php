@@ -94,6 +94,31 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         ->middleware('role:afiliado,secretaria,administrador,administrador_sector,cajero')
         ->name('payments.proof');
 
+    Route::prefix('pagos')->name('payments.')->group(function () {
+        Route::get('/crear', [PaymentController::class, 'create'])
+            ->middleware('permission:payments.create')->name('create');
+        Route::post('/', [PaymentController::class, 'store'])
+            ->middleware('permission:payments.create')->name('store');
+        Route::get('/{payment}', [PaymentController::class, 'show'])
+            ->middleware('permission:payments.view')->name('show');
+        Route::get('/{payment}/editar', [PaymentController::class, 'edit'])
+            ->middleware('permission:payments.update_pending')->name('edit');
+        Route::put('/{payment}', [PaymentController::class, 'update'])
+            ->middleware('permission:payments.update_pending')->name('update');
+        Route::post('/{payment}/confirmar', [PaymentController::class, 'confirm'])
+            ->middleware('permission:payments.confirm')->name('confirm');
+        Route::post('/{payment}/rechazar', [PaymentController::class, 'reject'])
+            ->middleware('permission:payments.reject')->name('reject');
+        Route::post('/{payment}/anular', [PaymentController::class, 'void'])
+            ->middleware('permission:payments.void')->name('void');
+        Route::get('/{payment}/comprobante-admin', [PaymentController::class, 'voucher'])
+            ->middleware('permission:payments.view_receipt')->name('voucher');
+        Route::get('/{payment}/recibo', [PaymentController::class, 'receipt'])
+            ->middleware('permission:payments.view_receipt')->name('receipt');
+        Route::get('/{payment}/recibo/descargar', [PaymentController::class, 'downloadReceipt'])
+            ->middleware('permission:payments.download_receipt')->name('receipt.download');
+    });
+
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->middleware('permission:dashboard.view')
         ->name('admin.dashboard');
@@ -101,7 +126,7 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
     Route::middleware('role:administrador,superadministrador,gerente,administrador_sector,secretaria,cajero,consulta')->group(function () {
         Route::get('/afiliados', [AffiliateController::class, 'index'])->name('affiliates.index');
         Route::get('/afiliados/{affiliate}', [AffiliateController::class, 'show'])->name('affiliates.show');
-        Route::get('/pagos', [PaymentController::class, 'index'])->name('payments.index');
+        Route::get('/pagos', [PaymentController::class, 'index'])->middleware('permission:payments.view')->name('payments.index');
         Route::get('/reportes', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/reportes/pdf', [ReportController::class, 'pdf'])->name('reports.pdf');
     });
@@ -144,11 +169,6 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         Route::get('/admin/credenciales/{affiliate}/pdf', [CredentialController::class, 'adminPdf'])->name('credentials.pdf');
         Route::get('/admin/credenciales/{affiliate}/png', [CredentialController::class, 'adminPng'])->name('credentials.png');
         Route::get('/admin/credenciales/{affiliate}/imprimir', [CredentialController::class, 'print'])->name('credentials.print');
-    });
-
-    Route::middleware('role:administrador,cajero')->group(function () {
-        Route::post('/pagos/{payment}/confirmar', [PaymentController::class, 'confirm'])->name('payments.confirm');
-        Route::post('/pagos/{payment}/rechazar', [PaymentController::class, 'reject'])->name('payments.reject');
     });
 
     Route::get('/panel-accionista', [InvestorPanelController::class, 'index'])

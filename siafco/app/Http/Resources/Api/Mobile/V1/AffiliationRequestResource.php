@@ -4,6 +4,7 @@ namespace App\Http\Resources\Api\Mobile\V1;
 
 use App\Models\InstitutionalSetting;
 use App\Support\AffiliationStatusPresenter;
+use App\Support\PaymentStatus;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,6 +24,7 @@ class AffiliationRequestResource extends JsonResource
             'observations' => $this->rejection_reason,
             'amount_due' => (float) $this->amount_due,
             'currency' => $this->plan?->currency ?? 'BOB',
+            'payment_status' => $payment?->status,
             'plan' => $this->plan ? [
                 'name' => $this->plan->name,
                 'type' => $this->plan->type,
@@ -33,7 +35,7 @@ class AffiliationRequestResource extends JsonResource
             ] : null,
             'payment' => $payment ? [
                 'status' => $payment->status,
-                'status_label' => AffiliationStatusPresenter::label($payment->status),
+                'status_label' => PaymentStatus::label($payment->status),
                 'transaction_number' => $payment->transaction_number,
                 'payment_date' => $payment->payment_date?->toDateString(),
                 'paid_amount' => $payment->paid_amount !== null ? (float) $payment->paid_amount : null,
@@ -48,7 +50,7 @@ class AffiliationRequestResource extends JsonResource
                 'instructions' => $this->plan?->payment_instructions ?: $institution->payment_instructions,
             ],
             'capabilities' => [
-                'can_submit_payment' => in_array($this->status, ['pending_payment', 'payment_submitted', 'rejected'], true),
+                'can_submit_payment' => ! $payment || PaymentStatus::isRejected($payment->status) || in_array($this->status, ['pending_payment', 'payment_submitted', 'rejected'], true),
                 'can_login' => true,
                 'can_view_credential' => $this->affiliate?->status === 'activo',
             ],

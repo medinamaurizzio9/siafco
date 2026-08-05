@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AffiliationPayment;
 use App\Models\PublicAffiliationRequest;
+use App\Services\PaymentLifecycleService;
 use App\Services\PublicAffiliationApprovalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -40,16 +41,16 @@ class PublicAffiliationAdminController extends Controller
         return back()->with('status', 'Solicitud tomada para revisión.');
     }
 
-    public function approve(AffiliationPayment $payment, PublicAffiliationApprovalService $service)
+    public function approve(AffiliationPayment $payment, PaymentLifecycleService $service)
     {
-        $service->approve($payment, auth()->id());
+        $service->confirm($payment, auth()->user());
         return back()->with('status', 'Pago confirmado, afiliado activado y credencial generada.');
     }
 
-    public function reject(Request $request, AffiliationPayment $payment, PublicAffiliationApprovalService $service)
+    public function reject(Request $request, AffiliationPayment $payment, PaymentLifecycleService $service)
     {
         $data = $request->validate(['rejection_reason' => ['required', 'string', 'max:1000']]);
-        $service->reject($payment, auth()->id(), $data['rejection_reason']);
+        $service->reject($payment, auth()->user(), $data['rejection_reason']);
         return back()->with('status', 'Pago rechazado. El motivo queda disponible en el seguimiento.');
     }
 

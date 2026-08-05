@@ -13,6 +13,7 @@ final class AffiliationStatusPresenter
             'approved' => 'Afiliación aprobada',
             'active', 'activo', 'confirmed', 'confirmado' => 'Afiliado activo',
             'rejected', 'rechazado', 'observado' => 'Solicitud observada',
+            'voided', 'anulado' => 'Pago anulado',
             'cancelled' => 'Solicitud cancelada',
             'suspended', 'suspendido' => 'Afiliación suspendida',
             'inactive', 'inactivo' => 'Afiliación inactiva',
@@ -35,6 +36,8 @@ final class AffiliationStatusPresenter
                 'Tu afiliación está activa. Ya puedes ingresar a tu panel, descargar tu credencial y acceder a los servicios habilitados.',
             'rejected', 'rechazado', 'observado' =>
                 'Tu solicitud presenta una observación. Revisa el detalle registrado por Secretaría y realiza la corrección solicitada.',
+            'voided', 'anulado' =>
+                'El pago fue anulado administrativamente y no cuenta para la activación de la afiliación.',
             'cancelled' =>
                 'La solicitud fue cancelada. Comunícate con la institución si necesitas aclaraciones o deseas iniciar un nuevo proceso.',
             'suspended', 'suspendido' =>
@@ -54,6 +57,7 @@ final class AffiliationStatusPresenter
             'approved' => 'bg-emerald-100 text-emerald-900 border border-emerald-200',
             'active', 'activo', 'confirmed', 'confirmado' => 'bg-green-100 text-green-900 border border-green-200',
             'rejected', 'rechazado', 'observado' => 'bg-red-100 text-red-900 border border-red-200',
+            'voided', 'anulado' => 'bg-slate-200 text-slate-900 border border-slate-300',
             'cancelled', 'inactive', 'inactivo' => 'bg-gray-100 text-gray-800 border border-gray-200',
             'suspended', 'suspendido' => 'bg-purple-100 text-purple-900 border border-purple-200',
             default => 'bg-slate-100 text-slate-800 border border-slate-200',
@@ -69,6 +73,7 @@ final class AffiliationStatusPresenter
             'approved' => 'check-circle',
             'active', 'activo', 'confirmed', 'confirmado' => 'shield-check',
             'rejected', 'rechazado', 'observado' => 'alert-circle',
+            'voided', 'anulado' => 'x-circle',
             'cancelled' => 'x-circle',
             default => 'information-circle',
         };
@@ -89,7 +94,7 @@ final class AffiliationStatusPresenter
 
     public static function isRejected(?string $status): bool
     {
-        return in_array(self::normalize($status), ['rejected', 'rechazado', 'observado', 'cancelled'], true);
+        return in_array(self::normalize($status), ['rejected', 'rechazado', 'observado', 'cancelled', 'voided', 'anulado'], true);
     }
 
     public static function isPaymentSubmitted(?string $status): bool

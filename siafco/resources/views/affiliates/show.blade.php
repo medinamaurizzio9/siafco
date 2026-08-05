@@ -120,6 +120,28 @@
         @endcan
     @endcan
 
+    <section class="mt-6 rounded-lg border border-slate-200 bg-white p-5">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+                <p class="text-xs font-black uppercase text-[#b8942f]">Tesoreria del afiliado</p>
+                <h3 class="text-xl font-black text-[#0b1f3a]">Resumen de pagos</h3>
+            </div>
+            @if(auth()->user()->hasPermission('payments.create'))
+                <a class="btn-primary" href="{{ route('payments.create', ['affiliate_id' => $affiliate->id]) }}">Registrar pago</a>
+            @endif
+        </div>
+        <dl class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div><dt class="text-xs font-black uppercase text-slate-500">Monto total del plan</dt><dd class="font-bold">BOB {{ number_format($treasury['required_amount'], 2) }}</dd></div>
+            <div><dt class="text-xs font-black uppercase text-slate-500">Total confirmado</dt><dd class="font-bold">BOB {{ number_format($treasury['confirmed_amount'], 2) }}</dd></div>
+            <div><dt class="text-xs font-black uppercase text-slate-500">Saldo pendiente</dt><dd class="font-bold">BOB {{ number_format($treasury['pending_balance'], 2) }}</dd></div>
+            <div><dt class="text-xs font-black uppercase text-slate-500">Cantidad de pagos</dt><dd class="font-bold">{{ $treasury['payment_count'] }}</dd></div>
+            <div><dt class="text-xs font-black uppercase text-slate-500">Ultimo pago</dt><dd class="font-bold">{{ $treasury['latest_payment']?->paid_at?->format('d/m/Y H:i') ?? $treasury['latest_payment']?->created_at?->format('d/m/Y H:i') ?? 'Sin pagos' }}</dd></div>
+            <div><dt class="text-xs font-black uppercase text-slate-500">Estado del pago</dt><dd class="font-bold">{{ \App\Support\PaymentStatus::label($treasury['payment_status']) }}</dd></div>
+            <div><dt class="text-xs font-black uppercase text-slate-500">Estado de afiliacion</dt><dd><x-affiliation-status :status="$affiliate->status" size="sm" /></dd></div>
+            <div><dt class="text-xs font-black uppercase text-slate-500">Credencial</dt><dd class="font-bold">{{ $treasury['credential_status'] === 'generada' ? 'Generada' : 'No generada' }}</dd></div>
+        </dl>
+    </section>
+
     <section class="mt-6 overflow-hidden rounded-lg border border-slate-200 bg-white" id="payments">
         <div class="border-b border-slate-200 px-4 py-3"><h3 class="font-black text-[#0b1f3a]">Pagos</h3></div>
         <div class="overflow-x-auto">
@@ -128,12 +150,15 @@
                 <tbody>
                 @foreach($affiliate->payments as $payment)
                     <tr>
-                        <td>Bs {{ number_format($payment->amount, 2) }}</td>
+                        <td>{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</td>
                         <td>{{ $payment->transaction_number ?: 'Pendiente' }}</td>
                         <td><x-affiliation-status :status="$payment->status" size="sm" /></td>
                         <td>
-                            @if(auth()->user()->hasRole(['administrador','cajero']))
+                            <a class="btn-secondary" href="{{ route('payments.show', $payment) }}">Ver</a>
+                            @if(auth()->user()->hasPermission('payments.confirm') && \App\Support\PaymentStatus::isEditable($payment->status))
                                 <form class="inline" method="post" action="{{ route('payments.confirm', $payment) }}">@csrf<button class="btn-primary">Confirmar</button></form>
+                            @endif
+                            @if(auth()->user()->hasPermission('payments.reject') && ! \App\Support\PaymentStatus::isConfirmed($payment->status) && ! \App\Support\PaymentStatus::isVoided($payment->status))
                                 <form class="mt-2 flex gap-2" method="post" action="{{ route('payments.reject', $payment) }}">@csrf<input class="form-input" name="rejection_reason" placeholder="Motivo"><button class="btn-danger">Rechazar</button></form>
                             @endif
                         </td>

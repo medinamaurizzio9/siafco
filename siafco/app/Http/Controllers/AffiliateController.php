@@ -11,6 +11,7 @@ use App\Models\Sector;
 use App\Models\User;
 use App\Services\AuditService;
 use App\Services\AffiliatePasswordService;
+use App\Services\PaymentBalanceService;
 use App\Support\TextNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -110,10 +111,11 @@ class AffiliateController extends Controller
             ->with('status', 'Afiliado registrado con pago pendiente. El correo sera utilizado para iniciar sesion en el portal y en la aplicacion movil. La contrasena temporal corresponde al CI del afiliado y debera cambiarla al ingresar.');
     }
 
-    public function show(Affiliate $affiliate)
+    public function show(Affiliate $affiliate, PaymentBalanceService $balances)
     {
         return view('affiliates.show', [
             'affiliate' => $affiliate->load('sector', 'plan', 'payments.cashier', 'credential', 'user'),
+            'treasury' => $balances->summary($affiliate),
         ]);
     }
 

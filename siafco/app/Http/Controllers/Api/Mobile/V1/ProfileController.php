@@ -7,6 +7,7 @@ use App\Http\Requests\Api\Mobile\V1\UpdatePasswordRequest;
 use App\Http\Requests\Api\Mobile\V1\UpdateProfilePhotoRequest;
 use App\Http\Requests\Api\Mobile\V1\UpdateProfileRequest;
 use App\Http\Resources\Api\Mobile\V1\MobileProfileResource;
+use App\Http\Resources\Api\Mobile\V1\PaymentResource;
 use App\Http\Responses\MobileApiResponse;
 use App\Models\Affiliate;
 use App\Models\Person;
@@ -28,6 +29,27 @@ class ProfileController extends Controller
     {
         return MobileApiResponse::success([
             'profile' => new MobileProfileResource($request->user()->load('affiliate.sector', 'affiliate.plan')),
+        ]);
+    }
+
+    public function payments(Request $request)
+    {
+        $affiliate = $request->user()->affiliate;
+
+        abort_unless($affiliate, 403);
+
+        $payments = $affiliate->payments()
+            ->latest()
+            ->paginate(min((int) $request->integer('per_page', 15), 50));
+
+        return MobileApiResponse::success([
+            'payments' => PaymentResource::collection($payments)->resolve(),
+            'meta' => [
+                'current_page' => $payments->currentPage(),
+                'per_page' => $payments->perPage(),
+                'total' => $payments->total(),
+                'last_page' => $payments->lastPage(),
+            ],
         ]);
     }
 

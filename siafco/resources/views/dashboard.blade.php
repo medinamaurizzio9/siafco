@@ -13,12 +13,18 @@
         </div>
     </section>
 
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         @foreach([
             'Afiliados' => $metrics['affiliates'],
+            'Nuevos afiliados' => $metrics['newAffiliates'],
             'Activos' => $metrics['active'],
             'Pendientes' => $metrics['pendingPayments'],
             'Confirmados' => $metrics['confirmedPayments'],
+            'Pagos de hoy' => $metrics['todayPayments'],
+            'Monto confirmado' => 'BOB '.number_format($metrics['confirmedAmount'], 2),
+            'Rechazados' => $metrics['rejectedPayments'],
+            'Anulados' => $metrics['voidedPayments'],
+            'Saldo pendiente' => 'BOB '.number_format($metrics['pendingBalance'], 2),
             'Credenciales' => $metrics['credentials'],
             'Sectores' => $metrics['sectors'],
         ] as $label => $value)
@@ -39,8 +45,8 @@
                 <tbody>
                 @forelse($recentPayments as $payment)
                     <tr>
-                        <td>{{ $payment->affiliate->full_name }}</td>
-                        <td>Bs {{ number_format($payment->amount, 2) }}</td>
+                        <td>{{ $payment->affiliate?->full_name ?? 'Afiliado no disponible' }}</td>
+                        <td>{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</td>
                         <td><x-affiliation-status :status="$payment->status" size="sm" /></td>
                         <td>{{ $payment->created_at->format('d/m/Y') }}</td>
                     </tr>
