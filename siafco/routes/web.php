@@ -77,8 +77,14 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         Route::get('/afiliado/credencial/png', [CredentialController::class, 'affiliatePng'])->name('affiliate.credential.png');
     });
 
-    Route::get('/credenciales', PlaceholderController::class)->defaults('title', 'Credenciales')->defaults('message', 'Las credenciales se generan desde la ficha de cada afiliado activo.')->middleware('role:administrador,administrador_sector,secretaria')->name('credentials.index');
-    Route::get('/credenciales/{affiliate}', [CredentialController::class, 'preview'])->name('credenciales.show');
+    Route::get('/credenciales', PlaceholderController::class)
+        ->defaults('title', 'Credenciales')
+        ->defaults('message', 'Las credenciales se generan desde la ficha de cada afiliado activo.')
+        ->middleware('permission:credentials.view')
+        ->name('credentials.index');
+    Route::get('/credenciales/{affiliate}', [CredentialController::class, 'preview'])
+        ->middleware('permission:credentials.view')
+        ->name('credenciales.show');
     Route::get('/credenciales/{affiliate}/pdf', [CredentialController::class, 'adminPdf'])->name('credenciales.pdf');
     Route::delete('/afiliados/{affiliate}', [AffiliateController::class, 'destroy'])
         ->middleware('role:administrador,superadministrador')

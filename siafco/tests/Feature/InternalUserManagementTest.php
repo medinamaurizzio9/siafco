@@ -239,11 +239,15 @@ class InternalUserManagementTest extends TestCase
             ->assertSee('Dashboard general')
             ->assertSee('Afiliados')
             ->assertSee('Pagos de afiliacion')
+            ->assertSee('Credenciales')
             ->assertSee('Reportes de afiliacion')
             ->assertDontSee('NUEVO USUARIO INTERNO')
+            ->assertDontSee(route('sectors.index'), false)
+            ->assertDontSee('Planes de afiliacion')
             ->assertDontSee('QR y pago institucional');
 
         $this->actingAs($manager)->get(route('affiliates.index'))->assertOk();
+        $this->actingAs($manager)->get(route('credentials.index'))->assertOk();
         $this->actingAs($manager)->get(route('reports.index'))->assertOk();
         $this->actingAs($manager)->delete(route('admin.users.destroy', $onlySuper), ['confirmation' => 'ELIMINAR'])
             ->assertForbidden();

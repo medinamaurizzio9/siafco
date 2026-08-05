@@ -25,6 +25,7 @@
             $canAdmin = $user->hasRole('administrador') || $canManageUsers;
             $canGeneralSettings = $user->hasRole(['administrador', 'secretaria']);
             $isPersonalOnly = $user->hasRole(['afiliado', 'accionista']) && ! $canViewAffiliation && ! $canManageInvestments;
+            $homeRoute = app(\App\Services\UserRedirectResolver::class)->homeRoute($user);
 
             $openModule = match (true) {
                 request()->routeIs('admin.dashboard') => 'home',
@@ -49,7 +50,7 @@
 
         <aside class="fixed inset-y-0 left-0 z-40 hidden w-80 overflow-y-auto bg-[#0b1f3a] text-white shadow-xl lg:static lg:block lg:w-72 lg:shadow-none" data-sidebar>
             <div class="flex items-center justify-between px-5 py-4">
-                <a href="{{ auth()->user()->role === 'afiliado' ? route('affiliate.panel') : (auth()->user()->role === 'accionista' ? route('investments.panel') : ($canViewDashboard ? route('admin.dashboard') : route('admin.users.index'))) }}" class="flex items-center gap-3">
+                <a href="{{ $homeRoute ? route($homeRoute) : route('login') }}" class="flex items-center gap-3">
                     <span class="grid h-12 w-12 place-items-center overflow-hidden rounded border border-[#d4af37] bg-white text-lg font-black text-[#0b1f3a]">
                         @if($institution->logoUrl())
                             <img class="h-full w-full object-contain p-1" src="{{ $institution->logoUrl() }}" alt="Logo">
@@ -87,22 +88,30 @@
                                 @if($canViewDashboard)
                                     {!! $navLink('admin.dashboard', 'Dashboard', [], ['admin.dashboard']) !!}
                                 @endif
-                                {!! $navLink('affiliates.index', 'Afiliados', [], ['affiliates.*']) !!}
+                                @if($user->hasPermission('affiliates.view'))
+                                    {!! $navLink('affiliates.index', 'Afiliados', [], ['affiliates.*']) !!}
+                                @endif
                                 @if($canManageAffiliation)
                                     {!! $navLink('public-affiliation.admin.index', 'Solicitudes publicas', [], ['public-affiliation.admin.*']) !!}
                                     {!! $navLink('sectors.index', 'Sectores', [], ['sectors.*']) !!}
                                     {!! $navLink('plans.index', 'Planes de afiliacion', [], ['plans.*']) !!}
                                     {!! $navLink('affiliate-benefits.index', 'Servicios y beneficios', [], ['affiliate-benefits.*']) !!}
                                 @endif
-                                {!! $navLink('payments.index', 'Pagos de afiliacion', [], ['payments.*']) !!}
-                                @if($canManageAffiliation)
+                                @if($user->hasPermission('payments.view'))
+                                    {!! $navLink('payments.index', 'Pagos de afiliacion', [], ['payments.*']) !!}
+                                @endif
+                                @if($user->hasPermission('credentials.view'))
                                     {!! $navLink('credentials.index', 'Credenciales', [], ['credentials.*', 'credenciales.*']) !!}
+                                @endif
+                                @if($canManageAffiliation)
                                     {!! $navLink('public-affiliation.qr.show', 'QR publico de afiliacion', [], ['public-affiliation.qr.*']) !!}
                                 @endif
                                 @if($canManagePaymentQr)
                                     {!! $navLink('institutional-qr.show', 'QR y pago institucional', [], ['institutional-qr.*']) !!}
                                 @endif
-                                {!! $navLink('reports.index', 'Reportes de afiliacion', [], ['reports.*']) !!}
+                                @if($user->hasPermission('reports.view'))
+                                    {!! $navLink('reports.index', 'Reportes de afiliacion', [], ['reports.*']) !!}
+                                @endif
                                 @if($canManageAffiliation)
                                     {!! $navLink('affiliation.settings.edit', 'Configuracion de afiliacion', [], ['affiliation.*']) !!}
                                 @endif
