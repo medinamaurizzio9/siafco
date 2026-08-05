@@ -17,10 +17,11 @@
             $user = auth()->user();
             $canManageAffiliation = $user->hasRole(['administrador', 'administrador_sector', 'secretaria']);
             $canManagePaymentQr = $user->hasRole(['administrador', 'superadministrador', 'secretaria']);
-            $canViewAffiliation = $user->hasRole(['administrador', 'superadministrador', 'administrador_sector', 'secretaria', 'cajero', 'consulta']);
+            $canViewAffiliation = $user->hasPermission('affiliates.view') || $user->hasPermission('payments.view') || $user->hasPermission('credentials.view') || $user->hasPermission('reports.view');
             $canManageInvestments = $user->hasRole(['administrador', 'caja', 'cajero', 'contabilidad']);
             $canViewCredits = $user->hasRole(['administrador', 'administrador_sector', 'secretaria', 'cajero', 'caja', 'contabilidad', 'consulta']);
             $canManageUsers = $user->isInternal() && $user->hasPermission('users.view');
+            $canViewDashboard = $user->hasPermission('dashboard.view');
             $canAdmin = $user->hasRole('administrador') || $canManageUsers;
             $canGeneralSettings = $user->hasRole(['administrador', 'secretaria']);
             $isPersonalOnly = $user->hasRole(['afiliado', 'accionista']) && ! $canViewAffiliation && ! $canManageInvestments;
@@ -48,7 +49,7 @@
 
         <aside class="fixed inset-y-0 left-0 z-40 hidden w-80 overflow-y-auto bg-[#0b1f3a] text-white shadow-xl lg:static lg:block lg:w-72 lg:shadow-none" data-sidebar>
             <div class="flex items-center justify-between px-5 py-4">
-                <a href="{{ auth()->user()->role === 'afiliado' ? route('affiliate.panel') : (auth()->user()->role === 'accionista' ? route('investments.panel') : route('admin.dashboard')) }}" class="flex items-center gap-3">
+                <a href="{{ auth()->user()->role === 'afiliado' ? route('affiliate.panel') : (auth()->user()->role === 'accionista' ? route('investments.panel') : ($canViewDashboard ? route('admin.dashboard') : route('admin.users.index'))) }}" class="flex items-center gap-3">
                     <span class="grid h-12 w-12 place-items-center overflow-hidden rounded border border-[#d4af37] bg-white text-lg font-black text-[#0b1f3a]">
                         @if($institution->logoUrl())
                             <img class="h-full w-full object-contain p-1" src="{{ $institution->logoUrl() }}" alt="Logo">
@@ -66,6 +67,7 @@
 
             <nav class="grid gap-2 px-3 pb-4 text-sm" data-sidebar-accordion data-current-module="{{ $openModule }}">
                 @unless($isPersonalOnly)
+                    @if($canViewDashboard)
                     <section class="nav-module" data-accordion-module="home">
                         <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'home' ? 'true' : 'false' }}">
                             <span>Inicio</span><span class="nav-chevron">⌄</span>
@@ -74,6 +76,7 @@
                             {!! $navLink('admin.dashboard', 'Dashboard general', [], ['admin.dashboard']) !!}
                         </div>
                     </section>
+                    @endif
 
                     @if($canViewAffiliation)
                         <section class="nav-module" data-accordion-module="affiliation">
@@ -81,7 +84,9 @@
                                 <span>Afiliacion</span><span class="nav-chevron">⌄</span>
                             </button>
                             <div class="nav-module-panel {{ $openModule === 'affiliation' ? '' : 'hidden' }}">
-                                {!! $navLink('admin.dashboard', 'Dashboard', [], ['admin.dashboard']) !!}
+                                @if($canViewDashboard)
+                                    {!! $navLink('admin.dashboard', 'Dashboard', [], ['admin.dashboard']) !!}
+                                @endif
                                 {!! $navLink('affiliates.index', 'Afiliados', [], ['affiliates.*']) !!}
                                 @if($canManageAffiliation)
                                     {!! $navLink('public-affiliation.admin.index', 'Solicitudes publicas', [], ['public-affiliation.admin.*']) !!}

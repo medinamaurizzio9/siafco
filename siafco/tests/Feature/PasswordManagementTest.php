@@ -149,6 +149,54 @@ class PasswordManagementTest extends TestCase
         $this->assertFalse($user->fresh()->must_change_password);
     }
 
+    public function test_manager_forced_password_change_keeps_session_and_opens_dashboard(): void
+    {
+        $manager = User::create([
+            'name' => 'Gerente',
+            'email' => 'gerente@example.com',
+            'role' => 'gerente',
+            'user_type' => 'internal',
+            'password' => Hash::make('OldPassword1'),
+            'must_change_password' => true,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($manager)->patch(route('password.force.update'), [
+            'password' => 'ClaveGerente2026',
+            'password_confirmation' => 'ClaveGerente2026',
+        ])->assertRedirect(route('admin.dashboard'));
+
+        $this->assertAuthenticatedAs($manager->fresh());
+        $this->assertFalse($manager->fresh()->must_change_password);
+        $this->get(route('admin.dashboard'))->assertOk();
+    }
+
+    public function test_manager_intended_dashboard_is_allowed_but_affiliate_intended_is_rejected(): void
+    {
+        $manager = User::create([
+            'name' => 'Gerente',
+            'email' => 'gerente-login@example.com',
+            'role' => 'gerente',
+            'user_type' => 'internal',
+            'password' => Hash::make('OldPassword1'),
+            'is_active' => true,
+        ]);
+
+        $this->withSession(['url.intended' => route('admin.dashboard')])
+            ->post(route('login.post'), [
+                'email' => $manager->email,
+                'password' => 'OldPassword1',
+            ])->assertRedirect(route('admin.dashboard'));
+
+        auth()->logout();
+
+        $this->withSession(['url.intended' => route('affiliate.panel')])
+            ->post(route('login.post'), [
+                'email' => $manager->email,
+                'password' => 'OldPassword1',
+            ])->assertRedirect(route('admin.dashboard'));
+    }
+
     public function test_affiliate_access_section_handles_linked_and_missing_user(): void
     {
         [$affiliateUser, $affiliate] = $this->affiliate();

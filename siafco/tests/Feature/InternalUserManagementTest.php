@@ -229,6 +229,31 @@ class InternalUserManagementTest extends TestCase
         $this->get(route('admin.dashboard'))->assertRedirect(route('password.force.edit'));
     }
 
+    public function test_manager_can_access_dashboard_and_authorized_read_sections_only(): void
+    {
+        $manager = $this->internalUser('gerente');
+        $onlySuper = $this->internalUser('superadministrador');
+
+        $this->actingAs($manager)->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Dashboard general')
+            ->assertSee('Afiliados')
+            ->assertSee('Pagos de afiliacion')
+            ->assertSee('Reportes de afiliacion')
+            ->assertDontSee('NUEVO USUARIO INTERNO')
+            ->assertDontSee('QR y pago institucional');
+
+        $this->actingAs($manager)->get(route('affiliates.index'))->assertOk();
+        $this->actingAs($manager)->get(route('reports.index'))->assertOk();
+        $this->actingAs($manager)->delete(route('admin.users.destroy', $onlySuper), ['confirmation' => 'ELIMINAR'])
+            ->assertForbidden();
+
+        $this->assertFalse($manager->hasPermission('users.delete'));
+        $this->assertFalse($manager->hasPermission('users.reset-password'));
+        $this->assertFalse($manager->hasPermission('settings.update'));
+        $this->assertTrue($manager->hasPermission('dashboard.view'));
+    }
+
     private function internalUser(string $role, array $attributes = []): User
     {
         return User::factory()->create(array_merge([

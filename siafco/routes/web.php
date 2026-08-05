@@ -88,8 +88,11 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         ->middleware('role:afiliado,secretaria,administrador,administrador_sector,cajero')
         ->name('payments.proof');
 
-    Route::middleware('role:administrador,superadministrador,administrador_sector,secretaria,cajero,consulta')->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->middleware('permission:dashboard.view')
+        ->name('admin.dashboard');
+
+    Route::middleware('role:administrador,superadministrador,gerente,administrador_sector,secretaria,cajero,consulta')->group(function () {
         Route::get('/afiliados', [AffiliateController::class, 'index'])->name('affiliates.index');
         Route::get('/afiliados/{affiliate}', [AffiliateController::class, 'show'])->name('affiliates.show');
         Route::get('/pagos', [PaymentController::class, 'index'])->name('payments.index');

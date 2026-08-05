@@ -1,6 +1,7 @@
 <?php
 
 $permissions = [
+    'dashboard.view',
     'users.view', 'users.create', 'users.update', 'users.block', 'users.activate',
     'users.reset-password', 'users.delete', 'users.restore', 'users.assign-role',
     'affiliates.view', 'affiliates.create', 'affiliates.update', 'affiliates.approve',
@@ -32,13 +33,13 @@ return [
         'superadministrador' => $permissions,
         'administrador' => $permissions,
         'gerente' => [
-            'users.view', 'affiliates.view', 'payments.view', 'credentials.view',
+            'dashboard.view', 'users.view', 'affiliates.view', 'payments.view', 'credentials.view',
             'settings.view', 'reports.view', 'reports.export', 'audit.view',
             'affiliate_access.view',
             'credits.view', 'investors.view',
         ],
         'secretaria' => [
-            'users.view', 'affiliates.view', 'affiliates.create', 'affiliates.update',
+            'dashboard.view', 'users.view', 'affiliates.view', 'affiliates.create', 'affiliates.update',
             'affiliates.approve', 'affiliates.reject', 'affiliates.reset-password',
             'affiliate_access.view', 'affiliate_access.block', 'affiliate_access.activate',
             'affiliate_access.reset_password', 'affiliate_access.revoke_sessions',
@@ -48,14 +49,14 @@ return [
             'reports.view', 'settings.view',
         ],
         'cajero' => [
-            'affiliates.view', 'payments.view', 'payments.create', 'payments.update',
+            'dashboard.view', 'affiliates.view', 'payments.view', 'payments.create', 'payments.update',
             'payments.verify', 'payments.receipt', 'credits.view',
         ],
         'administrador_sector' => [
-            'affiliates.view', 'affiliates.create', 'affiliates.update',
+            'dashboard.view', 'affiliates.view', 'affiliates.create', 'affiliates.update',
             'payments.view', 'credentials.view', 'credentials.download',
             'credentials.print', 'reports.view',
         ],
-        'consulta' => ['affiliates.view', 'payments.view', 'reports.view', 'credits.view'],
+        'consulta' => ['dashboard.view', 'affiliates.view', 'payments.view', 'reports.view', 'credits.view'],
     ],
 ];

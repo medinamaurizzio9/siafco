@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         }
 
         $middleware->alias([
+            'permission' => \App\Http\Middleware\PermissionMiddleware::class,
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'affiliate.active-access' => \App\Http\Middleware\RestrictPendingAffiliateAccess::class,
             'password.changed' => \App\Http\Middleware\EnsurePasswordIsChanged::class,
