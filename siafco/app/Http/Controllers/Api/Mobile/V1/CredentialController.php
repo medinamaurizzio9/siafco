@@ -31,6 +31,12 @@ class CredentialController extends Controller
             return MobileApiResponse::error('Aun no tienes una credencial digital disponible.', 404);
         }
 
+        if (! $credential->isActive()) {
+            return MobileApiResponse::error('La credencial digital no se encuentra vigente.', 403, [
+                'credential_status' => [$credential->status],
+            ]);
+        }
+
         $institution = InstitutionalSetting::current();
         $credentialData = $credentialService->presentationData($affiliate, $credential);
 

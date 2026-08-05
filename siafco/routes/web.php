@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AffiliateController;
 use App\Http\Controllers\AffiliateAccessController;
+use App\Http\Controllers\AffiliateAdministrationController;
 use App\Http\Controllers\AffiliateBenefitController;
 use App\Http\Controllers\AffiliatePanelController;
 use App\Http\Controllers\AffiliateProfileController;
@@ -87,8 +88,11 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         ->name('credenciales.show');
     Route::get('/credenciales/{affiliate}/pdf', [CredentialController::class, 'adminPdf'])->name('credenciales.pdf');
     Route::delete('/afiliados/{affiliate}', [AffiliateController::class, 'destroy'])
-        ->middleware('role:administrador,superadministrador')
+        ->middleware('permission:affiliates.soft_delete,affiliates.delete')
         ->name('affiliates.destroy');
+    Route::post('/afiliados/{affiliate}/restaurar', [AffiliateAdministrationController::class, 'restore'])
+        ->middleware('permission:affiliates.restore')
+        ->name('affiliates.restore');
 
     Route::post('/pagos/{payment}/comprobante', [PaymentController::class, 'updateProof'])
         ->middleware('role:afiliado,secretaria,administrador,administrador_sector,cajero')
@@ -150,6 +154,27 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         Route::post('/afiliados', [AffiliateController::class, 'store'])->name('affiliates.store');
         Route::get('/afiliados/{affiliate}/editar', [AffiliateController::class, 'edit'])->name('affiliates.edit');
         Route::put('/afiliados/{affiliate}', [AffiliateController::class, 'update'])->name('affiliates.update');
+    });
+
+    Route::middleware('role:administrador,superadministrador,gerente,secretaria,cajero,consulta')->group(function () {
+        Route::patch('/admin/afiliados/{affiliate}/datos-personales', [AffiliateAdministrationController::class, 'updatePersonal'])
+            ->middleware('permission:affiliates.update_personal')->name('admin.affiliates.personal.update');
+        Route::patch('/admin/afiliados/{affiliate}/datos-institucionales', [AffiliateAdministrationController::class, 'updateInstitutional'])
+            ->middleware('permission:affiliates.update_institutional')->name('admin.affiliates.institutional.update');
+        Route::patch('/admin/afiliados/{affiliate}/sector', [AffiliateAdministrationController::class, 'changeSector'])
+            ->middleware('permission:affiliates.change_sector')->name('admin.affiliates.sector.update');
+        Route::patch('/admin/afiliados/{affiliate}/plan', [AffiliateAdministrationController::class, 'changePlan'])
+            ->middleware('permission:affiliates.change_plan')->name('admin.affiliates.plan.update');
+        Route::patch('/admin/afiliados/{affiliate}/estado', [AffiliateAdministrationController::class, 'changeStatus'])
+            ->middleware('permission:affiliates.change_status')->name('admin.affiliates.status.update');
+        Route::post('/admin/afiliados/{affiliate}/fotografia', [AffiliateAdministrationController::class, 'updatePhoto'])
+            ->middleware('permission:affiliates.manage_photo')->name('admin.affiliates.photo.update');
+        Route::post('/admin/afiliados/{affiliate}/credencial/regenerar', [AffiliateAdministrationController::class, 'regenerateCredential'])
+            ->middleware('permission:affiliates.manage_credential')->name('admin.affiliates.credential.regenerate');
+        Route::post('/admin/afiliados/{affiliate}/credencial/suspender', [AffiliateAdministrationController::class, 'suspendCredential'])
+            ->middleware('permission:affiliates.manage_credential')->name('admin.affiliates.credential.suspend');
+        Route::post('/admin/afiliados/{affiliate}/credencial/reactivar', [AffiliateAdministrationController::class, 'reactivateCredential'])
+            ->middleware('permission:affiliates.manage_credential')->name('admin.affiliates.credential.reactivate');
     });
 
     Route::middleware('role:administrador,superadministrador,secretaria')->group(function () {

@@ -10,6 +10,8 @@ use App\Models\Person;
 use App\Models\Sector;
 use App\Models\User;
 use App\Services\AuditService;
+use App\Services\AffiliateDuplicateDetector;
+use App\Services\AffiliateTimelineService;
 use App\Services\AffiliatePasswordService;
 use App\Services\PaymentBalanceService;
 use App\Support\TextNormalizer;
@@ -111,11 +113,25 @@ class AffiliateController extends Controller
             ->with('status', 'Afiliado registrado con pago pendiente. El correo sera utilizado para iniciar sesion en el portal y en la aplicacion movil. La contrasena temporal corresponde al CI del afiliado y debera cambiarla al ingresar.');
     }
 
-    public function show(Affiliate $affiliate, PaymentBalanceService $balances)
+    public function show(
+        Affiliate $affiliate,
+        PaymentBalanceService $balances,
+        AffiliateTimelineService $timeline,
+        AffiliateDuplicateDetector $duplicates
+    )
     {
+        $affiliate->load('sector', 'plan', 'payments.cashier', 'credential', 'user', 'person');
+
         return view('affiliates.show', [
-            'affiliate' => $affiliate->load('sector', 'plan', 'payments.cashier', 'credential', 'user'),
+            'affiliate' => $affiliate,
             'treasury' => $balances->summary($affiliate),
+            'timeline' => auth()->user()->hasPermission('affiliates.view_timeline') ? $timeline->forAffiliate($affiliate, 20) : collect(),
+            'duplicates' => $duplicates->forAffiliate($affiliate),
+            'auditLogs' => auth()->user()->hasPermission('affiliates.view_audit')
+                ? \App\Models\AuditLog::where('auditable_type', Affiliate::class)->where('auditable_id', $affiliate->id)->latest()->limit(20)->get()
+                : collect(),
+            'sectors' => Sector::where('is_active', true)->orderBy('name')->get(),
+            'plans' => AffiliationPlan::where('is_active', true)->orderBy('name')->get(),
         ]);
     }
 
@@ -167,9 +183,22 @@ class AffiliateController extends Controller
             $affiliate->loadMissing('user');
             $user = $affiliate->user;
 
+            $affiliate->forceFill([
+                'deleted_by' => auth()->id(),
+                'deletion_reason' => $data['deletion_reason'],
+            ])->save();
             $affiliate->delete();
             $user?->delete();
 
+            AuditService::record('affiliate_soft_deleted', $affiliate, [
+                'affiliate_id' => $affiliate->id,
+                'full_name' => $affiliate->full_name,
+                'affiliate_number' => $affiliate->registration_number,
+                'registration_number' => $affiliate->registration_number,
+                'ci' => $affiliate->ci,
+                'reason' => $data['deletion_reason'],
+                'linked_user_id' => $user?->id,
+            ]);
             AuditService::record('afiliado.eliminado', $affiliate, [
                 'affiliate_id' => $affiliate->id,
                 'full_name' => $affiliate->full_name,

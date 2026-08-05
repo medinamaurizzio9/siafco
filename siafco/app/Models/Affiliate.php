@@ -22,17 +22,27 @@ class Affiliate extends Model
         'regional',
         'institution',
         'position',
+        'affiliate_type',
+        'administrative_notes',
         'photo_path',
         'birth_date',
         'marital_status',
         'registration_number',
         'status',
+        'status_changed_at',
+        'status_changed_by',
+        'status_reason',
+        'deleted_by',
+        'deletion_reason',
         'verification_token',
     ];
 
     protected function casts(): array
     {
-        return ['birth_date' => 'date'];
+        return [
+            'birth_date' => 'date',
+            'status_changed_at' => 'datetime',
+        ];
     }
 
     public function user()
@@ -63,6 +73,11 @@ class Affiliate extends Model
     public function credential()
     {
         return $this->hasOne(DigitalCredential::class)->latestOfMany();
+    }
+
+    public function statusChanger()
+    {
+        return $this->belongsTo(User::class, 'status_changed_by');
     }
 
     public function publicRequest()

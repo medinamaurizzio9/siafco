@@ -16,13 +16,13 @@
                         <span class="text-slate-600">{{ $affiliate->sector->name }}</span>
                         <x-affiliation-status :status="$affiliate->status" size="sm" />
                     </div>
-                    @if(auth()->user()->hasRole(['administrador','administrador_sector','secretaria']))
+                    @if(auth()->user()->hasPermission('affiliates.update'))
                         <a class="btn-secondary mt-4" href="{{ route('affiliates.edit', $affiliate) }}">Editar datos</a>
                     @endif
                 </div>
             </div>
             <dl class="mt-6 grid gap-4 md:grid-cols-2">
-                @foreach(['CI' => $affiliate->ci, 'Correo' => $affiliate->email, 'Celular' => $affiliate->phone, 'Regional' => $affiliate->regional, 'Institucion' => $affiliate->institution, 'Cargo/profesion' => $affiliate->position, 'Direccion' => $affiliate->address, 'Estado civil' => $affiliate->marital_status] as $label => $value)
+                @foreach(['CI' => $affiliate->ci, 'Correo' => $affiliate->email, 'Celular' => $affiliate->phone, 'Regional' => $affiliate->regional, 'Institucion' => $affiliate->institution, 'Cargo/profesion' => $affiliate->position, 'Tipo de afiliado' => $affiliate->affiliate_type, 'Direccion' => $affiliate->address, 'Fecha de nacimiento' => $affiliate->birth_date?->format('d/m/Y'), 'Estado civil' => $affiliate->marital_status] as $label => $value)
                     <div><dt class="text-xs font-black uppercase text-slate-500">{{ $label }}</dt><dd>{{ $value ?: 'Sin dato' }}</dd></div>
                 @endforeach
             </dl>
@@ -38,6 +38,7 @@
                         CREDENCIAL DIGITAL
                     </div>
                 </div>
+                <p class="mt-3 text-sm font-bold text-slate-700">Estado: {{ $affiliate->credential?->status === 'suspendida' ? 'Suspendida' : 'Vigente' }}</p>
                 @can('viewCredential', $affiliate)
                     <a class="btn-primary mt-4 w-full" href="{{ route('credenciales.show', $affiliate) }}">Ver credencial</a>
                 @endcan
@@ -53,7 +54,91 @@
                     <a class="btn-primary mt-4 w-full" href="{{ route('credenciales.show', $affiliate) }}">Ver credencial completa</a>
                 @endif
             @endif
+            @if(auth()->user()->hasPermission('affiliates.manage_credential'))
+                <div class="mt-4 grid gap-2">
+                    <form method="post" action="{{ route('admin.affiliates.credential.regenerate', $affiliate) }}">@csrf<button class="btn-secondary w-full">Regenerar archivos</button></form>
+                    @if($affiliate->credential?->status === 'suspendida')
+                        <form method="post" action="{{ route('admin.affiliates.credential.reactivate', $affiliate) }}">@csrf<button class="btn-primary w-full">Reactivar credencial</button></form>
+                    @else
+                        <form method="post" action="{{ route('admin.affiliates.credential.suspend', $affiliate) }}">@csrf<input class="form-input mb-2" name="reason" placeholder="Motivo de suspension" required><button class="btn-danger w-full">Suspender credencial</button></form>
+                    @endif
+                </div>
+            @endif
         </aside>
+    </div>
+
+    <div class="mt-6 grid gap-5 xl:grid-cols-2">
+        @can('updatePersonal', $affiliate)
+            <section class="rounded-lg border border-slate-200 bg-white p-5">
+                <p class="text-xs font-black uppercase text-[#b8942f]">Datos personales</p>
+                <form class="mt-4 grid gap-3 md:grid-cols-2" method="post" action="{{ route('admin.affiliates.personal.update', $affiliate) }}">
+                    @csrf @method('patch')
+                    <label class="grid gap-1 text-sm font-bold">Celular<input class="form-input" name="phone" value="{{ old('phone', $affiliate->phone) }}"></label>
+                    <label class="grid gap-1 text-sm font-bold">Correo<input class="form-input" type="email" name="email" value="{{ old('email', $affiliate->email) }}" required></label>
+                    <label class="grid gap-1 text-sm font-bold md:col-span-2">Direccion<input class="form-input" name="address" value="{{ old('address', $affiliate->address) }}"></label>
+                    <label class="grid gap-1 text-sm font-bold">Fecha de nacimiento<input class="form-input" type="date" name="birth_date" value="{{ old('birth_date', $affiliate->birth_date?->toDateString()) }}"></label>
+                    <label class="grid gap-1 text-sm font-bold">Estado civil<input class="form-input" name="marital_status" value="{{ old('marital_status', $affiliate->marital_status) }}"></label>
+                    <div class="md:col-span-2"><button class="btn-primary">Guardar datos personales</button></div>
+                </form>
+            </section>
+        @endcan
+
+        @if(auth()->user()->hasPermission('affiliates.manage_photo'))
+            <section class="rounded-lg border border-slate-200 bg-white p-5">
+                <p class="text-xs font-black uppercase text-[#b8942f]">Fotografia</p>
+                <form class="mt-4 grid gap-3" method="post" enctype="multipart/form-data" action="{{ route('admin.affiliates.photo.update', $affiliate) }}">
+                    @csrf
+                    <input class="form-input" type="file" name="photo" accept="image/jpeg,image/png,image/webp" required>
+                    <p class="text-sm text-slate-600">Se procesa como imagen cuadrada optimizada. No se usan nombres originales.</p>
+                    <button class="btn-primary">Actualizar fotografia</button>
+                </form>
+            </section>
+        @endif
+
+        @can('updateInstitutional', $affiliate)
+            <section class="rounded-lg border border-slate-200 bg-white p-5">
+                <p class="text-xs font-black uppercase text-[#b8942f]">Datos institucionales</p>
+                <form class="mt-4 grid gap-3 md:grid-cols-2" method="post" action="{{ route('admin.affiliates.institutional.update', $affiliate) }}">
+                    @csrf @method('patch')
+                    <label class="grid gap-1 text-sm font-bold">Regional<input class="form-input" name="regional" value="{{ old('regional', $affiliate->regional) }}"></label>
+                    <label class="grid gap-1 text-sm font-bold">Institucion<input class="form-input" name="institution" value="{{ old('institution', $affiliate->institution) }}"></label>
+                    <label class="grid gap-1 text-sm font-bold">Cargo/profesion<input class="form-input" name="position" value="{{ old('position', $affiliate->position) }}"></label>
+                    <label class="grid gap-1 text-sm font-bold">Tipo de afiliado<input class="form-input" name="affiliate_type" value="{{ old('affiliate_type', $affiliate->affiliate_type) }}"></label>
+                    <label class="grid gap-1 text-sm font-bold md:col-span-2">Observaciones administrativas<textarea class="form-input" name="administrative_notes" rows="3">{{ old('administrative_notes', $affiliate->administrative_notes) }}</textarea></label>
+                    <div class="md:col-span-2"><button class="btn-primary">Guardar datos institucionales</button></div>
+                </form>
+            </section>
+        @endcan
+
+        @if(auth()->user()->hasPermission('affiliates.change_sector') || auth()->user()->hasPermission('affiliates.change_plan') || auth()->user()->hasPermission('affiliates.change_status'))
+            <section class="rounded-lg border border-slate-200 bg-white p-5">
+                <p class="text-xs font-black uppercase text-[#b8942f]">Sector, plan y estado</p>
+                <div class="mt-4 grid gap-4">
+                    @if(auth()->user()->hasPermission('affiliates.change_sector'))
+                        <form class="grid gap-2" method="post" action="{{ route('admin.affiliates.sector.update', $affiliate) }}">
+                            @csrf @method('patch')
+                            <label class="text-sm font-bold">Sector<select class="form-input" name="sector_id">@foreach($sectors as $sector)<option value="{{ $sector->id }}" @selected($affiliate->sector_id === $sector->id)>{{ $sector->name }}</option>@endforeach</select></label>
+                            <button class="btn-secondary">Cambiar sector</button>
+                        </form>
+                    @endif
+                    @if(auth()->user()->hasPermission('affiliates.change_plan'))
+                        <form class="grid gap-2" method="post" action="{{ route('admin.affiliates.plan.update', $affiliate) }}">
+                            @csrf @method('patch')
+                            <label class="text-sm font-bold">Plan<select class="form-input" name="affiliation_plan_id">@foreach($plans as $plan)<option value="{{ $plan->id }}" @selected($affiliate->affiliation_plan_id === $plan->id)>{{ $plan->name }} - {{ $plan->currency ?? 'BOB' }} {{ number_format($plan->total_amount, 2) }}</option>@endforeach</select></label>
+                            <button class="btn-secondary">Cambiar plan</button>
+                        </form>
+                    @endif
+                    @if(auth()->user()->hasPermission('affiliates.change_status'))
+                        <form class="grid gap-2" method="post" action="{{ route('admin.affiliates.status.update', $affiliate) }}">
+                            @csrf @method('patch')
+                            <label class="text-sm font-bold">Accion<select class="form-input" name="action"><option value="activate">Activar</option><option value="suspend">Suspender</option><option value="deactivate">Dar de baja</option><option value="reactivate">Reactivar</option></select></label>
+                            <label class="text-sm font-bold">Motivo<input class="form-input" name="reason" placeholder="Obligatorio para suspension o baja"></label>
+                            <button class="btn-primary">Aplicar estado</button>
+                        </form>
+                    @endif
+                </div>
+            </section>
+        @endif
     </div>
 
     @can('viewAccess', $affiliate)
@@ -168,4 +253,60 @@
             </table>
         </div>
     </section>
+
+    @php($duplicateCount = collect($duplicates)->sum(fn ($items) => $items->count()))
+    @if($duplicateCount > 0)
+        <section class="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-5">
+            <p class="text-xs font-black uppercase text-amber-800">Posible duplicado</p>
+            <h3 class="mt-1 font-black text-amber-950">Registros para revisar manualmente</h3>
+            <div class="mt-3 grid gap-3 md:grid-cols-2">
+                @foreach($duplicates as $type => $items)
+                    @foreach($items as $person)
+                        <div class="rounded border border-amber-200 bg-white p-3 text-sm">
+                            <p class="font-black">{{ str($type)->replace('_', ' ')->headline() }}</p>
+                            <p>{{ $person->full_name }} · CI {{ $person->ci ?: 'sin dato' }}</p>
+                        </div>
+                    @endforeach
+                @endforeach
+            </div>
+        </section>
+    @endif
+
+    @if(auth()->user()->hasPermission('affiliates.view_timeline'))
+        <section class="mt-6 rounded-lg border border-slate-200 bg-white p-5">
+            <p class="text-xs font-black uppercase text-[#b8942f]">Timeline</p>
+            <div class="mt-4 grid gap-3">
+                @forelse($timeline as $event)
+                    <div class="rounded border border-slate-200 p-3">
+                        <p class="font-black text-[#0b1f3a]">{{ $event['label'] }}</p>
+                        <p class="text-sm text-slate-600">{{ $event['occurred_at']?->format('d/m/Y H:i') }}</p>
+                    </div>
+                @empty
+                    <p class="text-sm text-slate-600">Sin eventos auditados.</p>
+                @endforelse
+            </div>
+        </section>
+    @endif
+
+    @if(auth()->user()->hasPermission('affiliates.view_audit'))
+        <section class="mt-6 rounded-lg border border-slate-200 bg-white p-5">
+            <p class="text-xs font-black uppercase text-[#b8942f]">Auditoria</p>
+            <div class="mt-4 overflow-x-auto">
+                <table class="table">
+                    <thead><tr><th>Accion</th><th>Fecha</th><th>Detalle</th></tr></thead>
+                    <tbody>
+                    @forelse($auditLogs as $log)
+                        <tr>
+                            <td>{{ $log->action }}</td>
+                            <td>{{ $log->created_at?->format('d/m/Y H:i') }}</td>
+                            <td class="max-w-lg truncate">{{ json_encode(collect($log->metadata ?? [])->except(['password', 'token', 'verification_token', 'qr'])->all(), JSON_UNESCAPED_UNICODE) }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="3">Sin registros de auditoria.</td></tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    @endif
 </x-layouts.app>

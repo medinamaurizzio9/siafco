@@ -9,7 +9,7 @@ class AffiliatePolicy
 {
     public function viewCredential(User $user, Affiliate $affiliate): bool
     {
-        if ($affiliate->status !== 'activo') {
+        if ($affiliate->status !== 'activo' || ($affiliate->credential && ! $affiliate->credential->isActive())) {
             return false;
         }
 
@@ -30,7 +30,48 @@ class AffiliatePolicy
 
     public function delete(User $user, Affiliate $affiliate): bool
     {
-        return $user->hasRole(['administrador', 'superadministrador']);
+        return $user->hasPermission('affiliates.soft_delete')
+            || $user->hasPermission('affiliates.delete');
+    }
+
+    public function restore(User $user, Affiliate $affiliate): bool
+    {
+        return $affiliate->trashed() && $user->hasPermission('affiliates.restore');
+    }
+
+    public function updatePersonal(User $user, Affiliate $affiliate): bool
+    {
+        return ! $affiliate->trashed() && $user->hasPermission('affiliates.update_personal');
+    }
+
+    public function updateInstitutional(User $user, Affiliate $affiliate): bool
+    {
+        return ! $affiliate->trashed() && $user->hasPermission('affiliates.update_institutional');
+    }
+
+    public function changeSector(User $user, Affiliate $affiliate): bool
+    {
+        return ! $affiliate->trashed() && $user->hasPermission('affiliates.change_sector');
+    }
+
+    public function changePlan(User $user, Affiliate $affiliate): bool
+    {
+        return ! $affiliate->trashed() && $user->hasPermission('affiliates.change_plan');
+    }
+
+    public function changeStatus(User $user, Affiliate $affiliate): bool
+    {
+        return ! $affiliate->trashed() && $user->hasPermission('affiliates.change_status');
+    }
+
+    public function managePhoto(User $user, Affiliate $affiliate): bool
+    {
+        return ! $affiliate->trashed() && $user->hasPermission('affiliates.manage_photo');
+    }
+
+    public function manageCredential(User $user, Affiliate $affiliate): bool
+    {
+        return ! $affiliate->trashed() && $user->hasPermission('affiliates.manage_credential');
     }
 
     public function resetPassword(User $user, Affiliate $affiliate): bool
