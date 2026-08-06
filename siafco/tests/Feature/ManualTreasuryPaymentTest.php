@@ -300,7 +300,8 @@ class ManualTreasuryPaymentTest extends TestCase
         $this->actingAs($secretary)->get(route('payments.receipt.download', $payment))->assertOk()
             ->assertHeader('Content-Type', 'application/pdf');
         $this->actingAs($secretary)->get(route('admin.dashboard'))->assertOk()
-            ->assertSee('Pagos de hoy');
+            ->assertSee('Centro de operaciones')
+            ->assertSee('Recaudacion');
 
         Sanctum::actingAs($user, ['*']);
         $this->getJson('/api/mobile/v1/me/payments')

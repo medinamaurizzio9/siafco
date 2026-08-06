@@ -236,7 +236,7 @@ class InternalUserManagementTest extends TestCase
 
         $this->actingAs($manager)->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertSee('Dashboard general')
+            ->assertSee('Centro de operaciones')
             ->assertSee('Afiliados')
             ->assertSee('Pagos de afiliacion')
             ->assertSee('Credenciales')

@@ -623,4 +623,209 @@
     .empty-state-icon { @apply grid h-12 w-12 place-items-center rounded-full; background: var(--color-siafco-primary-50); color: var(--ds-color-primary); }
     .skeleton { @apply animate-pulse rounded-md; background: linear-gradient(90deg, #e2e8f0, #f1f5f9, #e2e8f0); background-size: 200% 100%; }
     .modal-panel { @apply w-[min(92vw,640px)] bg-white p-0; border-radius: var(--ds-radius-lg); box-shadow: var(--ds-shadow-md); }
+
+    .dashboard-shell { @apply grid gap-5; }
+    .dashboard-hero,
+    .dashboard-attention,
+    .dashboard-panel,
+    .dashboard-system {
+        @apply bg-white;
+        border: 1px solid var(--ds-color-border);
+        border-radius: 16px;
+        box-shadow: 0 10px 24px rgb(15 23 42 / 0.06);
+    }
+    .dashboard-hero { @apply grid gap-4 p-4 lg:grid-cols-[1fr_auto] lg:items-center lg:p-5; }
+    .dashboard-kicker { @apply text-xs font-black uppercase; color: var(--ds-color-secondary-strong); }
+    .dashboard-title { @apply mt-1 text-2xl font-black tracking-tight sm:text-3xl; color: var(--ds-color-primary); }
+    .dashboard-greeting { @apply mt-1 text-sm font-bold; color: var(--ds-color-muted); }
+    .dashboard-hero-actions { @apply grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center lg:min-w-[560px]; }
+    .dashboard-search { @apply flex min-h-11 items-center gap-2 rounded-xl border-2 border-slate-200 bg-slate-50 px-3; }
+    .dashboard-search input { @apply min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none; color: var(--ds-color-muted); }
+    .dashboard-notifications { @apply relative; }
+    .dashboard-notifications summary { @apply grid h-11 w-11 cursor-pointer list-none place-items-center rounded-xl border border-siafco-border bg-white; }
+    .dashboard-notifications summary::-webkit-details-marker { display: none; }
+    .dashboard-notifications summary span { @apply absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[10px] font-black text-white; background: #dc2626; }
+    .dashboard-notifications-menu { @apply absolute right-0 z-20 mt-2 grid w-64 gap-1 rounded-xl border border-siafco-border bg-white p-2 text-sm shadow-lg; }
+    .dashboard-notifications-menu a,
+    .dashboard-notifications-menu p { @apply rounded-lg px-3 py-2 font-bold text-siafco-text; }
+    .dashboard-notifications-menu a:hover { @apply bg-slate-50; }
+    .dashboard-user { @apply flex min-w-0 items-center gap-3 rounded-xl border border-siafco-border bg-white px-3 py-2; }
+    .dashboard-user > span { @apply grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-black text-white; background: var(--ds-color-primary); }
+    .dashboard-user strong { @apply block max-w-36 truncate text-sm font-black; color: var(--ds-color-primary); }
+    .dashboard-user small { @apply block text-xs font-bold; color: var(--ds-color-muted); }
+
+    .dashboard-kpis { @apply grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5; }
+    .dashboard-kpi { @apply block rounded-2xl border bg-white p-4 transition hover:-translate-y-0.5 hover:shadow-md; border-color: var(--ds-color-border); }
+    .dashboard-kpi-icon { @apply grid h-11 w-11 place-items-center rounded-xl; }
+    .dashboard-kpi-label { @apply mt-4 block text-sm font-black; color: var(--ds-color-muted); }
+    .dashboard-kpi strong { @apply mt-1 block text-3xl font-black leading-tight; color: var(--ds-color-primary); }
+    .dashboard-kpi small { @apply mt-1 block text-xs font-bold; color: var(--ds-color-muted); }
+
+    .dashboard-attention { @apply grid gap-4 p-4 lg:grid-cols-[220px_1fr] lg:items-center lg:p-5; }
+    .dashboard-attention h3,
+    .dashboard-panel h3,
+    .dashboard-system h3 { @apply text-lg font-black; color: var(--ds-color-primary); }
+    .dashboard-alerts { @apply grid gap-3 sm:grid-cols-2 xl:grid-cols-4; }
+    .dashboard-alert { @apply rounded-2xl border p-4 transition hover:-translate-y-0.5; }
+    .dashboard-alert strong { @apply block text-lg font-black; color: var(--ds-color-primary); }
+    .dashboard-alert span { @apply mt-1 block text-xs font-bold; color: var(--ds-color-muted); }
+
+    .dashboard-chart-grid { @apply grid gap-5 xl:grid-cols-3; }
+    .dashboard-panel { @apply p-4 lg:p-5; }
+    .dashboard-panel header { @apply mb-4; }
+    .dashboard-chart { @apply min-h-64; }
+    .dashboard-main-grid { @apply grid gap-5 xl:grid-cols-[0.85fr_1.15fr]; }
+    .dashboard-actions { @apply grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-2; }
+    .dashboard-action { @apply grid min-h-28 place-items-center gap-2 rounded-2xl border p-4 text-center transition hover:-translate-y-0.5 hover:shadow-md; }
+    .dashboard-action span { @apply grid h-11 w-11 place-items-center rounded-xl; }
+    .dashboard-action strong { @apply text-sm font-black; color: var(--ds-color-primary); }
+    .dashboard-activity { @apply grid gap-3; }
+    .dashboard-activity article { @apply grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl border border-siafco-border p-3; }
+    .dashboard-activity-icon { @apply grid h-10 w-10 place-items-center rounded-xl; }
+    .dashboard-activity strong { @apply block text-sm font-black; color: var(--ds-color-primary); }
+    .dashboard-activity p { @apply truncate text-xs font-semibold; color: var(--ds-color-muted); }
+    .dashboard-activity time { @apply text-xs font-black; color: var(--ds-color-muted); }
+    .dashboard-system { @apply grid gap-4 p-4 lg:grid-cols-[260px_1fr] lg:items-center lg:p-5; }
+    .dashboard-system small { @apply mt-1 block text-xs font-bold; color: var(--ds-color-muted); }
+    .dashboard-system-items { @apply flex flex-wrap gap-2; }
+    .dashboard-system-pill { @apply rounded-full px-3 py-2 text-xs font-black; }
+
+    .dashboard-tone-blue .dashboard-kpi-icon,
+    .dashboard-tone-blue span,
+    .dashboard-alert-blue { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+    .dashboard-tone-gold .dashboard-kpi-icon,
+    .dashboard-tone-gold span { background: #fff8df; color: #92400e; }
+    .dashboard-tone-teal .dashboard-kpi-icon,
+    .dashboard-tone-teal span { background: #ecfeff; color: #0f766e; }
+    .dashboard-tone-violet .dashboard-kpi-icon,
+    .dashboard-tone-violet span { background: #f5f3ff; color: #6d28d9; }
+    .dashboard-tone-cyan .dashboard-kpi-icon,
+    .dashboard-tone-cyan span { background: #ecfeff; color: #155e75; }
+    .dashboard-tone-slate span { background: #f1f5f9; color: #334155; }
+    .dashboard-alert-orange { background: #fff7ed; border-color: #fed7aa; }
+    .dashboard-alert-yellow { background: #fefce8; border-color: #fde68a; }
+    .dashboard-alert-green { background: #ecfdf5; border-color: #bbf7d0; }
+    .dashboard-badge-success { background: #ecfdf5; color: #065f46; }
+    .dashboard-badge-warning { background: #fffbeb; color: #92400e; }
+    .dashboard-badge-danger { background: #fef2f2; color: #991b1b; }
+    .dashboard-badge-info { background: #eff6ff; color: #1e40af; }
+
+    @media (max-width: 430px) {
+        .dashboard-hero-actions { @apply grid-cols-1; }
+        .dashboard-actions { @apply grid-cols-2; }
+        .dashboard-kpi strong { @apply text-2xl; }
+        .dashboard-user strong { @apply max-w-48; }
+    }
+
+    .dashboard-shell { animation: dashboardFade .24s ease-out both; }
+    .dashboard-shell.is-fullscreen {
+        @apply min-h-screen overflow-auto p-4 sm:p-6;
+        background: var(--ds-color-canvas);
+    }
+    .dashboard-hero {
+        @apply lg:grid-cols-[minmax(0,0.8fr)_minmax(520px,1.2fr)];
+    }
+    .dashboard-title { @apply text-xl sm:text-2xl; }
+    .dashboard-greeting { @apply text-xs; }
+    .dashboard-search,
+    .dashboard-fullscreen,
+    .dashboard-notifications summary,
+    .dashboard-user {
+        min-height: 42px;
+    }
+    .dashboard-fullscreen {
+        @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-siafco-border bg-white px-3 text-xs font-black text-siafco-primary-900 transition duration-200 hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-siafco-gold-500;
+    }
+    .dashboard-kpis { @apply 2xl:grid-cols-5; }
+    .dashboard-kpi {
+        @apply grid min-h-44 gap-2 p-3 duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-siafco-gold-500;
+        animation: dashboardRise .28s ease-out both;
+    }
+    .dashboard-kpi:nth-child(2) { animation-delay: .04s; }
+    .dashboard-kpi:nth-child(3) { animation-delay: .08s; }
+    .dashboard-kpi:nth-child(4) { animation-delay: .12s; }
+    .dashboard-kpi:nth-child(5) { animation-delay: .16s; }
+    .dashboard-kpi:hover,
+    .dashboard-alert:hover,
+    .dashboard-action:hover {
+        transform: translateY(-3px);
+    }
+    .dashboard-kpi-top { @apply flex items-center justify-between gap-2; }
+    .dashboard-kpi-chip { @apply rounded-full px-2 py-1 text-[11px] font-black; }
+    .dashboard-sparkline { @apply mt-auto block h-11 w-full overflow-hidden; }
+    .dashboard-tone-green .dashboard-kpi-icon,
+    .dashboard-tone-green span { background: #ecfdf5; color: #047857; }
+    .dashboard-tone-orange .dashboard-kpi-icon,
+    .dashboard-tone-orange span { background: #fff7ed; color: #c2410c; }
+    .dashboard-tone-gold .dashboard-kpi-icon,
+    .dashboard-tone-gold span { background: #fffbeb; color: #b45309; }
+    .dashboard-tone-violet .dashboard-kpi-icon,
+    .dashboard-tone-violet span { background: #f5f3ff; color: #6d28d9; }
+    .dashboard-tone-cyan .dashboard-kpi-icon,
+    .dashboard-tone-cyan span { background: #ecfeff; color: #0e7490; }
+    .dashboard-attention {
+        @apply lg:grid-cols-[180px_1fr];
+        animation: dashboardFade .3s ease-out both;
+    }
+    .dashboard-alert { @apply duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-siafco-gold-500; }
+    .dashboard-chart-grid,
+    .dashboard-main-grid,
+    .dashboard-system { animation: dashboardFade .34s ease-out both; }
+    .dashboard-panel-header { @apply flex items-start justify-between gap-3; }
+    .dashboard-panel-link {
+        @apply rounded-full border border-siafco-border px-3 py-1 text-xs font-black text-siafco-primary-900 transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-siafco-gold-500;
+    }
+    .dashboard-actions-panel .dashboard-actions { @apply sm:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6; }
+    .dashboard-action { @apply min-h-24 duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-siafco-gold-500; }
+    .dashboard-activity article {
+        animation: dashboardRise .28s ease-out both;
+    }
+    .dashboard-activity article:nth-child(2) { animation-delay: .04s; }
+    .dashboard-activity article:nth-child(3) { animation-delay: .08s; }
+    .dashboard-activity article:nth-child(4) { animation-delay: .12s; }
+    .dashboard-activity article:nth-child(5) { animation-delay: .16s; }
+    .dashboard-system {
+        @apply grid-cols-1 gap-3;
+    }
+    .dashboard-system-heading { @apply flex flex-wrap items-end justify-between gap-2; }
+    .dashboard-system-items { @apply items-center; }
+    .dashboard-system-pill { @apply inline-flex items-center gap-2 border; }
+    .dashboard-system-pill > span {
+        @apply h-2 w-2 rounded-full;
+        background: currentColor;
+    }
+    .dashboard-system small { @apply mt-0; }
+
+    @media (max-width: 640px) {
+        .dashboard-kpis { @apply grid-cols-1; }
+        .dashboard-kpi { @apply min-h-36; }
+        .dashboard-fullscreen { @apply hidden; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .dashboard-shell,
+        .dashboard-kpi,
+        .dashboard-attention,
+        .dashboard-chart-grid,
+        .dashboard-main-grid,
+        .dashboard-system,
+        .dashboard-activity article {
+            animation: none;
+        }
+        .dashboard-kpi:hover,
+        .dashboard-alert:hover,
+        .dashboard-action:hover {
+            transform: none;
+        }
+    }
+
+    @keyframes dashboardFade {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes dashboardRise {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 }

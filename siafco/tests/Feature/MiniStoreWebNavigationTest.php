@@ -70,13 +70,13 @@ class MiniStoreWebNavigationTest extends TestCase
         $this->actingAs($affiliate->user)->get(route('admin.dashboard'))->assertRedirect(route('affiliate.panel'));
         $this->followingRedirects()->actingAs($affiliate->user)->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertDontSee('Dashboard general');
+            ->assertDontSee('Centro de operaciones');
 
         auth()->logout();
 
         $this->actingAs($admin)->get('/')->assertRedirect(route('admin.dashboard'));
         $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk()
-            ->assertSee('Dashboard general');
+            ->assertSee('Centro de operaciones');
     }
 
     public function test_affiliate_store_access_remains_available_and_admin_paths_remain_blocked(): void
