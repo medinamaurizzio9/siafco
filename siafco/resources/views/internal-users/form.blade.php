@@ -49,8 +49,8 @@
                         <span class="font-bold text-slate-700">Usar CI como contraseña temporal</span>
                     </label>
                     <div class="contents" data-password-fields>
-                        <label><span class="form-label">Contraseña temporal</span><input class="form-input" type="password" name="password"></label>
-                        <label><span class="form-label">Confirmar contraseña</span><input class="form-input" type="password" name="password_confirmation"></label>
+                        <x-password-input name="password" label="Contrasena temporal" :required="false" autocomplete="new-password" />
+                        <x-password-input name="password_confirmation" label="Confirmar contrasena" :required="false" autocomplete="new-password" />
                     </div>
                 @endunless
             </div>

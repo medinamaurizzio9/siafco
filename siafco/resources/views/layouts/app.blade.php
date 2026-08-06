@@ -21,8 +21,10 @@
             $canManageInvestments = $user->hasRole(['administrador', 'caja', 'cajero', 'contabilidad']);
             $canViewCredits = $user->hasRole(['administrador', 'administrador_sector', 'secretaria', 'cajero', 'caja', 'contabilidad', 'consulta']);
             $canManageUsers = $user->isInternal() && $user->hasPermission('users.view');
+            $canViewRoles = $user->isInternal() && $user->hasPermission('roles.view');
+            $canViewAudit = $user->isInternal() && $user->hasPermission('audit.view');
             $canViewDashboard = $user->hasPermission('dashboard.view');
-            $canAdmin = $user->hasRole('administrador') || $canManageUsers;
+            $canAdmin = $canManageUsers || $canViewRoles || $canViewAudit;
             $canGeneralSettings = $user->hasRole(['administrador', 'secretaria']);
             $canViewStore = $user->isInternal() && $user->hasPermission('store.view');
             $canManageStoreProducts = $user->isInternal() && $user->hasPermission('store.manage-products');
@@ -31,6 +33,8 @@
             $canManageStoreCoupons = $user->isInternal() && $user->hasPermission('store.manage-coupons');
             $canManageStoreOrders = $user->isInternal() && $user->hasPermission('store.manage-orders');
             $isPersonalOnly = $user->hasRole(['afiliado', 'accionista']) && ! $canViewAffiliation && ! $canManageInvestments;
+            $isAffiliateExperience = $user->user_type === 'affiliate' || $user->hasRole('afiliado');
+            $activeAffiliateStore = $user->user_type === 'affiliate' && $user->is_active && $user->affiliate?->status === 'activo';
             $homeRoute = app(\App\Services\UserRedirectResolver::class)->homeRoute($user);
 
             $openModule = match (true) {
@@ -55,7 +59,7 @@
             $soon = fn (string $route, string $label) => $navLink($route, $label);
         @endphp
 
-        <aside class="ds-sidebar" data-sidebar>
+        <aside class="ds-sidebar" id="mobile-sidebar" data-sidebar aria-label="Menu principal">
             <div class="ds-sidebar-brand">
                 <a href="{{ $homeRoute ? route($homeRoute) : route('login') }}" class="flex items-center gap-3">
                     <span class="ds-sidebar-logo">
@@ -203,9 +207,11 @@
                                 @if($canManageUsers)
                                     {!! $navLink('admin.users.index', 'Usuarios internos', [], ['admin.users.*']) !!}
                                 @endif
-                                @if($user->hasRole('administrador'))
-                                    {!! $soon('administration.roles.index', 'Roles y permisos') !!}
-                                    {!! $soon('administration.audit.index', 'Auditoria') !!}
+                                @if($canViewRoles)
+                                    {!! $navLink('administration.roles.index', 'Roles y permisos', [], ['administration.roles.*']) !!}
+                                @endif
+                                @if($canViewAudit)
+                                    {!! $navLink('administration.audit.index', 'Auditoria', [], ['administration.audit.*']) !!}
                                 @endif
                             </div>
                         </section>
@@ -234,7 +240,7 @@
                             {!! $navLink('affiliate.panel', 'Panel principal', [], ['affiliate.panel']) !!}
                             {!! $navLink('affiliate.profile.show', 'Mi perfil', [], ['affiliate.profile.*']) !!}
                             {!! $navLink('affiliate.credential.preview', 'Mi credencial', [], ['affiliate.credential.*']) !!}
-                            @if($user->user_type === 'affiliate' && $user->is_active && $user->affiliate?->status === 'activo')
+                            @if($activeAffiliateStore)
                                 {!! $navLink('store.catalog.index', 'Mini tienda', [], ['store.catalog.*']) !!}
                                 {!! $navLink('store.cart.show', 'Mi carrito ('.collect(session('store_cart.lines', []))->sum('quantity').')', [], ['store.cart.*']) !!}
                                 {!! $navLink('store.orders.index', 'Mis pedidos', [], ['store.orders.*', 'store.checkout.*']) !!}
@@ -255,17 +261,18 @@
         <div class="fixed inset-0 z-30 hidden bg-slate-950/50 lg:hidden" data-sidebar-backdrop></div>
     @endauth
 
-    <main class="ds-main">
+    <main class="ds-main {{ auth()->check() && $isAffiliateExperience ? 'has-mobile-bottom-nav' : '' }}">
         @auth
             <header class="ds-header">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex items-start gap-3">
-                        <button type="button" class="btn-icon bg-siafco-primary-900 text-siafco-gold-500 lg:hidden" data-sidebar-open aria-label="Abrir menu">
+                <div class="flex min-h-14 items-center justify-between gap-3 sm:min-h-0">
+                    <div class="flex min-w-0 items-center gap-3">
+                        <button type="button" class="btn-icon bg-siafco-primary-900 text-siafco-gold-500 lg:hidden" data-sidebar-open aria-label="Abrir menu" aria-controls="mobile-sidebar" aria-expanded="false">
                             <x-ui.icon name="menu" class="h-5 w-5" />
                         </button>
-                        <div>
-                            <p class="ds-title-eyebrow">{{ auth()->user()->roleLabel() }}</p>
-                            <h1 class="ds-title-h1">{{ $title ?? 'SIAFCO' }}</h1>
+                        <div class="min-w-0">
+                            <p class="ds-title-eyebrow hidden sm:block">{{ auth()->user()->roleLabel() }}</p>
+                            <h1 class="ds-title-h1 truncate">{{ $title ?? 'SIAFCO' }}</h1>
+                            <p class="text-xs font-black text-siafco-gold-600 sm:hidden">SIAFCO</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
@@ -308,6 +315,32 @@
                 <span>SIAFCO · Sistema de afiliacion cooperativa</span>
                 <span>Version {{ config('app.version', 'local') }} · Build {{ app()->environment('production') ? 'production' : 'local' }} · Ambiente {{ app()->environment() }}</span>
             </footer>
+            @if($isAffiliateExperience)
+                <nav class="mobile-bottom-nav" aria-label="Navegacion rapida del afiliado">
+                    <a href="{{ route('affiliate.panel') }}" class="mobile-bottom-nav__item {{ request()->routeIs('affiliate.panel') ? 'mobile-bottom-nav__item-active' : '' }}" @if(request()->routeIs('affiliate.panel')) aria-current="page" @endif>
+                        <x-ui.icon name="home" class="h-5 w-5" />
+                        <span>Inicio</span>
+                    </a>
+                    <a href="{{ route('affiliate.credential.preview') }}" class="mobile-bottom-nav__item {{ request()->routeIs('affiliate.credential.*') ? 'mobile-bottom-nav__item-active' : '' }}" @if(request()->routeIs('affiliate.credential.*')) aria-current="page" @endif>
+                        <x-ui.icon name="credit-card" class="h-5 w-5" />
+                        <span>Credencial</span>
+                    </a>
+                    <a href="{{ route('affiliate.profile.show') }}#payments" class="mobile-bottom-nav__item">
+                        <x-ui.icon name="chart" class="h-5 w-5" />
+                        <span>Pagos</span>
+                    </a>
+                    @if($activeAffiliateStore)
+                        <a href="{{ route('store.catalog.index') }}" class="mobile-bottom-nav__item {{ request()->routeIs('store.*') ? 'mobile-bottom-nav__item-active' : '' }}" @if(request()->routeIs('store.*')) aria-current="page" @endif>
+                            <x-ui.icon name="briefcase" class="h-5 w-5" />
+                            <span>Tienda</span>
+                        </a>
+                    @endif
+                    <a href="{{ route('affiliate.profile.show') }}" class="mobile-bottom-nav__item {{ request()->routeIs('affiliate.profile.*') ? 'mobile-bottom-nav__item-active' : '' }}" @if(request()->routeIs('affiliate.profile.*')) aria-current="page" @endif>
+                        <x-ui.icon name="user" class="h-5 w-5" />
+                        <span>Perfil</span>
+                    </a>
+                </nav>
+            @endif
         @endauth
     </main>
 </div>

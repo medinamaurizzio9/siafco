@@ -26,7 +26,27 @@
         <button class="btn-secondary">Filtrar</button>
     </form>
 
-    <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
+    <div class="mobile-card-list">
+        @forelse($products as $product)
+            <article class="mobile-list-card">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <h2 class="mobile-list-card__title truncate">{{ $product->name }}</h2>
+                        <p class="mobile-list-card__meta">{{ $product->category?->name }} · {{ $product->sku }}</p>
+                    </div>
+                    <span class="badge">{{ $product->availability_status }}</span>
+                </div>
+                <p class="mt-3 text-sm">Afiliado <strong>Bs {{ number_format((float) $product->affiliate_price, 2) }}</strong></p>
+                @can('store.manage-products')
+                    <a class="btn-secondary mt-4 min-h-12 w-full" href="{{ route('admin.store.products.edit', $product) }}">Editar</a>
+                @endcan
+            </article>
+        @empty
+            <p class="mobile-list-card text-slate-600">No hay productos registrados.</p>
+        @endforelse
+    </div>
+
+    <div class="desktop-table overflow-hidden rounded-lg border border-slate-200 bg-white">
         <div class="overflow-x-auto">
             <table class="table">
                 <thead><tr><th>Orden</th><th>Producto</th><th>Categoría</th><th>Precios</th><th>Disponibilidad</th><th></th></tr></thead>

@@ -1,31 +1,49 @@
 <x-layouts.app title="{{ $affiliate->full_name }}">
     <div class="grid gap-5 xl:grid-cols-[1fr_420px]">
-        <section class="rounded-lg border border-slate-200 bg-white p-5">
-            <div class="flex flex-col gap-4 sm:flex-row">
-                <div class="grid h-28 w-28 shrink-0 place-items-center overflow-hidden rounded bg-slate-100">
+        <section class="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
+            <div class="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
+                <div class="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-full bg-slate-100 sm:h-32 sm:w-32 xl:h-36 xl:w-36">
                     @if($affiliate->photo_path)
                         <img class="h-full w-full object-cover" src="{{ Storage::url($affiliate->photo_path) }}" alt="">
                     @else
                         <span class="text-3xl font-black text-[#0b1f3a]">{{ substr($affiliate->full_name, 0, 1) }}</span>
                     @endif
                 </div>
-                <div>
+                <div class="min-w-0 flex-1">
                     <p class="text-sm font-bold uppercase text-[#b8942f]">{{ $affiliate->registration_number }}</p>
-                    <h2 class="text-3xl font-black text-[#0b1f3a]">{{ $affiliate->full_name }}</h2>
-                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                    <h2 class="text-2xl font-black text-[#0b1f3a] sm:text-3xl">{{ $affiliate->full_name }}</h2>
+                    <div class="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                         <span class="text-slate-600">{{ $affiliate->sector->name }}</span>
                         <x-affiliation-status :status="$affiliate->status" size="sm" />
                     </div>
-                    @if(auth()->user()->hasPermission('affiliates.update'))
-                        <a class="btn-secondary mt-4" href="{{ route('affiliates.edit', $affiliate) }}">Editar datos</a>
-                    @endif
+                    <dl class="mt-4 grid gap-3 text-left sm:grid-cols-2">
+                        <div><dt class="text-xs font-black uppercase text-slate-500">Celular</dt><dd class="font-bold">{{ $affiliate->phone ?: 'Sin dato' }}</dd></div>
+                        <div><dt class="text-xs font-black uppercase text-slate-500">Correo</dt><dd class="break-all font-bold">{{ $affiliate->email ?: 'Sin dato' }}</dd></div>
+                        <div><dt class="text-xs font-black uppercase text-slate-500">Sector</dt><dd class="font-bold">{{ $affiliate->sector->name }}</dd></div>
+                        <div><dt class="text-xs font-black uppercase text-slate-500">Estado</dt><dd><x-affiliation-status :status="$affiliate->status" size="sm" /></dd></div>
+                    </dl>
+                    <div class="mobile-actions mt-5">
+                        @can('viewCredential', $affiliate)
+                            <a class="btn-primary" href="{{ route('credenciales.show', $affiliate) }}">Ver credencial</a>
+                        @endcan
+                        <a class="btn-secondary" href="#payments">Ver pagos</a>
+                        @if(auth()->user()->hasPermission('affiliates.update'))
+                            <a class="btn-secondary" href="{{ route('affiliates.edit', $affiliate) }}">Editar datos</a>
+                        @endif
+                        @if(auth()->user()->hasRole('afiliado') && $affiliate->status === 'activo')
+                            <a class="btn-secondary" href="{{ route('store.catalog.index') }}">Mini Tienda</a>
+                        @endif
+                    </div>
                 </div>
             </div>
-            <dl class="mt-6 grid gap-4 md:grid-cols-2">
-                @foreach(['CI' => $affiliate->ci, 'Correo' => $affiliate->email, 'Celular' => $affiliate->phone, 'Regional' => $affiliate->regional, 'Institucion' => $affiliate->institution, 'Cargo/profesion' => $affiliate->position, 'Tipo de afiliado' => $affiliate->affiliate_type, 'Direccion' => $affiliate->address, 'Fecha de nacimiento' => $affiliate->birth_date?->format('d/m/Y'), 'Estado civil' => $affiliate->marital_status] as $label => $value)
-                    <div><dt class="text-xs font-black uppercase text-slate-500">{{ $label }}</dt><dd>{{ $value ?: 'Sin dato' }}</dd></div>
-                @endforeach
-            </dl>
+            <details class="collapsible-section mt-5">
+                <summary>Informacion completa</summary>
+                <dl class="collapsible-section__body grid gap-4 md:grid-cols-2">
+                    @foreach(['CI' => $affiliate->ci, 'Correo' => $affiliate->email, 'Celular' => $affiliate->phone, 'Regional' => $affiliate->regional, 'Institucion' => $affiliate->institution, 'Cargo/profesion' => $affiliate->position, 'Tipo de afiliado' => $affiliate->affiliate_type, 'Direccion' => $affiliate->address, 'Fecha de nacimiento' => $affiliate->birth_date?->format('d/m/Y'), 'Estado civil' => $affiliate->marital_status] as $label => $value)
+                        <div><dt class="text-xs font-black uppercase text-slate-500">{{ $label }}</dt><dd>{{ $value ?: 'Sin dato' }}</dd></div>
+                    @endforeach
+                </dl>
+            </details>
         </section>
 
         <aside class="rounded-lg border border-slate-200 bg-white p-5">
@@ -229,7 +247,23 @@
 
     <section class="mt-6 overflow-hidden rounded-lg border border-slate-200 bg-white" id="payments">
         <div class="border-b border-slate-200 px-4 py-3"><h3 class="font-black text-[#0b1f3a]">Pagos</h3></div>
-        <div class="overflow-x-auto">
+        <div class="mobile-card-list p-4">
+            @forelse($affiliate->payments as $payment)
+                <article class="mobile-list-card">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <h4 class="mobile-list-card__title">{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</h4>
+                            <p class="mobile-list-card__meta">{{ $payment->transaction_number ?: 'Pendiente' }}</p>
+                        </div>
+                        <x-affiliation-status :status="$payment->status" size="sm" />
+                    </div>
+                    <a class="btn-secondary mt-4 min-h-12 w-full" href="{{ route('payments.show', $payment) }}">Ver</a>
+                </article>
+            @empty
+                <p class="text-sm text-slate-600">Sin pagos registrados.</p>
+            @endforelse
+        </div>
+        <div class="desktop-table overflow-x-auto">
             <table class="table">
                 <thead><tr><th>Monto</th><th>Transaccion</th><th>Estado</th><th>Acciones</th></tr></thead>
                 <tbody>

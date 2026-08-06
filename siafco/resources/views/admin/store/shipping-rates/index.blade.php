@@ -39,7 +39,30 @@
         @endif
     </section>
 
-    <div class="overflow-x-auto rounded bg-white shadow">
+    <div class="mobile-card-list">
+        @forelse($rates as $rate)
+            <article class="mobile-list-card">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <h2 class="mobile-list-card__title truncate">{{ $scopes[$rate->scope] ?? $rate->scope }}</h2>
+                        <p class="mobile-list-card__meta">{{ collect([$rate->department, $rate->city, $rate->zone])->filter()->implode(' / ') ?: 'Todo el pais' }}</p>
+                    </div>
+                    <span class="badge">{{ $rate->active ? 'Activa' : 'Inactiva' }}</span>
+                </div>
+                <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div><span class="text-slate-500">Monto</span><strong class="block">Bs {{ number_format((float) $rate->amount, 2) }}</strong></div>
+                    <div><span class="text-slate-500">Prioridad</span><strong class="block">{{ $rate->priority }}</strong></div>
+                </div>
+                @can('store.manage-shipping')
+                    <a class="btn-secondary mt-4 min-h-12 w-full" href="{{ route('admin.store.shipping-rates.edit', $rate) }}">Editar</a>
+                @endcan
+            </article>
+        @empty
+            <p class="mobile-list-card text-slate-600">No hay tarifas registradas.</p>
+        @endforelse
+    </div>
+
+    <div class="desktop-table overflow-x-auto rounded bg-white shadow">
         <table class="table min-w-full">
             <thead>
                 <tr>

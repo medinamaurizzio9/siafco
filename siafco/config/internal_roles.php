@@ -18,7 +18,8 @@ $permissions = [
     'payments.cancel', 'payments.receipt', 'payments.view_receipt', 'payments.download_receipt',
     'credentials.view', 'credentials.download', 'credentials.print',
     'settings.view', 'settings.update', 'reports.view', 'reports.export',
-    'audit.view', 'credits.view', 'credits.create', 'credits.update', 'credits.approve',
+    'roles.view', 'roles.update', 'audit.view', 'audit.export',
+    'credits.view', 'credits.create', 'credits.update', 'credits.approve',
     'investors.view', 'investors.create', 'investors.update',
     'store.view', 'store.manage-products', 'store.manage-settings', 'store.manage-shipping',
     'store.manage-coupons', 'store.manage-orders', 'store.verify-receipts',
@@ -41,7 +42,7 @@ return [
         'administrador' => $permissions,
         'gerente' => [
             'dashboard.view', 'users.view', 'affiliates.view', 'payments.view', 'credentials.view',
-            'settings.view', 'reports.view', 'reports.export', 'audit.view',
+            'settings.view', 'reports.view', 'reports.export', 'audit.view', 'roles.view',
             'affiliates.update_institutional', 'affiliates.change_sector', 'affiliates.change_plan',
             'affiliates.change_status', 'affiliates.view_timeline', 'affiliates.view_audit',
             'affiliates.manage_credential',

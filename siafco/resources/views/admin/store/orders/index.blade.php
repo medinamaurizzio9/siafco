@@ -17,7 +17,25 @@
         <button class="btn-secondary">Filtrar</button>
     </form>
 
-    <div class="overflow-x-auto rounded bg-white shadow">
+    <div class="mobile-card-list">
+        @forelse($orders as $order)
+            <article class="mobile-list-card">
+                <h2 class="mobile-list-card__title">{{ $order->code }}</h2>
+                <p class="mobile-list-card__meta">{{ $order->affiliate?->full_name }}</p>
+                <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div><span class="text-slate-500">Estado</span><strong class="block">{{ $order->status }}</strong></div>
+                    <div><span class="text-slate-500">Total</span><strong class="block">Bs {{ number_format((float) $order->total, 2) }}</strong></div>
+                    <div><span class="text-slate-500">Entrega</span><strong class="block">{{ $order->delivery_method }}</strong></div>
+                    <div><span class="text-slate-500">Fecha</span><strong class="block">{{ $order->created_at->format('d/m/Y') }}</strong></div>
+                </div>
+                <a class="btn-secondary mt-4 min-h-12 w-full" href="{{ route('admin.store.orders.show', $order) }}">Ver</a>
+            </article>
+        @empty
+            <p class="mobile-list-card text-slate-600">No hay pedidos registrados.</p>
+        @endforelse
+    </div>
+
+    <div class="desktop-table overflow-x-auto rounded bg-white shadow">
         <table class="table min-w-full">
             <thead><tr><th>Código</th><th>Afiliado</th><th>Estado</th><th>Entrega</th><th>Total</th><th>Fecha</th><th></th></tr></thead>
             <tbody>

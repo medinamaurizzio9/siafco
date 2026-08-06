@@ -10,7 +10,7 @@
             <article class="rounded bg-white p-4 shadow">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div><h3 class="font-black text-[#0b1f3a]">{{ $order->code }}</h3><p class="text-sm text-slate-600">{{ $order->created_at->format('d/m/Y H:i') }} · {{ $order->delivery_method }}</p></div>
-                    <div class="flex items-center gap-3"><span class="rounded bg-[#fff8df] px-2 py-1 text-xs font-bold">{{ $order->status }}</span><strong>Bs {{ number_format((float) $order->total, 2) }}</strong><a class="btn-secondary" href="{{ route('store.orders.show', $order) }}">Ver</a></div>
+                    <div class="grid gap-2 sm:flex sm:items-center sm:gap-3"><span class="rounded bg-[#fff8df] px-2 py-1 text-xs font-bold">{{ $order->status }}</span><strong>Bs {{ number_format((float) $order->total, 2) }}</strong><a class="btn-secondary min-h-12 w-full sm:w-auto" href="{{ route('store.orders.show', $order) }}">Ver</a></div>
                 </div>
             </article>
         @empty

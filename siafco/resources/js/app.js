@@ -140,10 +140,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.querySelector('[data-sidebar]');
     const backdrop = document.querySelector('[data-sidebar-backdrop]');
     const accordion = document.querySelector('[data-sidebar-accordion]');
+    const sidebarOpenButtons = Array.from(document.querySelectorAll('[data-sidebar-open]'));
+    const sidebarFocusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
     const showSidebar = () => {
-        sidebar?.classList.remove('hidden');
+        sidebar?.classList.add('is-open');
         backdrop?.classList.remove('hidden');
+        document.body.classList.add('sidebar-open');
+        sidebarOpenButtons.forEach((button) => button.setAttribute('aria-expanded', 'true'));
+        const firstFocusable = sidebar?.querySelector(sidebarFocusableSelector);
+        firstFocusable?.focus({ preventScroll: true });
     };
 
     const hideSidebar = () => {
@@ -151,13 +157,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        sidebar?.classList.add('hidden');
+        sidebar?.classList.remove('is-open');
         backdrop?.classList.add('hidden');
+        document.body.classList.remove('sidebar-open');
+        sidebarOpenButtons.forEach((button) => button.setAttribute('aria-expanded', 'false'));
     };
 
-    document.querySelectorAll('[data-sidebar-open]').forEach((button) => button.addEventListener('click', showSidebar));
+    sidebarOpenButtons.forEach((button) => button.addEventListener('click', showSidebar));
     document.querySelectorAll('[data-sidebar-close], [data-sidebar-backdrop]').forEach((button) => button.addEventListener('click', hideSidebar));
     document.querySelectorAll('[data-sidebar-link]').forEach((link) => link.addEventListener('click', hideSidebar));
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            hideSidebar();
+        }
+    });
 
     if (!accordion) {
         return;

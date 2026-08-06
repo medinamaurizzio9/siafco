@@ -12,7 +12,30 @@
             <a class="btn-primary" href="{{ route('affiliates.create') }}">Nuevo afiliado</a>
         @endif
     </form>
-    <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
+    <div class="mobile-card-list">
+        @foreach($affiliates as $affiliate)
+            <article class="mobile-list-card">
+                <div class="flex items-start gap-3">
+                    <div class="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-siafco-primary-50 text-sm font-black text-siafco-primary-900">
+                        @if($affiliate->photo_path)
+                            <img class="h-full w-full object-cover" src="{{ Storage::url($affiliate->photo_path) }}" alt="">
+                        @else
+                            {{ mb_substr($affiliate->full_name, 0, 1) }}
+                        @endif
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <h2 class="mobile-list-card__title truncate">{{ $affiliate->full_name }}</h2>
+                        <p class="mobile-list-card__meta">{{ $affiliate->registration_number }} · {{ $affiliate->sector->name }}</p>
+                        <div class="mt-2"><x-affiliation-status :status="$affiliate->status" size="sm" /></div>
+                    </div>
+                </div>
+                <div class="mt-4 grid gap-2">
+                    <a class="btn-secondary min-h-12 w-full" href="{{ route('affiliates.show', $affiliate) }}">Abrir</a>
+                </div>
+            </article>
+        @endforeach
+    </div>
+    <div class="desktop-table overflow-hidden rounded-lg border border-slate-200 bg-white">
         <div class="overflow-x-auto">
             <table class="table">
                 <thead><tr><th>Registro</th><th>Nombre</th><th>CI</th><th>Sector</th><th>Estado</th><th></th></tr></thead>

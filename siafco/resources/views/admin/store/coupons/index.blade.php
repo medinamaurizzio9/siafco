@@ -20,7 +20,31 @@
         @endcan
     </div>
 
-    <div class="overflow-x-auto rounded bg-white shadow">
+    <div class="mobile-card-list">
+        @forelse($coupons as $coupon)
+            <article class="mobile-list-card">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <h2 class="mobile-list-card__title truncate">{{ $coupon->code_hint }}</h2>
+                        <p class="mobile-list-card__meta">{{ $types[$coupon->type] ?? $coupon->type }}</p>
+                    </div>
+                    <span class="badge">{{ $coupon->active ? 'Activo' : 'Inactivo' }}</span>
+                </div>
+                <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div><span class="text-slate-500">Valor</span><strong class="block">{{ $coupon->type === 'percentage' ? number_format((float) $coupon->value, 2).'%' : 'Bs '.number_format((float) $coupon->value, 2) }}</strong></div>
+                    <div><span class="text-slate-500">Limite</span><strong class="block">{{ $coupon->global_limit ?: 'Sin limite' }}</strong></div>
+                    <div class="col-span-2"><span class="text-slate-500">Vigencia</span><strong class="block">{{ $coupon->starts_at?->format('d/m/Y H:i') ?: 'Sin inicio' }} - {{ $coupon->ends_at?->format('d/m/Y H:i') ?: 'Sin vencimiento' }}</strong></div>
+                </div>
+                @can('store.manage-coupons')
+                    <a class="btn-secondary mt-4 min-h-12 w-full" href="{{ route('admin.store.coupons.edit', $coupon) }}">Editar</a>
+                @endcan
+            </article>
+        @empty
+            <p class="mobile-list-card text-slate-600">No hay cupones registrados.</p>
+        @endforelse
+    </div>
+
+    <div class="desktop-table overflow-x-auto rounded bg-white shadow">
         <table class="table min-w-full">
             <thead><tr><th>Código</th><th>Tipo</th><th>Valor</th><th>Vigencia</th><th>Límites</th><th>Estado</th><th></th></tr></thead>
             <tbody>

@@ -87,6 +87,52 @@ class MiniStoreWebNavigationTest extends TestCase
         $this->actingAs($affiliate->user)->get('/admin/mini-tienda')->assertForbidden();
     }
 
+    public function test_responsive_layout_exposes_drawer_and_affiliate_bottom_navigation_only_for_affiliates(): void
+    {
+        $affiliate = $this->affiliate();
+        $admin = User::create([
+            'name' => 'Super Admin',
+            'email' => 'super-responsive@test.local',
+            'role' => 'superadministrador',
+            'user_type' => 'internal',
+            'password' => Hash::make('secret-password'),
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($affiliate->user)->get(route('affiliate.panel'))
+            ->assertOk()
+            ->assertSee('id="mobile-sidebar"', false)
+            ->assertSee('aria-controls="mobile-sidebar"', false)
+            ->assertSee('mobile-bottom-nav', false)
+            ->assertSee('Navegacion rapida del afiliado', false);
+
+        $this->actingAs($admin)->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('id="mobile-sidebar"', false)
+            ->assertSee('Mini tienda')
+            ->assertDontSee('mobile-bottom-nav', false);
+    }
+
+    public function test_affiliate_show_prioritizes_mobile_summary_and_collapses_secondary_information(): void
+    {
+        $affiliate = $this->affiliate();
+        $admin = User::create([
+            'name' => 'Super Admin Perfil',
+            'email' => 'super-profile-responsive@test.local',
+            'role' => 'superadministrador',
+            'user_type' => 'internal',
+            'password' => Hash::make('secret-password'),
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)->get(route('affiliates.show', $affiliate))
+            ->assertOk()
+            ->assertSee('Informacion completa')
+            ->assertSee('Ver pagos')
+            ->assertSee('desktop-table', false)
+            ->assertSee('mobile-card-list', false);
+    }
+
     public function test_inactive_affiliate_cannot_login_into_affiliate_panel(): void
     {
         $affiliate = $this->affiliate();

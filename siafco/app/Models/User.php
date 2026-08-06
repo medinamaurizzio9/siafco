@@ -91,22 +91,37 @@ class User extends Authenticatable
 
     public function hasRole(string|array $roles): bool
     {
-        return in_array($this->role, (array) $roles, true);
+        $service = app(\App\Services\RolePermissionService::class);
+        $current = $service->normalizeRole($this->role);
+        $roles = array_map(fn (string $role) => $service->normalizeRole($role), (array) $roles);
+
+        return in_array($current, $roles, true);
     }
 
     public function hasPermission(string $permission): bool
     {
-        return in_array($permission, config("internal_roles.roles.{$this->role}", []), true);
+        if (! $this->isInternal()) {
+            return false;
+        }
+
+        return in_array($permission, app(\App\Services\RolePermissionService::class)->permissionsForRole($this->role), true);
     }
 
     public function isInternal(): bool
     {
-        return $this->user_type === 'internal';
+        if ($this->user_type === 'internal') {
+            return true;
+        }
+
+        return $this->user_type === null
+            && app(\App\Services\RolePermissionService::class)->isKnownInternalRole((string) $this->role);
     }
 
     public function roleLabel(): string
     {
-        return config("internal_roles.labels.{$this->role}", str($this->role)->headline()->toString());
+        $role = app(\App\Services\RolePermissionService::class)->normalizeRole($this->role);
+
+        return config("internal_roles.labels.{$role}", str($this->role)->headline()->toString());
     }
 
     public function photoUrl(): ?string

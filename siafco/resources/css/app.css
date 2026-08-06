@@ -478,7 +478,11 @@
     .ds-shell { @apply min-h-screen lg:flex; background: var(--ds-color-canvas); }
     .ds-main { @apply flex-1 min-w-0; }
     .ds-page { @apply mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:py-8; }
-    .ds-sidebar { @apply fixed inset-y-0 left-0 z-40 hidden w-80 overflow-y-auto text-white lg:static lg:block lg:w-72; background: linear-gradient(180deg, var(--ds-color-primary) 0%, #07172b 100%); box-shadow: var(--ds-shadow-md); }
+    .ds-sidebar { @apply fixed inset-y-0 left-0 z-50 w-80 overflow-y-auto text-white lg:static lg:block lg:w-72; background: linear-gradient(180deg, var(--ds-color-primary) 0%, #07172b 100%); box-shadow: var(--ds-shadow-md); transform: translateX(-100%); transition: transform var(--ds-duration-base) ease; pointer-events: none; }
+    .ds-sidebar.is-open { transform: translateX(0); pointer-events: auto; }
+    @media (min-width: 1024px) {
+        .ds-sidebar { transform: translateX(0); pointer-events: auto; }
+    }
     .ds-sidebar-brand { @apply flex items-center justify-between px-5 py-5; border-bottom: 1px solid rgb(255 255 255 / .08); }
     .ds-sidebar-logo { @apply grid h-11 w-11 place-items-center overflow-hidden bg-white text-lg font-black; border: 1px solid var(--ds-color-secondary); border-radius: var(--ds-radius-md); color: var(--ds-color-primary); }
     .ds-sidebar-title { @apply block text-lg font-black; color: var(--ds-color-secondary); }
@@ -487,6 +491,16 @@
     .ds-footer { @apply mx-auto flex max-w-7xl flex-col gap-1 border-t px-4 py-4 text-xs sm:flex-row sm:items-center sm:justify-between sm:px-6; border-color: var(--ds-color-border); color: var(--ds-color-muted); }
     .ds-title-eyebrow { @apply text-xs font-semibold uppercase; color: var(--ds-color-secondary-strong); }
     .ds-title-h1 { @apply text-2xl font-black sm:text-3xl; color: var(--ds-color-text); }
+
+    .sidebar-open { @apply overflow-hidden lg:overflow-auto; }
+
+    @media (max-width: 1023px) {
+        .ds-sidebar { width: min(88vw, 21rem); }
+        .ds-header { @apply sticky top-0 z-20 px-4 py-2; }
+        .ds-title-h1 { @apply text-base; }
+        .ds-page { @apply px-4 py-4; }
+        .has-mobile-bottom-nav { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+    }
 
     .nav-module { @apply p-1; border: 1px solid rgb(255 255 255 / .10); border-radius: var(--ds-radius-md); background: rgb(255 255 255 / .035); }
     .nav-module-button { @apply flex w-full items-center justify-between px-3 py-2 text-left text-xs font-black uppercase tracking-wide transition; border-radius: var(--ds-radius-sm); color: var(--ds-color-secondary); transition-duration: var(--ds-duration-fast); }
@@ -523,17 +537,24 @@
     .form-label { @apply mb-1 block text-sm font-bold; color: var(--ds-color-text); }
     .form-helper { @apply mt-1 text-xs; color: var(--ds-color-muted); }
     .form-input {
-        @apply w-full px-3 py-2 text-sm outline-none transition;
-        min-height: 42px;
-        border: 1px solid var(--ds-color-border);
-        border-radius: var(--ds-radius-md);
+        @apply w-full px-4 py-3 text-sm outline-none transition;
+        min-height: 48px;
+        border: 2px solid #cbd5e1;
+        border-radius: 12px;
         background: var(--ds-color-surface);
         color: var(--ds-color-text);
-        transition-duration: var(--ds-duration-fast);
+        font-family: inherit;
+        transition-duration: var(--ds-duration-base);
     }
-    .form-input:hover { border-color: color-mix(in srgb, var(--ds-color-primary) 35%, var(--ds-color-border)); }
-    .form-input:focus { border-color: var(--ds-color-secondary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-color-secondary) 22%, transparent); }
-    .form-input[disabled] { background: #f1f5f9; color: var(--ds-color-muted); }
+    .form-input:hover { border-color: var(--ds-color-primary-raised); }
+    .form-input:focus { border-color: var(--ds-color-secondary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ds-color-secondary) 24%, transparent); }
+    .form-input[aria-invalid="true"],
+    .form-input.border-red-500 { border-color: #dc2626; }
+    .form-input[disabled],
+    .form-input:disabled { background: #f1f5f9; color: var(--ds-color-muted); cursor: not-allowed; }
+    .password-toggle-button {
+        @apply absolute inset-y-1 right-1 grid w-11 place-items-center rounded-lg text-slate-500 transition hover:text-[#0b1f3a] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#d4af37];
+    }
 
     .card, .section-card { @apply bg-white; border: 1px solid var(--ds-color-border); border-radius: var(--ds-radius-lg); box-shadow: var(--ds-shadow-sm); }
     .section-card { @apply p-5; }
@@ -550,6 +571,39 @@
     .table td { @apply border-t px-4 py-3 align-middle; border-color: #eef2f7; }
     .table tbody tr { @apply transition; transition-duration: var(--ds-duration-fast); }
     .table tbody tr:hover { background: #f8fafc; }
+
+    .mobile-bottom-nav {
+        @apply fixed inset-x-0 bottom-0 z-30 grid grid-flow-col items-stretch border-t bg-white/95 px-2 pt-1 shadow-lg backdrop-blur lg:hidden;
+        padding-bottom: max(env(safe-area-inset-bottom), 6px);
+        border-color: var(--ds-color-border);
+    }
+    .mobile-bottom-nav__item {
+        @apply flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-md px-2 text-[11px] font-black;
+        color: var(--ds-color-muted);
+    }
+    .mobile-bottom-nav__item-active,
+    .mobile-bottom-nav__item[aria-current="page"] {
+        background: var(--color-siafco-primary-50);
+        color: var(--ds-color-primary);
+    }
+
+    .mobile-card-list { @apply grid gap-3 md:hidden; }
+    .desktop-table { @apply hidden md:block; }
+    .mobile-list-card { @apply rounded-lg border bg-white p-4 shadow-sm; border-color: var(--ds-color-border); }
+    .mobile-list-card__title { @apply text-base font-black; color: var(--ds-color-primary); }
+    .mobile-list-card__meta { @apply mt-1 text-sm; color: var(--ds-color-muted); }
+    .mobile-actions { @apply grid gap-2 sm:flex sm:flex-wrap; }
+    .mobile-actions > a,
+    .mobile-actions > button,
+    .mobile-actions > form > button { @apply min-h-12 w-full sm:w-auto; }
+    .collapsible-section { @apply rounded-lg border bg-white; border-color: var(--ds-color-border); }
+    .collapsible-section > summary { @apply cursor-pointer px-4 py-3 text-sm font-black uppercase; color: var(--ds-color-primary); }
+    .collapsible-section > summary::marker { color: var(--ds-color-secondary); }
+    .collapsible-section__body { @apply border-t p-4; border-color: var(--ds-color-border); }
+
+    @media (min-width: 768px) {
+        .desktop-table { @apply block; }
+    }
 
     .badge { @apply inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-black uppercase; background: var(--color-siafco-gold-50); color: var(--ds-color-primary); }
     .badge-success { background: var(--ds-success-bg); color: var(--ds-success-text); }

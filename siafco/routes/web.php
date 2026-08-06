@@ -29,6 +29,8 @@ use App\Http\Controllers\Store\OrderController as StoreWebOrderController;
 use App\Http\Controllers\Store\ReceiptController as StoreReceiptController;
 use App\Http\Controllers\Store\WhatsAppController as StoreWhatsAppController;
 use App\Http\Controllers\VerificationController;
+use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\RolePermissionController;
 use App\Http\Controllers\Admin\Store\DashboardController as StoreDashboardController;
 use App\Http\Controllers\Admin\Store\SettingController as StoreSettingController;
 use App\Http\Controllers\Admin\Store\CategoryController as StoreCategoryController;
@@ -301,9 +303,21 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         Route::delete('/{user}', 'destroy')->name('destroy');
     });
 
-    Route::prefix('administracion')->name('administration.')->middleware('role:administrador')->group(function () {
-        Route::get('/roles-permisos', PlaceholderController::class)->defaults('title', 'Roles y permisos')->defaults('message', 'Gestion detallada de permisos por modulo pendiente de implementacion.')->name('roles.index');
-        Route::get('/auditoria', PlaceholderController::class)->defaults('title', 'Auditoria')->defaults('message', 'Consulta avanzada de auditoria preparada para una fase posterior.')->name('audit.index');
+    Route::prefix('administracion')->name('administration.')->group(function () {
+        Route::get('/roles-permisos', [RolePermissionController::class, 'index'])
+            ->middleware('permission:roles.view')->name('roles.index');
+        Route::get('/roles-permisos/{role}', [RolePermissionController::class, 'edit'])
+            ->middleware('permission:roles.view')->name('roles.edit');
+        Route::patch('/roles-permisos/{role}', [RolePermissionController::class, 'update'])
+            ->middleware('permission:roles.update')->name('roles.update');
+        Route::post('/roles-permisos/{role}/restaurar', [RolePermissionController::class, 'reset'])
+            ->middleware('permission:roles.update')->name('roles.reset');
+        Route::get('/auditoria', [AuditLogController::class, 'index'])
+            ->middleware('permission:audit.view')->name('audit.index');
+        Route::get('/auditoria/exportar', [AuditLogController::class, 'export'])
+            ->middleware('permission:audit.export')->name('audit.export');
+        Route::get('/auditoria/{audit}', [AuditLogController::class, 'show'])
+            ->middleware('permission:audit.view')->name('audit.show');
     });
 
     Route::prefix('admin/mini-tienda')->name('admin.store.')->middleware('permission:store.view')->group(function () {
