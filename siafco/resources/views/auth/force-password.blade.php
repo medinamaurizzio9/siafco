@@ -9,15 +9,8 @@
             <form class="mt-5 grid gap-4" method="post" action="{{ route('password.force.update') }}">
                 @csrf
                 @method('PATCH')
-                <label class="grid gap-2 text-sm font-bold text-slate-700">
-                    Nueva contraseña
-                    <input class="form-input" type="password" name="password" required minlength="8" autocomplete="new-password">
-                    @error('password')<span class="text-sm text-red-700">{{ $message }}</span>@enderror
-                </label>
-                <label class="grid gap-2 text-sm font-bold text-slate-700">
-                    Confirmar nueva contraseña
-                    <input class="form-input" type="password" name="password_confirmation" required minlength="8" autocomplete="new-password">
-                </label>
+                <x-password-input name="password" label="Nueva contraseña" autocomplete="new-password" minlength="8" />
+                <x-password-input name="password_confirmation" label="Confirmar nueva contraseña" autocomplete="new-password" minlength="8" />
                 <p class="text-sm text-slate-500">Usa al menos 8 caracteres, incluyendo letras y números.</p>
                 <button class="btn-primary mt-2 py-3" type="submit">GUARDAR NUEVA CONTRASEÑA</button>
             </form>

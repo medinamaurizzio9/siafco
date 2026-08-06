@@ -16,7 +16,7 @@ class RestrictPendingAffiliateAccess
         if (
             $affiliate
             && $affiliate->status !== 'activo'
-            && ! $request->routeIs('affiliate.panel', 'affiliate.profile.*', 'password.force.*', 'logout', 'payments.proof')
+            && ! $request->routeIs('affiliate.panel', 'affiliate.profile.*', 'password.force.*', 'logout', 'logout.confirm', 'payments.proof')
         ) {
             return redirect()->route('affiliate.panel')
                 ->with('status', 'Tu acceso está limitado al seguimiento mientras Secretaría revisa tu afiliación.');

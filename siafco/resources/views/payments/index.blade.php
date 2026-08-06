@@ -40,7 +40,24 @@
         <button class="btn-secondary">Filtrar</button>
     </form>
 
-    <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
+    <div class="mobile-card-list">
+        @forelse($payments as $payment)
+            <article class="mobile-list-card">
+                <h2 class="mobile-list-card__title">{{ $payment->affiliate?->full_name ?? 'Afiliado no disponible' }}</h2>
+                <p class="mobile-list-card__meta">{{ $payment->affiliate?->registration_number ?: $payment->affiliate?->ci }} · {{ $payment->source ?: 'web' }}</p>
+                <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div><span class="text-slate-500">Monto</span><strong class="block">{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</strong></div>
+                    <div><span class="text-slate-500">Metodo</span><strong class="block">{{ ucfirst((string) $payment->payment_method) }}</strong></div>
+                    <div class="col-span-2"><x-affiliation-status :status="$payment->status" size="sm" /></div>
+                </div>
+                <a class="btn-secondary mt-4 min-h-12 w-full" href="{{ route('payments.show', $payment) }}">Ver</a>
+            </article>
+        @empty
+            <p class="mobile-list-card text-slate-600">Sin pagos registrados.</p>
+        @endforelse
+    </div>
+
+    <div class="desktop-table overflow-hidden rounded-lg border border-slate-200 bg-white">
         <div class="overflow-x-auto">
             <table class="table">
                 <thead><tr><th>Afiliado</th><th>Monto</th><th>Metodo</th><th>Referencia</th><th>Origen</th><th>Estado</th><th>Acciones</th></tr></thead>
