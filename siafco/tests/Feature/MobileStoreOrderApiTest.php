@@ -12,12 +12,14 @@ use App\Models\StoreCoupon;
 use App\Models\StoreCouponUsage;
 use App\Models\StoreOrder;
 use App\Models\StoreProduct;
+use App\Models\StoreProductImage;
 use App\Models\User;
 use App\Support\StoreAvailabilityStatus;
 use App\Support\StoreDeliveryMethod;
 use App\Support\StoreOrderStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -120,6 +122,46 @@ class MobileStoreOrderApiTest extends TestCase
             ->assertJsonPath('success', false);
     }
 
+    public function test_order_detail_items_include_nullable_primary_image_url(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('store/products/joya.jpg', 'fake-image');
+
+        $affiliate = $this->affiliate();
+        $withImage = $this->product(['name' => 'JOYA CONVENIO']);
+        $withoutImage = $this->product(['name' => 'JOUA JUVENIL']);
+        StoreProductImage::create([
+            'store_product_id' => $withImage->id,
+            'path' => 'store/products/joya.jpg',
+            'is_primary' => true,
+            'order' => 1,
+        ]);
+
+        Sanctum::actingAs($affiliate->user);
+
+        $code = $this->withHeader('Idempotency-Key', (string) Str::uuid())->postJson('/api/mobile/v1/store/orders', [
+            'items' => [
+                ['product_public_code' => $withImage->public_code, 'quantity' => 1],
+                ['product_public_code' => $withoutImage->public_code, 'quantity' => 1],
+            ],
+            'delivery_method' => StoreDeliveryMethod::PICKUP,
+        ])->assertCreated()->json('data.order.code');
+
+        $response = $this->getJson("/api/mobile/v1/store/orders/{$code}");
+
+        $response->assertOk()
+            ->assertJsonPath('data.order.items.0.name', 'JOYA CONVENIO')
+            ->assertJsonPath('data.order.items.1.name', 'JOUA JUVENIL')
+            ->assertJsonPath('data.order.items.1.primary_image_url', null)
+            ->assertJsonMissingPath('data.order.items.0.id')
+            ->assertJsonMissingPath('data.order.items.0.store_product_id');
+
+        $this->assertStringContainsString(
+            '/storage/store/products/joya.jpg?v=',
+            $response->json('data.order.items.0.primary_image_url')
+        );
+    }
+
     public function test_attention_only_returns_old_pending_orders_before_pagination(): void
     {
         $owner = $this->affiliate();
@@ -213,11 +255,11 @@ class MobileStoreOrderApiTest extends TestCase
         return Affiliate::create(['person_id' => $person->id, 'user_id' => $user->id, 'sector_id' => $sector->id, 'affiliation_plan_id' => $plan->id, 'full_name' => $person->full_name, 'ci' => $person->ci, 'email' => $person->email, 'registration_number' => fake()->unique()->bothify('REG-#####'), 'verification_token' => fake()->uuid(), 'status' => 'activo']);
     }
 
-    private function product(): StoreProduct
+    private function product(array $overrides = []): StoreProduct
     {
         $category = StoreCategory::create(['name' => fake()->unique()->word(), 'slug' => fake()->unique()->slug(), 'active' => true]);
 
-        return StoreProduct::create(['store_category_id' => $category->id, 'sku' => fake()->unique()->bothify('SKU-###'), 'slug' => fake()->unique()->slug(), 'name' => 'Producto Pedido', 'regular_price' => 100, 'affiliate_price' => 80, 'availability_status' => StoreAvailabilityStatus::AVAILABLE, 'delivery_modes' => [StoreDeliveryMethod::PICKUP], 'max_quantity_per_order' => 10, 'active' => true]);
+        return StoreProduct::create(array_merge(['store_category_id' => $category->id, 'sku' => fake()->unique()->bothify('SKU-###'), 'slug' => fake()->unique()->slug(), 'name' => 'Producto Pedido', 'regular_price' => 100, 'affiliate_price' => 80, 'availability_status' => StoreAvailabilityStatus::AVAILABLE, 'delivery_modes' => [StoreDeliveryMethod::PICKUP], 'max_quantity_per_order' => 10, 'active' => true], $overrides));
     }
 
     private function orderFor(Affiliate $affiliate, string $status, \DateTimeInterface $createdAt): StoreOrder

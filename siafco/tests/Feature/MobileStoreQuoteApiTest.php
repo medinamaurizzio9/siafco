@@ -86,6 +86,44 @@ class MobileStoreQuoteApiTest extends TestCase
             ->assertJsonStructure(['errors' => ['total']]);
     }
 
+    public function test_delivery_destinations_include_department_rates_without_prices(): void
+    {
+        $affiliate = $this->affiliate();
+        StoreShippingRate::create(['scope' => StoreShippingRate::SCOPE_DEPARTMENT, 'department' => 'LA PAZ', 'amount' => 20, 'currency' => 'BOB', 'active' => true]);
+        Sanctum::actingAs($affiliate->user);
+
+        $this->getJson('/api/mobile/v1/store/delivery-destinations')
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.0.department', 'LA PAZ')
+            ->assertJsonPath('data.0.cities', [])
+            ->assertJsonMissingPath('data.0.amount')
+            ->assertJsonMissingPath('data.0.currency');
+    }
+
+    public function test_delivery_destinations_group_cities_and_zones_without_duplicates(): void
+    {
+        $affiliate = $this->affiliate();
+        StoreShippingRate::create(['scope' => StoreShippingRate::SCOPE_CITY, 'department' => 'LA PAZ', 'city' => 'LA PAZ', 'amount' => 18, 'currency' => 'BOB', 'active' => true]);
+        StoreShippingRate::create(['scope' => StoreShippingRate::SCOPE_CITY, 'department' => 'LA PAZ', 'city' => 'EL ALTO', 'amount' => 18, 'currency' => 'BOB', 'active' => true]);
+        StoreShippingRate::create(['scope' => StoreShippingRate::SCOPE_ZONE, 'department' => 'LA PAZ', 'city' => 'LA PAZ', 'zone' => 'SOPOCACHI', 'amount' => 12, 'currency' => 'BOB', 'active' => true]);
+        StoreShippingRate::create(['scope' => StoreShippingRate::SCOPE_ZONE, 'department' => 'LA PAZ', 'city' => 'LA PAZ', 'zone' => 'SOPOCACHI', 'amount' => 10, 'currency' => 'BOB', 'active' => true, 'priority' => 5]);
+        StoreShippingRate::create(['scope' => StoreShippingRate::SCOPE_ZONE, 'department' => 'SANTA CRUZ', 'city' => 'SANTA CRUZ DE LA SIERRA', 'zone' => 'EQUIPETROL', 'amount' => 20, 'currency' => 'BOB', 'active' => false]);
+        Sanctum::actingAs($affiliate->user);
+
+        $response = $this->getJson('/api/mobile/v1/store/delivery-destinations');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.department', 'LA PAZ')
+            ->assertJsonPath('data.0.cities.0.city', 'EL ALTO')
+            ->assertJsonPath('data.0.cities.1.city', 'LA PAZ')
+            ->assertJsonPath('data.0.cities.1.zones.0.zone', 'SOPOCACHI')
+            ->assertJsonCount(1, 'data.0.cities.1.zones')
+            ->assertJsonMissing(['department' => 'SANTA CRUZ'])
+            ->assertJsonMissingPath('data.0.cities.0.amount');
+    }
+
     private function affiliate(): Affiliate
     {
         $sector = Sector::create(['name' => fake()->unique()->word(), 'code' => fake()->unique()->bothify('SEC-###'), 'is_active' => true]);

@@ -5,9 +5,9 @@ namespace App\Http\Resources\Api\Mobile\V1;
 use App\Models\StoreProduct;
 use App\Services\Store\StoreMoney;
 use App\Support\StoreAvailabilityStatus;
+use App\Support\StoreProductImages;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class StoreProductResource extends JsonResource
 {
@@ -15,10 +15,6 @@ class StoreProductResource extends JsonResource
     {
         /** @var StoreProduct $product */
         $product = $this->resource;
-        $primaryImage = $product->relationLoaded('images')
-            ? $product->images->sortBy([['is_primary', 'desc'], ['order', 'asc']])->first()
-            : null;
-
         return [
             'public_code' => $product->public_code,
             'slug' => $product->slug,
@@ -35,7 +31,7 @@ class StoreProductResource extends JsonResource
             'delivery_modes' => $product->delivery_modes ?? [],
             'featured' => (bool) $product->featured,
             'max_quantity_per_order' => $product->max_quantity_per_order,
-            'primary_image_url' => $this->imageUrl($primaryImage?->path),
+            'primary_image_url' => StoreProductImages::primaryImageUrl($product),
             'category' => $product->category ? [
                 'slug' => $product->category->slug,
                 'name' => $product->category->name,
@@ -44,7 +40,7 @@ class StoreProductResource extends JsonResource
                 'can_order' => $product->availability_status === StoreAvailabilityStatus::AVAILABLE,
             ],
             'images' => $this->whenLoaded('images', fn () => $product->images->sortBy('order')->values()->map(fn ($image) => [
-                'url' => $this->imageUrl($image->path),
+                'url' => StoreProductImages::publicUrl($image->path),
                 'alt' => $image->alt,
                 'is_primary' => (bool) $image->is_primary,
             ])->all()),
@@ -79,12 +75,4 @@ class StoreProductResource extends JsonResource
             && (! $product->promo_ends_at || $product->promo_ends_at->gte(now()));
     }
 
-    private function imageUrl(?string $path): ?string
-    {
-        if (! $path || ! Storage::disk('public')->exists($path)) {
-            return null;
-        }
-
-        return Storage::disk('public')->url($path).'?v='.Storage::disk('public')->lastModified($path);
-    }
 }

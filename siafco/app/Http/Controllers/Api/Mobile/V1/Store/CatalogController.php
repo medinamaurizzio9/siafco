@@ -11,6 +11,7 @@ use App\Http\Responses\MobileApiResponse;
 use App\Models\InstitutionalSetting;
 use App\Models\StoreCategory;
 use App\Models\StoreProduct;
+use App\Models\StoreShippingRate;
 use App\Models\StoreSetting;
 use App\Services\Store\StorePricingService;
 use App\Support\StoreAvailabilityStatus;
@@ -89,6 +90,58 @@ class CatalogController extends Controller
         return MobileApiResponse::success([
             'quote' => StoreQuoteResource::make($quote)->resolve(),
         ], 'Cotizacion calculada.');
+    }
+
+    public function deliveryDestinations()
+    {
+        $rates = StoreShippingRate::query()
+            ->active()
+            ->where(function ($query): void {
+                $query->whereNotNull('department')
+                    ->orWhereNotNull('city')
+                    ->orWhereNotNull('zone');
+            })
+            ->orderBy('department')
+            ->orderBy('city')
+            ->orderBy('zone')
+            ->get(['department', 'city', 'zone']);
+
+        $destinations = $rates
+            ->groupBy('department')
+            ->filter(fn ($rates, $department) => filled($department))
+            ->map(function ($departmentRates, string $department): array {
+                $cities = $departmentRates
+                    ->filter(fn ($rate) => filled($rate->city))
+                    ->groupBy('city')
+                    ->map(function ($cityRates, string $city): array {
+                        $zones = $cityRates
+                            ->pluck('zone')
+                            ->filter()
+                            ->unique()
+                            ->sort()
+                            ->values()
+                            ->map(fn (string $zone): array => ['zone' => $zone])
+                            ->all();
+
+                        return [
+                            'city' => $city,
+                            'zones' => $zones,
+                        ];
+                    })
+                    ->sortKeys()
+                    ->values()
+                    ->all();
+
+                return [
+                    'department' => $department,
+                    'cities' => $cities,
+                ];
+            })
+            ->sortKeys()
+            ->values()
+            ->all();
+
+        return MobileApiResponse::success($destinations);
     }
 
     private function productQuery()

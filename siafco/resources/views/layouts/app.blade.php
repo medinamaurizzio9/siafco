@@ -179,7 +179,8 @@
                                 <span>Mini tienda</span><span class="nav-chevron">⌄</span>
                             </button>
                             <div class="nav-module-panel {{ $openModule === 'store' ? '' : 'hidden' }}">
-                                {!! $navLink('admin.store.dashboard', 'Resumen', [], ['admin.store.dashboard']) !!}
+                                {!! $navLink('admin.store.dashboard', 'Dashboard', [], ['admin.store.dashboard']) !!}
+                                {!! $navLink('admin.store.sales.index', 'Ventas', [], ['admin.store.sales.*']) !!}
                                 {!! $navLink('admin.store.orders.index', 'Pedidos', [], ['admin.store.orders.*']) !!}
                                 @if($canManageStoreProducts)
                                     {!! $navLink('admin.store.products.index', 'Productos', [], ['admin.store.products.*']) !!}

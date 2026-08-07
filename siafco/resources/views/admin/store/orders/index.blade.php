@@ -1,4 +1,12 @@
 <x-layouts.app title="Pedidos de tienda">
+    <div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <h2 class="text-2xl font-black text-[#0b1f3a]">Pedidos</h2>
+            <p class="text-sm text-slate-600">Modulo operativo completo: pendientes, pagos en revision, confirmados y entregas.</p>
+        </div>
+        <a class="btn-secondary" href="{{ route('admin.store.sales.index') }}">Ver ventas</a>
+    </div>
+
     <form class="mb-5 grid gap-3 rounded bg-white p-4 shadow md:grid-cols-5" method="get">
         <input class="form-input" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Código o afiliado">
         <select class="form-input" name="status">

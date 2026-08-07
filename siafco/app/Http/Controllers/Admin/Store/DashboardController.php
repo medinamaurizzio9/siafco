@@ -7,12 +7,13 @@ use App\Models\StoreCategory;
 use App\Models\StoreProduct;
 use App\Models\StoreSetting;
 use App\Models\StoreShippingRate;
+use App\Services\Store\StoreAdminReportService;
 use App\Support\StoreAvailabilityStatus;
 use Illuminate\Support\Facades\Gate;
 
 class DashboardController extends Controller
 {
-    public function __invoke()
+    public function __invoke(StoreAdminReportService $reports)
     {
         Gate::authorize('store.view');
 
@@ -25,6 +26,8 @@ class DashboardController extends Controller
                 'sold_out_products' => StoreProduct::query()->where('availability_status', StoreAvailabilityStatus::SOLD_OUT)->count(),
                 'active_shipping_rates' => StoreShippingRate::query()->active()->count(),
             ],
+            'storeMetrics' => $reports->dashboard(),
+            'recentOrders' => $reports->recentOrders(),
         ]);
     }
 }

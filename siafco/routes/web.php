@@ -40,6 +40,7 @@ use App\Http\Controllers\Admin\Store\OrderReceiptController as StoreAdminOrderRe
 use App\Http\Controllers\Admin\Store\ProductController as StoreProductController;
 use App\Http\Controllers\Admin\Store\ProductVariantController as StoreProductVariantController;
 use App\Http\Controllers\Admin\Store\ProductImageController as StoreProductImageController;
+use App\Http\Controllers\Admin\Store\SalesController as StoreSalesController;
 use App\Http\Controllers\Admin\Store\ShippingRateController as StoreShippingRateController;
 use App\Http\Controllers\Investments\DashboardController as InvestmentDashboardController;
 use App\Http\Controllers\Investments\InvestmentLotController;
@@ -322,6 +323,7 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
 
     Route::prefix('admin/mini-tienda')->name('admin.store.')->middleware('permission:store.view')->group(function () {
         Route::get('/', StoreDashboardController::class)->name('dashboard');
+        Route::get('ventas', [StoreSalesController::class, 'index'])->name('sales.index');
         Route::get('pedidos', [StoreOrderController::class, 'index'])->name('orders.index');
         Route::get('pedidos/{order:code}', [StoreOrderController::class, 'show'])->name('orders.show');
         Route::patch('pedidos/{order:code}/estado', [StoreOrderController::class, 'updateStatus'])->name('orders.status');

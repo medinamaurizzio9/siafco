@@ -52,6 +52,9 @@ Route::prefix('mobile/v1')->name('api.mobile.v1.')->group(function () {
             Route::get('/', [MobileStoreCatalogController::class, 'index'])
                 ->middleware('throttle:60,1')
                 ->name('index');
+            Route::get('/delivery-destinations', [MobileStoreCatalogController::class, 'deliveryDestinations'])
+                ->middleware('throttle:60,1')
+                ->name('delivery-destinations.index');
             Route::get('/products/{productPublicCode}', [MobileStoreCatalogController::class, 'show'])
                 ->middleware('throttle:60,1')
                 ->name('products.show');

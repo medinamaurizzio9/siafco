@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\Mobile\V1;
 
+use App\Support\StoreProductImages;
 use Illuminate\Http\Request;
 
 class StoreOrderResource extends StoreOrderSummaryResource
@@ -28,6 +29,9 @@ class StoreOrderResource extends StoreOrderSummaryResource
                 'quantity' => $item->quantity,
                 'discount_total' => $item->discount_total,
                 'line_total' => $item->line_total,
+                'primary_image_url' => StoreProductImages::primaryImageUrl(
+                    $item->relationLoaded('product') ? $item->product : null
+                ),
             ])->all(),
             'subtotal' => $order->subtotal,
             'discount_total' => $order->discount_total,

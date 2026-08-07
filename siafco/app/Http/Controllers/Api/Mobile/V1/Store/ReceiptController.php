@@ -18,7 +18,7 @@ class ReceiptController extends Controller
     public function store(StoreReceiptRequest $request, string $orderCode, StoreReceiptService $receipts)
     {
         $order = StoreOrder::query()
-            ->with(['items', 'receipts', 'statusHistories'])
+            ->with(['items.product.images', 'receipts', 'statusHistories'])
             ->where('code', $orderCode)
             ->where('affiliate_id', $request->user()->affiliate->id)
             ->first();
@@ -34,7 +34,7 @@ class ReceiptController extends Controller
             return MobileApiResponse::error('La clave de idempotencia ya fue utilizada con otro contenido.', 409);
         }
         if ($existing) {
-            $order->refresh()->load(['items', 'receipts', 'statusHistories']);
+            $order->refresh()->load(['items.product.images', 'receipts', 'statusHistories']);
 
             return MobileApiResponse::success([
                 'order' => StoreOrderResource::make($order)->resolve(),
@@ -60,7 +60,7 @@ class ReceiptController extends Controller
             return $receipt;
         });
 
-        $order->refresh()->load(['items', 'receipts', 'statusHistories']);
+        $order->refresh()->load(['items.product.images', 'receipts', 'statusHistories']);
 
         return MobileApiResponse::success([
             'order' => StoreOrderResource::make($order)->resolve(),
