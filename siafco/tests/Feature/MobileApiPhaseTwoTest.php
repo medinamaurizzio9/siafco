@@ -269,6 +269,54 @@ class MobileApiPhaseTwoTest extends TestCase
             ->assertJsonMissing(['request_code' => $secondRequest->request_code]);
     }
 
+    public function test_affiliation_request_exposes_configured_payment_qr_url(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('institutional/payment/payment-qr.png', 'qr-image');
+        $setting = InstitutionalSetting::current();
+        $setting->update([
+            'payment_qr_path' => 'institutional/payment/payment-qr.png',
+            'payment_bank' => 'Banco Mercantil',
+            'payment_holder' => 'Cooperativa Tierra Bendita',
+            'payment_account' => '123456789',
+            'phone' => '70000000',
+        ]);
+        InstitutionalSetting::clearCurrentCache();
+        [$user] = $this->application();
+
+        $this->withToken($this->tokenFor($user))
+            ->getJson('/api/mobile/v1/me/affiliation-request')
+            ->assertOk()
+            ->assertJsonPath('data.affiliation_request.payment_instructions.bank', 'Banco Mercantil')
+            ->assertJsonPath('data.affiliation_request.payment_instructions.holder', 'Cooperativa Tierra Bendita')
+            ->assertJsonPath('data.affiliation_request.payment_instructions.account', '123456789')
+            ->assertJsonPath('data.affiliation_request.payment_instructions.support_phone', '70000000')
+            ->assertJsonPath(
+                'data.affiliation_request.payment_instructions.qr_url',
+                InstitutionalSetting::current()->paymentQrUrl()
+            );
+    }
+
+    public function test_affiliation_request_keeps_payment_qr_url_nullable_when_missing(): void
+    {
+        Storage::fake('public');
+        $setting = InstitutionalSetting::current();
+        $setting->update([
+            'payment_qr_path' => 'institutional/payment/missing.png',
+            'payment_bank' => 'Banco Mercantil',
+            'phone' => null,
+        ]);
+        InstitutionalSetting::clearCurrentCache();
+        [$user] = $this->application();
+
+        $this->withToken($this->tokenFor($user))
+            ->getJson('/api/mobile/v1/me/affiliation-request')
+            ->assertOk()
+            ->assertJsonPath('data.affiliation_request.payment_instructions.bank', 'Banco Mercantil')
+            ->assertJsonPath('data.affiliation_request.payment_instructions.qr_url', null)
+            ->assertJsonPath('data.affiliation_request.payment_instructions.support_phone', null);
+    }
+
     public function test_blocked_or_internal_token_cannot_access_affiliation_request(): void
     {
         [$user] = $this->application('pending_payment', 'suspendido');
@@ -301,7 +349,8 @@ class MobileApiPhaseTwoTest extends TestCase
             ->assertJsonPath('data.idempotent', false)
             ->assertJsonPath('data.affiliation_request.status', 'payment_submitted')
             ->assertJsonPath('data.affiliation_request.payment.status', 'pending')
-            ->assertJsonPath('data.affiliation_request.payment.has_receipt', true);
+            ->assertJsonPath('data.affiliation_request.payment.has_receipt', true)
+            ->assertJsonPath('data.affiliation_request.capabilities.can_submit_payment', false);
 
         $payment = AffiliationPayment::firstOrFail();
         Storage::disk('local')->assertExists($payment->voucher_path);

@@ -255,7 +255,7 @@
                             <h4 class="mobile-list-card__title">{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</h4>
                             <p class="mobile-list-card__meta">{{ $payment->transaction_number ?: 'Pendiente' }}</p>
                         </div>
-                        <x-affiliation-status :status="$payment->status" size="sm" />
+                        <x-payment-status :status="$payment->status" size="sm" />
                     </div>
                     <a class="btn-secondary mt-4 min-h-12 w-full" href="{{ route('payments.show', $payment) }}">Ver</a>
                 </article>
@@ -271,7 +271,7 @@
                     <tr>
                         <td>{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</td>
                         <td>{{ $payment->transaction_number ?: 'Pendiente' }}</td>
-                        <td><x-affiliation-status :status="$payment->status" size="sm" /></td>
+                        <td><x-payment-status :status="$payment->status" size="sm" /></td>
                         <td>
                             <a class="btn-secondary" href="{{ route('payments.show', $payment) }}">Ver</a>
                             @if(auth()->user()->hasPermission('payments.confirm') && \App\Support\PaymentStatus::isEditable($payment->status))
@@ -330,10 +330,20 @@
                     <thead><tr><th>Accion</th><th>Fecha</th><th>Detalle</th></tr></thead>
                     <tbody>
                     @forelse($auditLogs as $log)
+                        @php($origin = \App\Support\AuditLogPresenter::origin($log))
                         <tr>
-                            <td>{{ $log->action }}</td>
+                            <td>{{ \App\Support\AuditLogPresenter::actionLabel($log->action) }}</td>
                             <td>{{ $log->created_at?->format('d/m/Y H:i') }}</td>
-                            <td class="max-w-lg truncate">{{ json_encode(collect($log->metadata ?? [])->except(['password', 'token', 'verification_token', 'qr'])->all(), JSON_UNESCAPED_UNICODE) }}</td>
+                            <td class="max-w-lg">
+                                <p class="font-semibold text-slate-800">{{ \App\Support\AuditLogPresenter::detail($log) }}</p>
+                                @if($origin)
+                                    <p class="mt-1 text-sm text-slate-600">Origen: {{ $origin }}</p>
+                                @endif
+                                <details class="mt-2 rounded border border-slate-200 bg-slate-50 p-2 text-left text-xs text-slate-700">
+                                    <summary class="cursor-pointer font-bold text-[#0b1f3a]">Ver detalle tecnico</summary>
+                                    <pre class="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words">{{ \App\Support\AuditLogPresenter::technicalJson($log) }}</pre>
+                                </details>
+                            </td>
                         </tr>
                     @empty
                         <tr><td colspan="3">Sin registros de auditoria.</td></tr>

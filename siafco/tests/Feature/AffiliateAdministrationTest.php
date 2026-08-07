@@ -216,6 +216,54 @@ class AffiliateAdministrationTest extends TestCase
             ->assertDontSee('secret-token');
     }
 
+    public function test_affiliate_detail_presents_payment_timeline_and_audit_statuses_separately(): void
+    {
+        [, $affiliate] = $this->affiliate();
+        $admin = $this->internalUser('gerente');
+        $payment = AffiliationPayment::create([
+            'affiliate_id' => $affiliate->id,
+            'amount' => 100,
+            'paid_amount' => 100,
+            'currency' => 'BOB',
+            'transaction_number' => 'TX-CONFIRMADO',
+            'status' => 'confirmed',
+        ]);
+        $this->credential($affiliate);
+        $audit = AuditLog::create([
+            'user_id' => $admin->id,
+            'action' => 'affiliate_activated',
+            'auditable_type' => Affiliate::class,
+            'auditable_id' => $affiliate->id,
+            'metadata' => [
+                'payment_id' => $payment->id,
+                'user_agent' => 'Mozilla/5.0 admin-test',
+            ],
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('affiliates.show', $affiliate));
+
+        $response->assertOk()
+            ->assertSee('Estado del pago')
+            ->assertSee('Confirmado')
+            ->assertSee('Estado de afiliacion')
+            ->assertSee('Afiliado activo')
+            ->assertSee('Credencial')
+            ->assertSee('Generada')
+            ->assertSee('Afiliado activado')
+            ->assertSee('Pago relacionado: #'.$payment->id)
+            ->assertSee('Origen: Panel administrativo')
+            ->assertSee('Ver detalle tecnico')
+            ->assertSee('user_agent')
+            ->assertSee('Mozilla/5.0 admin-test');
+
+        $html = $response->getContent();
+        $this->assertMatchesRegularExpression('/<td>TX-CONFIRMADO<\/td>\s*<td>.*?Confirmado.*?<\/td>/s', $html);
+        $this->assertDoesNotMatchRegularExpression('/<td>TX-CONFIRMADO<\/td>\s*<td>.*?Afiliado activo.*?<\/td>/s', $html);
+        $this->assertSame('affiliate_activated', $audit->fresh()->action);
+        $this->assertSame($payment->id, $audit->fresh()->metadata['payment_id']);
+        $this->assertSame('Mozilla/5.0 admin-test', $audit->fresh()->metadata['user_agent']);
+    }
+
     private function affiliate(string $email = 'affiliate-admin@test.local'): array
     {
         $person = Person::create(['full_name' => 'AFILIADO ADMIN', 'ci' => Str::random(8), 'email' => $email]);

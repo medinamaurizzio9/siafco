@@ -48,12 +48,27 @@ class AffiliationRequestResource extends JsonResource
                 'holder' => $institution->payment_holder,
                 'account' => $institution->payment_account,
                 'instructions' => $this->plan?->payment_instructions ?: $institution->payment_instructions,
+                'qr_url' => $institution->paymentQrUrl(),
+                'support_phone' => $institution->phone,
             ],
             'capabilities' => [
-                'can_submit_payment' => ! $payment || PaymentStatus::isRejected($payment->status) || in_array($this->status, ['pending_payment', 'payment_submitted', 'rejected'], true),
+                'can_submit_payment' => $this->canSubmitPayment($payment?->status),
                 'can_login' => true,
                 'can_view_credential' => $this->affiliate?->status === 'activo',
             ],
         ];
+    }
+
+    private function canSubmitPayment(?string $paymentStatus): bool
+    {
+        if ($this->status === 'payment_submitted') {
+            return false;
+        }
+
+        if (in_array($paymentStatus, [...PaymentStatus::pendingValues(), PaymentStatus::UNDER_REVIEW], true)) {
+            return false;
+        }
+
+        return $paymentStatus === null || PaymentStatus::isRejected($paymentStatus) || in_array($this->status, ['pending_payment', 'rejected'], true);
     }
 }

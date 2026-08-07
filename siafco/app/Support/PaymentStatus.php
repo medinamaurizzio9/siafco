@@ -58,6 +58,18 @@ class PaymentStatus
         };
     }
 
+    public static function badgeClasses(?string $status): string
+    {
+        return match ($status) {
+            self::PENDING, 'pendiente' => 'bg-amber-100 text-amber-800',
+            self::UNDER_REVIEW => 'bg-sky-100 text-sky-800',
+            self::CONFIRMED, 'confirmado' => 'bg-emerald-100 text-emerald-800',
+            self::REJECTED, 'rechazado' => 'bg-red-100 text-red-800',
+            self::VOIDED, 'anulado' => 'bg-slate-200 text-slate-700',
+            default => 'bg-slate-100 text-slate-700',
+        };
+    }
+
     public static function isEditable(?string $status): bool
     {
         return in_array($status, self::editableValues(), true);
