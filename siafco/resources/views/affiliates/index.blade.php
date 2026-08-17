@@ -8,7 +8,7 @@
             @endforeach
         </select>
         <button class="btn-secondary">Filtrar</button>
-        @if(auth()->user()->hasRole(['administrador','administrador_sector','secretaria']))
+        @if(auth()->user()->hasRole(['superadministrador','administrador','administrador_sector','secretaria']))
             <a class="btn-primary" href="{{ route('affiliates.create') }}">Nuevo afiliado</a>
         @endif
     </form>

@@ -68,7 +68,7 @@
                 @endcan
                 <a class="btn-secondary mt-3 w-full" href="{{ route('verify.show', $affiliate->verification_token) }}" target="_blank">Verificar publico</a>
             @else
-                @if(auth()->user()->hasRole(['administrador','secretaria']))
+                @if(auth()->user()->hasRole(['superadministrador','administrador','secretaria']))
                     <a class="btn-primary mt-4 w-full" href="{{ route('credenciales.show', $affiliate) }}">Ver credencial completa</a>
                 @endif
             @endif

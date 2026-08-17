@@ -15,17 +15,17 @@
     @auth
         @php
             $user = auth()->user();
-            $canManageAffiliation = $user->hasRole(['administrador', 'administrador_sector', 'secretaria']);
+            $canManageAffiliation = $user->hasRole(['superadministrador', 'administrador', 'administrador_sector', 'secretaria']);
             $canManagePaymentQr = $user->hasRole(['administrador', 'superadministrador', 'secretaria']);
             $canViewAffiliation = $user->hasPermission('affiliates.view') || $user->hasPermission('payments.view') || $user->hasPermission('credentials.view') || $user->hasPermission('reports.view');
-            $canManageInvestments = $user->hasRole(['administrador', 'caja', 'cajero', 'contabilidad']);
-            $canViewCredits = $user->hasRole(['administrador', 'administrador_sector', 'secretaria', 'cajero', 'caja', 'contabilidad', 'consulta']);
+            $canManageInvestments = $user->hasRole(['superadministrador', 'administrador', 'caja', 'cajero', 'contabilidad']);
+            $canViewCredits = $user->hasRole(['superadministrador', 'administrador', 'administrador_sector', 'secretaria', 'cajero', 'caja', 'contabilidad', 'consulta']);
             $canManageUsers = $user->isInternal() && $user->hasPermission('users.view');
             $canViewRoles = $user->isInternal() && $user->hasPermission('roles.view');
             $canViewAudit = $user->isInternal() && $user->hasPermission('audit.view');
             $canViewDashboard = $user->hasPermission('dashboard.view');
             $canAdmin = $canManageUsers || $canViewRoles || $canViewAudit;
-            $canGeneralSettings = $user->hasRole(['administrador', 'secretaria']);
+            $canGeneralSettings = $user->hasRole(['superadministrador', 'administrador', 'secretaria']);
             $canViewStore = $user->isInternal() && $user->hasPermission('store.view');
             $canManageStoreProducts = $user->isInternal() && $user->hasPermission('store.manage-products');
             $canManageStoreSettings = $user->isInternal() && $user->hasPermission('store.manage-settings');

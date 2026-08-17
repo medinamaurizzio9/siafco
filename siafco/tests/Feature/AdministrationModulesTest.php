@@ -100,6 +100,23 @@ class AdministrationModulesTest extends TestCase
         $this->actingAs($legacy)->get(route('administration.roles.index'))->assertOk();
     }
 
+    public function test_super_administrator_sees_legacy_administrator_sidebar_modules(): void
+    {
+        $super = $this->internalUser('superadministrador');
+
+        $this->actingAs($super)->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Afiliacion')
+            ->assertSee('Solicitudes publicas')
+            ->assertSee('Accionistas e inversiones')
+            ->assertSee('Creditos')
+            ->assertSee('Configuracion general')
+            ->assertSee('Usuarios internos')
+            ->assertSee('Roles y permisos')
+            ->assertSee('Auditoria')
+            ->assertSee('Mini tienda');
+    }
+
     public function test_secretary_and_cashier_keep_expected_safe_matrices(): void
     {
         $secretary = $this->internalUser('secretaria');
