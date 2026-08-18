@@ -72,6 +72,65 @@ class PublicAffiliationTest extends TestCase
         $this->assertSame([600, 600], [$width, $height]);
     }
 
+    public function test_public_affiliation_accepts_optional_position_and_institution(): void
+    {
+        Storage::fake('public');
+        [$sector, $plan] = $this->catalog();
+
+        $this->post(route('public-affiliation.store'), $this->form($sector, $plan, [
+            'position' => null,
+            'institution' => null,
+        ]))->assertRedirect();
+
+        $affiliate = Affiliate::firstOrFail();
+        $this->assertNull($affiliate->position);
+        $this->assertNull($affiliate->institution);
+    }
+
+    public function test_public_affiliation_accepts_missing_position(): void
+    {
+        Storage::fake('public');
+        [$sector, $plan] = $this->catalog();
+        $payload = $this->form($sector, $plan, ['institution' => 'Hospital Central']);
+        unset($payload['position']);
+
+        $this->post(route('public-affiliation.store'), $payload)->assertRedirect();
+
+        $affiliate = Affiliate::firstOrFail();
+        $this->assertNull($affiliate->position);
+        $this->assertSame('HOSPITAL CENTRAL', $affiliate->institution);
+    }
+
+    public function test_public_affiliation_accepts_missing_institution(): void
+    {
+        Storage::fake('public');
+        [$sector, $plan] = $this->catalog();
+        $payload = $this->form($sector, $plan, ['position' => 'Médica']);
+        unset($payload['institution']);
+
+        $this->post(route('public-affiliation.store'), $payload)->assertRedirect();
+
+        $affiliate = Affiliate::firstOrFail();
+        $this->assertSame('MÉDICA', $affiliate->position);
+        $this->assertNull($affiliate->institution);
+    }
+
+    public function test_public_affiliation_create_and_login_entrypoint_are_public(): void
+    {
+        $this->get(route('public-affiliation.create'))
+            ->assertOk()
+            ->assertSee('Solicitud de afiliación')
+            ->assertSee('Cargo o profesión')
+            ->assertSee('(opcional)')
+            ->assertSee('Institución');
+
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('¿Aún no estás afiliado?')
+            ->assertSee('Crear afiliación')
+            ->assertSee(route('public-affiliation.create'), false);
+    }
+
     public function test_reuses_existing_investor_person_and_does_not_expose_private_data_in_status(): void
     {
         Storage::fake('public');

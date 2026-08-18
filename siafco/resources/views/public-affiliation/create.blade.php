@@ -50,10 +50,10 @@
                 max="{{ today()->subDay()->format('Y-m-d') }}" />
             <x-forms.select-input name="marital_status" label="Estado civil" :options="$maritalStatuses"
                 :required="true" placeholder="Seleccione su estado civil" />
-            <x-forms.text-input name="position" label="Cargo o profesión" :required="true" :uppercase="true" />
+            <x-forms.text-input name="position" label="Cargo o profesión" :optional="true" :uppercase="true" />
             <x-forms.select-input name="regional" label="Regional" :options="$regionals"
                 :required="true" placeholder="Seleccione la regional" />
-            <x-forms.text-input name="institution" label="Institución" :required="true" :uppercase="true" />
+            <x-forms.text-input name="institution" label="Institución" :optional="true" :uppercase="true" />
 
             <x-forms.photo-cropper />
         </fieldset>

@@ -89,6 +89,17 @@
                 </div>
 
                 <button class="login-submit" type="submit">INGRESAR AL SISTEMA</button>
+
+                <div class="mt-6 border-t border-slate-200/80 pt-4 text-center">
+                    <p class="text-xs font-bold text-slate-500">¿Aún no estás afiliado?</p>
+                    <p class="mt-1 text-xs text-slate-500">Inicia tu solicitud de afiliación en línea.</p>
+                    <a
+                        class="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-lg border border-[#0b1f3a]/25 bg-white/40 px-4 text-xs font-black uppercase tracking-wide text-[#0b1f3a] transition hover:border-[#d8a928] hover:bg-[#fff8df] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b1f3a]"
+                        href="{{ route('public-affiliation.create') }}"
+                    >
+                        Crear afiliación →
+                    </a>
+                </div>
             </form>
         </section>
     </main>
