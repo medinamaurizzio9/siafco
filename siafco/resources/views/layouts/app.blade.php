@@ -16,8 +16,10 @@
         @php
             $user = auth()->user();
             $canManageAffiliation = $user->hasRole(['superadministrador', 'administrador', 'administrador_sector', 'secretaria']);
+            $canRegisterOfficeAffiliation = $user->isInternal() && $user->hasRole(['superadministrador', 'administrador', 'gerente', 'caja', 'cajero']);
+            $canViewCollectionReport = $user->isInternal() && $user->hasRole(['superadministrador', 'administrador', 'gerente', 'caja', 'cajero']);
             $canManagePaymentQr = $user->hasRole(['administrador', 'superadministrador', 'secretaria']);
-            $canViewAffiliation = $user->hasPermission('affiliates.view') || $user->hasPermission('payments.view') || $user->hasPermission('credentials.view') || $user->hasPermission('reports.view');
+            $canViewAffiliation = $canRegisterOfficeAffiliation || $canViewCollectionReport || $user->hasPermission('affiliates.view') || $user->hasPermission('payments.view') || $user->hasPermission('credentials.view') || $user->hasPermission('reports.view');
             $canManageInvestments = $user->hasRole(['superadministrador', 'administrador', 'caja', 'cajero', 'contabilidad']);
             $canViewCredits = $user->hasRole(['superadministrador', 'administrador', 'administrador_sector', 'secretaria', 'cajero', 'caja', 'contabilidad', 'consulta']);
             $canManageUsers = $user->isInternal() && $user->hasPermission('users.view');
@@ -39,7 +41,7 @@
 
             $openModule = match (true) {
                 request()->routeIs('admin.dashboard') => 'home',
-                request()->routeIs('affiliates.*', 'affiliate-benefits.*', 'sectors.*', 'plans.*', 'payments.*', 'credentials.*', 'credenciales.*', 'institutional-qr.*', 'reports.*', 'affiliation.*', 'public-affiliation.admin.*') => 'affiliation',
+                request()->routeIs('affiliates.*', 'affiliate-benefits.*', 'sectors.*', 'plans.*', 'payments.*', 'admin.collections.*', 'admin.payments.*', 'credentials.*', 'credenciales.*', 'institutional-qr.*', 'reports.*', 'affiliation.*', 'public-affiliation.admin.*') => 'affiliation',
                 request()->routeIs('investments.*') && ! request()->routeIs('investments.panel') => 'investments',
                 request()->routeIs('credits.*') => 'credits',
                 request()->routeIs('admin.store.*') => 'store',
@@ -104,6 +106,9 @@
                                 @if($user->hasPermission('affiliates.view'))
                                     {!! $navLink('affiliates.index', 'Afiliados', [], ['affiliates.*']) !!}
                                 @endif
+                                @if($canRegisterOfficeAffiliation)
+                                    {!! $navLink('affiliates.office.create', '+ Afiliacion en oficina', [], ['affiliates.office.*']) !!}
+                                @endif
                                 @if($canManageAffiliation)
                                     {!! $navLink('public-affiliation.admin.index', 'Solicitudes publicas', [], ['public-affiliation.admin.*']) !!}
                                     {!! $navLink('sectors.index', 'Sectores', [], ['sectors.*']) !!}
@@ -112,6 +117,9 @@
                                 @endif
                                 @if($user->hasPermission('payments.view'))
                                     {!! $navLink('payments.index', 'Pagos de afiliacion', [], ['payments.*']) !!}
+                                @endif
+                                @if($canViewCollectionReport)
+                                    {!! $navLink('admin.collections.index', 'Reporte de cobros', [], ['admin.collections.*']) !!}
                                 @endif
                                 @if($user->hasPermission('credentials.view'))
                                     {!! $navLink('credentials.index', 'Credenciales', [], ['credentials.*', 'credenciales.*']) !!}

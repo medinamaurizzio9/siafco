@@ -8,6 +8,9 @@
             @endforeach
         </select>
         <button class="btn-secondary">Filtrar</button>
+        @if(auth()->user()->isInternal() && auth()->user()->hasRole(['superadministrador','administrador','gerente','caja','cajero']))
+            <a class="btn-secondary" href="{{ route('affiliates.office.create') }}">+ Afiliacion en oficina</a>
+        @endif
         @if(auth()->user()->hasRole(['superadministrador','administrador','administrador_sector','secretaria']))
             <a class="btn-primary" href="{{ route('affiliates.create') }}">Nuevo afiliado</a>
         @endif

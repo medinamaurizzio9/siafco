@@ -166,22 +166,31 @@ class PaymentController extends Controller
 
     public function receipt(Request $request, AffiliationPayment $payment, PaymentReceiptService $receipts)
     {
-        abort_unless($request->user()->hasPermission('payments.view_receipt'), 403);
+        abort_unless($this->canViewReceipt($request), 403);
+        abort_unless(PaymentStatus::isConfirmed($payment->status) && filled($payment->receipt_number), 404);
 
         return Response::make($receipts->output($payment), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="recibo-'.$payment->id.'.pdf"',
+            'Content-Disposition' => 'inline; filename="recibo-'.($payment->receipt_number ?: $payment->id).'.pdf"',
         ]);
     }
 
     public function downloadReceipt(Request $request, AffiliationPayment $payment, PaymentReceiptService $receipts)
     {
         abort_unless($request->user()->hasPermission('payments.download_receipt'), 403);
+        abort_unless(PaymentStatus::isConfirmed($payment->status) && filled($payment->receipt_number), 404);
         AuditService::record('payment_receipt_downloaded', $payment, ['receipt_number' => $payment->receipt_number]);
 
         return Response::make($receipts->output($payment), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="recibo-'.$payment->id.'.pdf"',
+            'Content-Disposition' => 'attachment; filename="recibo-'.($payment->receipt_number ?: $payment->id).'.pdf"',
         ]);
+    }
+
+    private function canViewReceipt(Request $request): bool
+    {
+        $user = $request->user();
+
+        return (bool) ($user?->hasPermission('payments.view_receipt') || ($user?->isInternal() && $user->hasRole('caja')));
     }
 }

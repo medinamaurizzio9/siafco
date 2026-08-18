@@ -11,10 +11,13 @@ class PaymentReceiptService
 {
     public function output(AffiliationPayment $payment): string
     {
-        $payment->loadMissing('affiliate', 'registrar', 'cashier');
+        $payment->loadMissing('affiliate.sector', 'affiliate.plan', 'registrar', 'cashier');
 
-        AuditService::record('payment_receipt_generated', $payment, [
+        AuditService::record('receipt_printed', $payment, [
+            'payment_id' => $payment->id,
             'receipt_number' => $payment->receipt_number,
+            'printed_by' => auth()->id(),
+            'printed_at' => now()->toDateTimeString(),
             'status' => $payment->status,
         ]);
 

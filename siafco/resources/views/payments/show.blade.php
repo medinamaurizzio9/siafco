@@ -65,8 +65,8 @@
                     @if(auth()->user()->hasPermission('payments.view_receipt') && $payment->voucher_path)
                         <a class="btn-secondary" href="{{ route('payments.voucher', $payment) }}" target="_blank">Ver comprobante</a>
                     @endif
-                    @if(auth()->user()->hasPermission('payments.view_receipt'))
-                        <a class="btn-secondary" href="{{ route('payments.receipt', $payment) }}" target="_blank">Ver recibo PDF</a>
+                    @if((auth()->user()->hasPermission('payments.view_receipt') || auth()->user()->hasRole('caja')) && \App\Support\PaymentStatus::isConfirmed($payment->status) && $payment->receipt_number)
+                        <a class="btn-secondary" href="{{ route('admin.payments.receipt', $payment) }}" target="_blank">Imprimir recibo</a>
                     @endif
                     @if(auth()->user()->hasPermission('payments.download_receipt'))
                         <a class="btn-secondary" href="{{ route('payments.receipt.download', $payment) }}">Descargar recibo</a>

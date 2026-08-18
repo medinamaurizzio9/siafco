@@ -9,11 +9,13 @@ use App\Http\Controllers\AffiliateProfileController;
 use App\Http\Controllers\AffiliatePasswordController;
 use App\Http\Controllers\AffiliationPlanController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CashCollectionReportController;
 use App\Http\Controllers\CredentialController;
 use App\Http\Controllers\HomeRedirectController;
 use App\Http\Controllers\InstitutionalQrController;
 use App\Http\Controllers\InstitutionalSettingController;
 use App\Http\Controllers\InternalUserController;
+use App\Http\Controllers\OfficeAffiliationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\PublicAffiliationAdminController;
@@ -159,6 +161,22 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         Route::get('/{payment}/recibo/descargar', [PaymentController::class, 'downloadReceipt'])
             ->middleware('permission:payments.download_receipt')->name('receipt.download');
     });
+
+    Route::prefix('admin/afiliaciones/oficina')
+        ->name('affiliates.office.')
+        ->middleware('role:superadministrador,administrador,gerente,caja,cajero')
+        ->group(function () {
+            Route::get('/crear', [OfficeAffiliationController::class, 'create'])->name('create');
+            Route::post('/', [OfficeAffiliationController::class, 'store'])->name('store');
+            Route::get('/{payment}/resumen', [OfficeAffiliationController::class, 'show'])->name('show');
+        });
+
+    Route::get('/admin/cobros', [CashCollectionReportController::class, 'index'])
+        ->middleware('role:superadministrador,administrador,gerente,caja,cajero')
+        ->name('admin.collections.index');
+    Route::get('/admin/cobros/{payment}/recibo', [PaymentController::class, 'receipt'])
+        ->middleware('role:superadministrador,administrador,gerente,caja,cajero,secretaria')
+        ->name('admin.payments.receipt');
 
     Route::get('/dashboard', [HomeRedirectController::class, 'dashboard'])->name('admin.dashboard');
 

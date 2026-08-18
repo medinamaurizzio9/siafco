@@ -4,9 +4,14 @@
             <h2 class="text-2xl font-black text-[#0b1f3a]">Pagos de afiliacion</h2>
             <p class="text-sm text-slate-600">Registro, revision y trazabilidad de pagos administrativos y moviles.</p>
         </div>
-        @if(auth()->user()->hasPermission('payments.create'))
-            <a class="btn-primary" href="{{ route('payments.create') }}">Registrar pago</a>
-        @endif
+        <div class="flex flex-wrap gap-2">
+            @if(auth()->user()->isInternal() && auth()->user()->hasRole(['superadministrador','administrador','gerente','caja','cajero']))
+                <a class="btn-secondary" href="{{ route('admin.collections.index') }}">Reporte de cobros</a>
+            @endif
+            @if(auth()->user()->hasPermission('payments.create'))
+                <a class="btn-primary" href="{{ route('payments.create') }}">Registrar pago</a>
+            @endif
+        </div>
     </div>
 
     <form class="mb-4 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-4">
@@ -85,8 +90,8 @@
                                 @if(auth()->user()->hasPermission('payments.view_receipt') && $payment->voucher_path)
                                     <a class="btn-secondary" href="{{ route('payments.voucher', $payment) }}" target="_blank">Comprobante</a>
                                 @endif
-                                @if(auth()->user()->hasPermission('payments.download_receipt'))
-                                    <a class="btn-secondary" href="{{ route('payments.receipt.download', $payment) }}">Recibo</a>
+                                @if((auth()->user()->hasPermission('payments.view_receipt') || auth()->user()->hasRole('caja')) && \App\Support\PaymentStatus::isConfirmed($payment->status) && $payment->receipt_number)
+                                    <a class="btn-secondary" href="{{ route('admin.payments.receipt', $payment) }}" target="_blank">Imprimir recibo</a>
                                 @endif
                             </div>
                         </td>

@@ -284,6 +284,8 @@ class ManualTreasuryPaymentTest extends TestCase
         $second->save();
 
         $this->actingAs($cashier)->post(route('payments.confirm', $second))->assertRedirect();
+        $this->actingAs($secretary)->get(route('payments.receipt.download', $second))->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
         $this->actingAs($cashier)->post(route('payments.void', $second), [
             'confirmation' => 'ANULAR',
             'void_reason' => 'ERROR',
@@ -297,8 +299,7 @@ class ManualTreasuryPaymentTest extends TestCase
         $this->assertSame('pendiente_pago', $affiliate->fresh()->status);
 
         $this->actingAs($secretary)->get(route('payments.voucher', $payment))->assertOk();
-        $this->actingAs($secretary)->get(route('payments.receipt.download', $payment))->assertOk()
-            ->assertHeader('Content-Type', 'application/pdf');
+        $this->actingAs($secretary)->get(route('payments.receipt.download', $payment))->assertNotFound();
         $this->actingAs($secretary)->get(route('admin.dashboard'))->assertOk()
             ->assertSee('Centro de operaciones')
             ->assertSee('Recaudacion');
