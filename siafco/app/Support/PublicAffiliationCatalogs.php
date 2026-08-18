@@ -24,4 +24,25 @@ final class PublicAffiliationCatalogs
             ['value' => 'PT', 'label' => 'Potosí'],
         ];
     }
+
+    public static function issuedInSelectOptions(): array
+    {
+        return collect(self::issuedInOptions())
+            ->mapWithKeys(fn (array $option) => [$option['value'] => $option['value'].' - '.$option['label']])
+            ->all();
+    }
+
+    public static function regionalOptions(): array
+    {
+        return collect(self::REGIONALS)
+            ->mapWithKeys(fn (string $regional) => [$regional => mb_convert_case($regional, MB_CASE_TITLE, 'UTF-8')])
+            ->all();
+    }
+
+    public static function maritalStatusOptions(): array
+    {
+        return collect(self::MARITAL_STATUSES)
+            ->mapWithKeys(fn (string $status) => [$status => mb_convert_case($status, MB_CASE_TITLE, 'UTF-8')])
+            ->all();
+    }
 }

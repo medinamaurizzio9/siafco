@@ -220,13 +220,14 @@ class AffiliateProfileTest extends TestCase
     {
         $script = file_get_contents(resource_path('js/components/photo-cropper.js'));
 
-        $this->assertStringContainsString('aspectRatio: 1', $script);
+        $this->assertStringContainsString('data-photo-aspect-ratio', file_get_contents(resource_path('views/components/forms/photo-cropper.blade.php')));
+        $this->assertStringContainsString('aspectRatio,', $script);
         $this->assertStringContainsString("dragMode: 'move'", $script);
         $this->assertStringContainsString('cropBoxResizable: true', $script);
         $this->assertStringContainsString('data-crop-zoom', file_get_contents(resource_path('views/components/forms/photo-cropper.blade.php')));
         $this->assertStringContainsString('cropper?.reset()', $script);
-        $this->assertStringContainsString('width: 600', $script);
-        $this->assertStringContainsString('height: 600', $script);
+        $this->assertStringContainsString('width: outputWidth', $script);
+        $this->assertStringContainsString('height: outputHeight', $script);
         $this->assertStringContainsString("'image/jpeg', 0.9", $script);
         $this->assertStringContainsString('new DataTransfer()', $script);
     }

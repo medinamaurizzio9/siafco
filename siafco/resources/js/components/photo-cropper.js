@@ -45,6 +45,9 @@ export function initPhotoCropper(root) {
     const zoom = root.querySelector('[data-crop-zoom]');
     const required = root.dataset.photoRequired === 'true';
     const initialSrc = root.dataset.photoInitial || '';
+    const aspectRatio = Number(root.dataset.photoAspectRatio || 1) || 1;
+    const outputWidth = Number(root.dataset.photoOutputWidth || 600) || 600;
+    const outputHeight = Number(root.dataset.photoOutputHeight || outputWidth) || outputWidth;
     const closeButtons = root.querySelectorAll('[data-crop-close], [data-crop-cancel]');
     let cropper;
     let sourceUrl;
@@ -71,7 +74,7 @@ export function initPhotoCropper(root) {
         document.body.classList.add('overflow-hidden');
         cropper?.destroy();
         cropper = new Cropper(cropImage, {
-            aspectRatio: 1,
+            aspectRatio,
             viewMode: 1,
             dragMode: 'move',
             autoCropArea: 1,
@@ -146,8 +149,8 @@ export function initPhotoCropper(root) {
     confirm.addEventListener('click', () => {
         if (!cropper) return;
         const canvas = cropper.getCroppedCanvas({
-            width: 600,
-            height: 600,
+            width: outputWidth,
+            height: outputHeight,
             fillColor: '#ffffff',
             imageSmoothingEnabled: true,
             imageSmoothingQuality: 'high',
@@ -168,7 +171,7 @@ export function initPhotoCropper(root) {
             edit.classList.remove('hidden');
             change.classList.remove('hidden');
             remove.classList.remove('hidden');
-            details.textContent = `Nueva fotografía seleccionada · 600 × 600 px · ${Math.max(1, Math.round(blob.size / 1024))} KB`;
+            details.textContent = `Nueva fotografía seleccionada · ${outputWidth} × ${outputHeight} px · ${Math.max(1, Math.round(blob.size / 1024))} KB`;
             details.classList.remove('hidden');
             setStatus('Fotografía lista para guardar.');
             closeModal();

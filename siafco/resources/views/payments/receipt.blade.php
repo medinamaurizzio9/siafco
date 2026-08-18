@@ -3,21 +3,25 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @page { margin: 28mm 22mm; }
-        body { font-family: DejaVu Sans, sans-serif; color: #111827; font-size: 12px; line-height: 1.45; }
-        .receipt { border: 1px solid #111827; padding: 18px; }
-        .header { border-bottom: 2px solid #111827; padding-bottom: 12px; margin-bottom: 16px; text-align: center; }
-        .brand { font-size: 20px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
-        .title { margin-top: 4px; font-size: 16px; font-weight: 800; text-transform: uppercase; }
-        .meta { margin-top: 14px; width: 100%; border-collapse: collapse; }
-        .meta td { padding: 4px 0; vertical-align: top; }
-        .meta .label { width: 130px; font-weight: 800; text-transform: uppercase; }
-        .section-title { margin: 18px 0 8px; border-bottom: 1px solid #9ca3af; padding-bottom: 3px; font-weight: 800; text-transform: uppercase; }
+        @page { margin: 14mm 16mm; }
+        * { box-sizing: border-box; }
+        body { font-family: DejaVu Sans, sans-serif; color: #111827; font-size: 10.5px; line-height: 1.28; margin: 0; }
+        .receipt { border: 1px solid #111827; padding: 11mm 10mm 9mm; page-break-inside: avoid; }
+        .header { border-bottom: 2px solid #111827; padding-bottom: 7px; margin-bottom: 9px; text-align: center; }
+        .logo { max-width: 64px; max-height: 54px; object-fit: contain; margin-bottom: 5px; }
+        .brand { font-size: 16px; font-weight: 800; letter-spacing: .035em; text-transform: uppercase; }
+        .system { margin-top: 1px; font-size: 11px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
+        .title { margin-top: 3px; font-size: 13px; font-weight: 800; text-transform: uppercase; }
+        .meta { margin-top: 8px; width: 100%; border-collapse: collapse; }
+        .meta td { padding: 2px 0; vertical-align: top; }
+        .meta .label { width: 95px; font-weight: 800; text-transform: uppercase; }
+        .section-title { margin: 10px 0 5px; border-bottom: 1px solid #9ca3af; padding-bottom: 2px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
         .grid { width: 100%; border-collapse: collapse; }
-        .grid th { width: 35%; background: #f3f4f6; text-align: left; font-weight: 800; }
-        .grid th, .grid td { border: 1px solid #9ca3af; padding: 7px 8px; }
-        .amount { margin-top: 16px; border: 2px solid #111827; padding: 10px 12px; text-align: right; font-size: 18px; font-weight: 800; }
-        .footer { margin-top: 20px; border-top: 1px solid #9ca3af; padding-top: 10px; text-align: center; font-size: 11px; }
+        .grid th { width: 34%; background: #f3f4f6; text-align: left; font-weight: 800; }
+        .grid th, .grid td { border: 1px solid #9ca3af; padding: 4px 6px; vertical-align: top; }
+        .amount { margin-top: 10px; border: 2px solid #111827; padding: 7px 9px; text-align: right; font-size: 15px; font-weight: 800; }
+        .footer { margin-top: 11px; border-top: 1px solid #9ca3af; padding-top: 7px; text-align: center; font-size: 9.5px; }
+        .no-break { page-break-inside: avoid; }
     </style>
 </head>
 <body>
@@ -32,8 +36,12 @@
 
     <main class="receipt">
         <div class="header">
+            @if($logoSrc ?? null)
+                <img class="logo" src="{{ $logoSrc }}" alt="Logo institucional">
+            @endif
             <div class="brand">{{ $institution->institution_name ?: 'COOPERATIVA TIERRA BENDITA' }}</div>
-            <div class="title">Recibo de pago</div>
+            <div class="system">SIAFCO</div>
+            <div class="title">Recibo oficial de pago</div>
         </div>
 
         <table class="meta">
@@ -49,7 +57,7 @@
             <tr><th>Codigo de afiliado</th><td>{{ $affiliate?->registration_number ?? 'No registrado' }}</td></tr>
         </table>
 
-        <div class="section-title">Detalle</div>
+        <div class="section-title">Detalle del pago</div>
         <table class="grid">
             <tr><th>Sector</th><td>{{ $affiliate?->sector?->name ?? 'Sin sector' }}</td></tr>
             <tr><th>Plan</th><td>{{ $affiliate?->plan?->name ?? $payment->plan?->name ?? 'Sin plan' }}</td></tr>
@@ -58,7 +66,7 @@
             <tr><th>Estado</th><td>{{ mb_strtoupper($statusLabel) }}</td></tr>
         </table>
 
-        <div class="amount">Monto recibido: {{ $payment->currency ?? 'BOB' }} {{ number_format($amount, 2) }}</div>
+        <div class="amount no-break">Monto recibido: {{ $payment->currency ?? 'BOB' }} {{ number_format($amount, 2) }}</div>
 
         <div class="section-title">Datos de caja</div>
         <table class="grid">

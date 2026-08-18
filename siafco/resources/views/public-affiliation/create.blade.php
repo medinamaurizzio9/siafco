@@ -1,20 +1,3 @@
-@php
-    $expeditionPlaces = [
-        'LP' => 'LP - La Paz', 'CB' => 'CB - Cochabamba', 'SC' => 'SC - Santa Cruz',
-        'BN' => 'BN - Beni', 'PA' => 'PA - Pando', 'TR' => 'TR - Tarija',
-        'CH' => 'CH - Chuquisaca', 'OR' => 'OR - Oruro', 'PT' => 'PT - Potosí',
-    ];
-    $maritalStatuses = [
-        'SOLTERO' => 'Soltero', 'CASADO' => 'Casado',
-        'DIVORCIADO' => 'Divorciado', 'VIUDO' => 'Viudo',
-    ];
-    $regionals = [
-        'LA PAZ' => 'La Paz', 'COCHABAMBA' => 'Cochabamba', 'SANTA CRUZ' => 'Santa Cruz',
-        'ORURO' => 'Oruro', 'POTOSÍ' => 'Potosí', 'SUCRE' => 'Sucre',
-        'TARIJA' => 'Tarija', 'BENI' => 'Beni', 'PANDO' => 'Pando',
-    ];
-@endphp
-
 <x-layouts.app title="Formulario de afiliación">
     <form method="post" action="{{ route('public-affiliation.store') }}" enctype="multipart/form-data"
         class="mx-auto max-w-4xl space-y-6" data-public-affiliation-form novalidate>

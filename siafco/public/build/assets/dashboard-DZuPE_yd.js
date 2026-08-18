@@ -1,4 +1,4 @@
-import{_ as u}from"./app-CAPYZb87.js";const m=["#0b1f3a","#d4af37","#0f9f9a","#64748b"],i=e=>Array.isArray(e)&&e.some(t=>Number(t)>0),c=(e,t="Sin datos")=>{e.innerHTML=`
+import{_ as u}from"./app-RGgQ0Ini.js";const m=["#0b1f3a","#d4af37","#0f9f9a","#64748b"],i=e=>Array.isArray(e)&&e.some(t=>Number(t)>0),c=(e,t="Sin datos")=>{e.innerHTML=`
         <div class="empty-state min-h-60">
             <span class="empty-state-icon" aria-hidden="true">--</span>
             <div>

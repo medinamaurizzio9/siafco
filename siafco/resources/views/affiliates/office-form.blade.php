@@ -56,11 +56,8 @@
                 </select>
                 @error('affiliation_plan_id') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
             </div>
-            <div>
-                <label class="form-label">Regional</label>
-                <input class="form-input" name="regional" value="{{ old('regional') }}" data-uppercase>
-                @error('regional') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
-            </div>
+            <x-forms.select-input name="regional" label="Regional" :options="$regionals"
+                placeholder="Seleccione regional" />
             <div>
                 <label class="form-label">Institucion <span class="text-xs font-medium text-slate-500">(opcional)</span></label>
                 <input class="form-input" name="institution" value="{{ old('institution') }}" data-uppercase>
@@ -76,16 +73,17 @@
                 <input class="form-input" type="date" name="birth_date" value="{{ old('birth_date') }}">
                 @error('birth_date') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
             </div>
-            <div>
-                <label class="form-label">Estado civil</label>
-                <input class="form-input" name="marital_status" value="{{ old('marital_status') }}" data-uppercase>
-                @error('marital_status') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
-            </div>
-            <div>
-                <label class="form-label">Fotografia</label>
-                <input class="form-input" type="file" name="photo" accept="image/*">
-                @error('photo') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
-            </div>
+            <x-forms.select-input name="marital_status" label="Estado civil" :options="$maritalStatuses"
+                placeholder="Seleccione estado civil" />
+            <x-forms.photo-cropper
+                :required="false"
+                label="Fotografía para credencial"
+                description="Encuadra el rostro dentro del área visible."
+                select-label="Seleccionar fotografía"
+                cancel-label="Quitar selección"
+                aspect-ratio="0.7894736842"
+                :output-width="600"
+                :output-height="760" />
             <div class="xl:col-span-3">
                 <label class="form-label">Direccion</label>
                 <input class="form-input" name="address" value="{{ old('address') }}" data-uppercase>

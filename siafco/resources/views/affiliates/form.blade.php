@@ -1,3 +1,7 @@
+@php
+    $photoUrl = $affiliate->photo_path ? \Illuminate\Support\Facades\Storage::url($affiliate->photo_path) : null;
+@endphp
+
 <x-layouts.app title="{{ $affiliate->exists ? 'Editar afiliado' : 'Registrar afiliado' }}">
     <form method="post" enctype="multipart/form-data" action="{{ $affiliate->exists ? route('affiliates.update', $affiliate) : route('affiliates.store') }}" class="grid gap-4 rounded-lg border border-slate-200 bg-white p-5 md:grid-cols-2 xl:grid-cols-3">
         @csrf
@@ -35,10 +39,8 @@
                 @endforeach
             </select>
         </div>
-        <div>
-            <label class="form-label">Regional</label>
-            <input class="form-input" name="regional" value="{{ old('regional', $affiliate->regional) }}" data-uppercase>
-        </div>
+        <x-forms.select-input name="regional" label="Regional" :options="$regionals"
+            :value="$affiliate->regional" placeholder="Seleccione regional" />
         <div>
             <label class="form-label">Institucion</label>
             <input class="form-input" name="institution" value="{{ old('institution', $affiliate->institution) }}" data-uppercase>
@@ -51,14 +53,18 @@
             <label class="form-label">Fecha de nacimiento</label>
             <input class="form-input" type="date" name="birth_date" value="{{ old('birth_date', optional($affiliate->birth_date)->format('Y-m-d')) }}">
         </div>
-        <div>
-            <label class="form-label">Estado civil</label>
-            <input class="form-input" name="marital_status" value="{{ old('marital_status', $affiliate->marital_status) }}" data-uppercase>
-        </div>
-        <div>
-            <label class="form-label">Foto</label>
-            <input class="form-input" type="file" name="photo" accept="image/*">
-        </div>
+        <x-forms.select-input name="marital_status" label="Estado civil" :options="$maritalStatuses"
+            :value="$affiliate->marital_status" placeholder="Seleccione estado civil" />
+        <x-forms.photo-cropper
+            :required="false"
+            :initial-src="$photoUrl"
+            label="Fotografía para credencial"
+            description="Encuadra el rostro dentro del área visible."
+            select-label="Seleccionar fotografía"
+            cancel-label="Quitar selección"
+            aspect-ratio="0.7894736842"
+            :output-width="600"
+            :output-height="760" />
         <div class="xl:col-span-3">
             <label class="form-label">Direccion</label>
             <input class="form-input" name="address" value="{{ old('address', $affiliate->address) }}" data-uppercase>

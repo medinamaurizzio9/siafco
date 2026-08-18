@@ -6,10 +6,14 @@
     'description' => null,
     'selectLabel' => 'Seleccionar fotografía',
     'cancelLabel' => 'Eliminar',
+    'aspectRatio' => '1',
+    'outputWidth' => 600,
+    'outputHeight' => 600,
 ])
 
 <div class="sm:col-span-2" data-photo-cropper data-photo-required="{{ $required ? 'true' : 'false' }}"
-    data-photo-initial="{{ $initialSrc }}" data-field-wrapper>
+    data-photo-initial="{{ $initialSrc }}" data-photo-aspect-ratio="{{ $aspectRatio }}"
+    data-photo-output-width="{{ $outputWidth }}" data-photo-output-height="{{ $outputHeight }}" data-field-wrapper>
     <span class="form-label" data-field-label>
         {{ $label }} @if($required)<span class="text-red-600" aria-hidden="true">*</span>@endif
     </span>
@@ -21,7 +25,8 @@
             aria-describedby="{{ $name }}-error {{ $name }}-status" data-validate-field data-touched="{{ $errors->has($name) ? 'true' : 'false' }}">
 
         <div class="grid gap-5 sm:grid-cols-[180px_1fr] sm:items-center">
-            <div class="aspect-square w-full max-w-[180px] overflow-hidden rounded border-2 border-[#d4af37] bg-white shadow-sm" data-photo-preview>
+            <div class="w-full max-w-[180px] overflow-hidden rounded border-2 border-[#d4af37] bg-white shadow-sm"
+                style="aspect-ratio: {{ $outputWidth }} / {{ $outputHeight }};" data-photo-preview>
                 <div class="{{ $initialSrc ? 'hidden' : 'grid' }} h-full place-items-center p-4 text-center text-sm text-slate-500" data-photo-placeholder>Selecciona una fotografía</div>
                 <img class="{{ $initialSrc ? '' : 'hidden' }} h-full w-full object-cover" src="{{ $initialSrc }}" data-photo-preview-image alt="Vista previa de fotografía institucional">
             </div>

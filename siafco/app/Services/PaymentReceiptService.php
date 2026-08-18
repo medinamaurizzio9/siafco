@@ -21,10 +21,24 @@ class PaymentReceiptService
             'status' => $payment->status,
         ]);
 
+        $institution = InstitutionalSetting::current();
+
         return Pdf::loadView('payments.receipt', [
             'payment' => $payment,
-            'institution' => InstitutionalSetting::current(),
+            'institution' => $institution,
             'statusLabel' => PaymentStatus::label($payment->status),
-        ])->setPaper('letter')->output();
+            'logoSrc' => $this->dataUri($institution->logoAbsolutePath()),
+        ])->setPaper('a4')->output();
+    }
+
+    private function dataUri(?string $path): ?string
+    {
+        if (! $path || ! is_file($path)) {
+            return null;
+        }
+
+        $mime = mime_content_type($path) ?: 'image/png';
+
+        return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($path));
     }
 }

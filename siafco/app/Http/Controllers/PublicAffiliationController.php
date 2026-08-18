@@ -9,6 +9,7 @@ use App\Models\PublicAffiliationRequest;
 use App\Models\Sector;
 use App\Services\AffiliatePhotoProcessor;
 use App\Services\PublicAffiliationService;
+use App\Support\PublicAffiliationCatalogs;
 use App\Support\PublicAffiliationValidation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -28,6 +29,9 @@ class PublicAffiliationController extends Controller
                 ->where(fn ($q) => $q->whereNull('valid_from')->orWhereDate('valid_from', '<=', today()))
                 ->where(fn ($q) => $q->whereNull('valid_until')->orWhereDate('valid_until', '>=', today()))
                 ->orderBy('name')->get(),
+            'expeditionPlaces' => PublicAffiliationCatalogs::issuedInSelectOptions(),
+            'maritalStatuses' => PublicAffiliationCatalogs::maritalStatusOptions(),
+            'regionals' => PublicAffiliationCatalogs::regionalOptions(),
         ]);
     }
 

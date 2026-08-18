@@ -11,7 +11,9 @@ use App\Models\Sector;
 use App\Models\User;
 use App\Services\CredentialService;
 use App\Support\PaymentStatus;
+use App\Support\PublicAffiliationCatalogs;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Mockery;
@@ -241,8 +243,121 @@ class OfficeAffiliationTest extends TestCase
             ->assertSee('Ver afiliado');
     }
 
+    public function test_office_affiliation_form_uses_real_regional_and_marital_catalogs(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $cashier = $this->internalUser('cajero');
+
+        $this->actingAs($cashier)
+            ->get(route('affiliates.office.create'))
+            ->assertOk()
+            ->assertSee('name="regional"', false)
+            ->assertSee('Seleccione regional')
+            ->assertSee('value="LA PAZ"', false)
+            ->assertSee('name="marital_status"', false)
+            ->assertSee('Seleccione estado civil')
+            ->assertSee('value="SOLTERO"', false)
+            ->assertSee('Fotografía para credencial')
+            ->assertSee('Encuadra el rostro dentro del área visible.');
+
+        $this->actingAs($cashier)
+            ->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
+                'regional' => 'OTRA REGIONAL',
+                'marital_status' => 'UNION LIBRE',
+            ]))
+            ->assertSessionHasErrors(['regional', 'marital_status']);
+    }
+
+    public function test_admin_affiliate_form_uses_same_regional_marital_and_photo_sources(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $admin = $this->internalUser('administrador');
+
+        $this->actingAs($admin)
+            ->get(route('affiliates.create'))
+            ->assertOk()
+            ->assertSee('name="regional"', false)
+            ->assertSee('value="LA PAZ"', false)
+            ->assertSee('name="marital_status"', false)
+            ->assertSee('value="SOLTERO"', false)
+            ->assertSee('data-photo-cropper', false)
+            ->assertSee('Fotografía para credencial');
+
+        $this->actingAs($admin)
+            ->post(route('affiliates.store'), [
+                'full_name' => 'AFILIADO ADMIN INVALIDO',
+                'ci' => 'ADMIN-INVALID',
+                'email' => 'admin-invalid@siafco.test',
+                'sector_id' => $sector->id,
+                'affiliation_plan_id' => $plan->id,
+                'regional' => 'REGIONAL LIBRE',
+                'marital_status' => 'CONVIVIENTE',
+            ])
+            ->assertSessionHasErrors(['regional', 'marital_status']);
+    }
+
+    public function test_office_photo_is_processed_for_credential_dimensions(): void
+    {
+        Storage::fake('public');
+        [$sector, $plan] = $this->catalog();
+        $cashier = $this->internalUser('cajero');
+
+        $this->actingAs($cashier)
+            ->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
+                'photo' => UploadedFile::fake()->image('vertical.png', 1400, 1900)->size(4800),
+                'reference_number' => 'PHOTO-OFFICE-001',
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $affiliate = Affiliate::firstOrFail();
+        Storage::disk('public')->assertExists($affiliate->photo_path);
+        [$width, $height] = getimagesize(Storage::disk('public')->path($affiliate->photo_path));
+
+        $this->assertSame([600, 760], [$width, $height]);
+        $this->assertLessThan(512 * 1024, Storage::disk('public')->size($affiliate->photo_path));
+        $this->assertSame($affiliate->photo_path, $affiliate->person->photo);
+    }
+
+    public function test_admin_affiliate_photo_is_processed_with_shared_service(): void
+    {
+        Storage::fake('public');
+        [$sector, $plan] = $this->catalog();
+        $admin = $this->internalUser('administrador');
+
+        $this->actingAs($admin)
+            ->post(route('affiliates.store'), [
+                'full_name' => 'AFILIADO ADMIN FOTO',
+                'ci' => 'ADMIN-PHOTO',
+                'phone' => '70000002',
+                'email' => 'admin-photo@siafco.test',
+                'address' => 'CALLE ADMIN',
+                'sector_id' => $sector->id,
+                'affiliation_plan_id' => $plan->id,
+                'regional' => PublicAffiliationCatalogs::REGIONALS[0],
+                'marital_status' => PublicAffiliationCatalogs::MARITAL_STATUSES[0],
+                'photo' => UploadedFile::fake()->image('admin.jpg', 1600, 2200)->size(4900),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $affiliate = Affiliate::firstOrFail();
+        Storage::disk('public')->assertExists($affiliate->photo_path);
+        [$width, $height] = getimagesize(Storage::disk('public')->path($affiliate->photo_path));
+
+        $this->assertSame([600, 760], [$width, $height]);
+        $this->assertSame($affiliate->photo_path, $affiliate->person->photo);
+    }
+
     public function test_office_receipt_pdf_route_and_template_use_original_payment_data(): void
     {
+        Storage::fake('public');
+        Storage::disk('public')->put('institutional/logo/logo.png', base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII='
+        ));
+        \App\Models\InstitutionalSetting::current()->update([
+            'logo_path' => 'institutional/logo/logo.png',
+            'institution_name' => 'COOPERATIVA TIERRA BENDITA',
+        ]);
+        \App\Models\InstitutionalSetting::clearCurrentCache();
         [$sector, $plan] = $this->catalog();
         $admin = $this->internalUser('superadministrador');
 
@@ -262,8 +377,12 @@ class OfficeAffiliationTest extends TestCase
             'payment' => $payment,
             'institution' => \App\Models\InstitutionalSetting::current(),
             'statusLabel' => PaymentStatus::label($payment->status),
+            'logoSrc' => 'data:image/png;base64,'.base64_encode(Storage::disk('public')->get('institutional/logo/logo.png')),
         ])->render();
 
+        $this->assertStringContainsString('Logo institucional', $html);
+        $this->assertStringContainsString('SIAFCO', $html);
+        $this->assertStringContainsString('Recibo oficial de pago', $html);
         $this->assertStringContainsString($receiptNumber, $html);
         $this->assertStringContainsString('AFILIADA RECIBO', $html);
         $this->assertStringContainsString('OFI-REC', $html);
@@ -276,6 +395,15 @@ class OfficeAffiliationTest extends TestCase
             ->get(route('admin.payments.receipt', $payment))
             ->assertOk()
             ->assertHeader('Content-Type', 'application/pdf');
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payments.receipt', [
+            'payment' => $payment,
+            'institution' => \App\Models\InstitutionalSetting::current(),
+            'statusLabel' => PaymentStatus::label($payment->status),
+            'logoSrc' => 'data:image/png;base64,'.base64_encode(Storage::disk('public')->get('institutional/logo/logo.png')),
+        ])->setPaper('a4');
+        $pdf->getDomPDF()->render();
+        $this->assertSame(1, $pdf->getDomPDF()->getCanvas()->get_page_count());
 
         $this->actingAs($admin)->get(route('admin.payments.receipt', $payment))->assertOk();
 
@@ -455,7 +583,7 @@ class OfficeAffiliationTest extends TestCase
             'email' => 'afiliada-oficina@siafco.test',
             'address' => 'AVENIDA OFICINA 123',
             'birth_date' => '1990-01-15',
-            'marital_status' => 'SOLTERA',
+            'marital_status' => 'SOLTERO',
             'regional' => 'LA PAZ',
             'sector_id' => $sector->id,
             'affiliation_plan_id' => $plan->id,

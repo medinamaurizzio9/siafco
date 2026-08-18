@@ -9,10 +9,12 @@ use App\Models\InstitutionalSetting;
 use App\Models\Person;
 use App\Models\Sector;
 use App\Models\User;
+use App\Services\AffiliatePhotoProcessor;
 use App\Services\AffiliatePasswordService;
 use App\Services\AuditService;
 use App\Services\PaymentLifecycleService;
 use App\Support\PaymentStatus;
+use App\Support\PublicAffiliationCatalogs;
 use App\Support\TextNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +33,8 @@ class OfficeAffiliationController extends Controller
             'affiliate' => new Affiliate(),
             'sectors' => Sector::where('is_active', true)->orderBy('name')->get(),
             'plans' => AffiliationPlan::where('is_active', true)->orderBy('name')->get(),
+            'regionals' => PublicAffiliationCatalogs::regionalOptions(),
+            'maritalStatuses' => PublicAffiliationCatalogs::maritalStatusOptions(),
             'paidAt' => now(),
         ]);
     }
@@ -56,7 +60,13 @@ class OfficeAffiliationController extends Controller
             $sector->increment('current_sequence');
             $sector->refresh();
 
-            $photoPath = $request->file('photo')?->store('affiliates/photos', 'public');
+            $photoPath = $request->hasFile('photo')
+                ? app(AffiliatePhotoProcessor::class)->process(
+                    $request->file('photo'),
+                    AffiliatePhotoProcessor::CREDENTIAL_WIDTH,
+                    AffiliatePhotoProcessor::CREDENTIAL_HEIGHT
+                )
+                : null;
             $registration = sprintf('%s-%06d', mb_strtoupper($sector->code), $sector->current_sequence);
 
             $person = Person::updateOrCreate(
@@ -162,12 +172,12 @@ class OfficeAffiliationController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
             'sector_id' => ['required', 'exists:sectors,id'],
             'affiliation_plan_id' => ['required', 'exists:affiliation_plans,id'],
-            'regional' => ['nullable', 'string', 'max:255'],
+            'regional' => ['nullable', 'string', Rule::in(PublicAffiliationCatalogs::REGIONALS)],
             'institution' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'string', 'max:255'],
-            'photo' => ['nullable', 'image', 'max:2048'],
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'birth_date' => ['nullable', 'date'],
-            'marital_status' => ['nullable', 'string', 'max:80'],
+            'marital_status' => ['nullable', 'string', Rule::in(PublicAffiliationCatalogs::MARITAL_STATUSES)],
             'received_amount' => ['required', 'numeric', 'min:0.01'],
             'paid_at' => ['required', 'date'],
             'reference_number' => ['nullable', 'string', 'max:120', Rule::unique('affiliation_payments', 'reference_number')],

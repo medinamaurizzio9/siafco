@@ -10,9 +10,13 @@ use Illuminate\Validation\ValidationException;
 class AffiliatePhotoProcessor
 {
     public const OUTPUT_SIZE = 600;
+    public const CREDENTIAL_WIDTH = 600;
+    public const CREDENTIAL_HEIGHT = 760;
 
-    public function process(UploadedFile $file): string
+    public function process(UploadedFile $file, int $outputWidth = self::OUTPUT_SIZE, ?int $outputHeight = null): string
     {
+        $outputHeight ??= $outputWidth;
+
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file->getRealPath());
         if (! in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
             throw ValidationException::withMessages([
@@ -33,13 +37,21 @@ class AffiliatePhotoProcessor
 
         $width = imagesx($image);
         $height = imagesy($image);
-        $side = min($width, $height);
-        $sourceX = (int) floor(($width - $side) / 2);
-        $sourceY = (int) floor(($height - $side) / 2);
+        $targetRatio = $outputWidth / $outputHeight;
+        $sourceWidth = $width;
+        $sourceHeight = (int) round($width / $targetRatio);
 
-        $output = imagecreatetruecolor(self::OUTPUT_SIZE, self::OUTPUT_SIZE);
+        if ($sourceHeight > $height) {
+            $sourceHeight = $height;
+            $sourceWidth = (int) round($height * $targetRatio);
+        }
+
+        $sourceX = (int) floor(($width - $sourceWidth) / 2);
+        $sourceY = (int) floor(($height - $sourceHeight) / 2);
+
+        $output = imagecreatetruecolor($outputWidth, $outputHeight);
         $white = imagecolorallocate($output, 255, 255, 255);
-        imagefilledrectangle($output, 0, 0, self::OUTPUT_SIZE, self::OUTPUT_SIZE, $white);
+        imagefilledrectangle($output, 0, 0, $outputWidth, $outputHeight, $white);
         imagecopyresampled(
             $output,
             $image,
@@ -47,10 +59,10 @@ class AffiliatePhotoProcessor
             0,
             $sourceX,
             $sourceY,
-            self::OUTPUT_SIZE,
-            self::OUTPUT_SIZE,
-            $side,
-            $side
+            $outputWidth,
+            $outputHeight,
+            $sourceWidth,
+            $sourceHeight
         );
 
         ob_start();

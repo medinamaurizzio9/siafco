@@ -13,7 +13,9 @@ use App\Services\AuditService;
 use App\Services\AffiliateDuplicateDetector;
 use App\Services\AffiliateTimelineService;
 use App\Services\AffiliatePasswordService;
+use App\Services\AffiliatePhotoProcessor;
 use App\Services\PaymentBalanceService;
+use App\Support\PublicAffiliationCatalogs;
 use App\Support\TextNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -47,6 +49,8 @@ class AffiliateController extends Controller
             'affiliate' => new Affiliate(),
             'sectors' => Sector::where('is_active', true)->orderBy('name')->get(),
             'plans' => AffiliationPlan::where('is_active', true)->orderBy('name')->get(),
+            'regionals' => PublicAffiliationCatalogs::regionalOptions(),
+            'maritalStatuses' => PublicAffiliationCatalogs::maritalStatusOptions(),
         ]);
     }
 
@@ -59,7 +63,13 @@ class AffiliateController extends Controller
             $plan = AffiliationPlan::findOrFail($data['affiliation_plan_id']);
             $sector->increment('current_sequence');
 
-            $photoPath = $request->file('photo')?->store('affiliates/photos', 'public');
+            $photoPath = $request->hasFile('photo')
+                ? app(AffiliatePhotoProcessor::class)->process(
+                    $request->file('photo'),
+                    AffiliatePhotoProcessor::CREDENTIAL_WIDTH,
+                    AffiliatePhotoProcessor::CREDENTIAL_HEIGHT
+                )
+                : null;
             $registration = sprintf('%s-%06d', strtoupper($sector->code), $sector->current_sequence);
             $person = Person::updateOrCreate(
                 ['ci' => $data['ci']],
@@ -141,6 +151,8 @@ class AffiliateController extends Controller
             'affiliate' => $affiliate,
             'sectors' => Sector::where('is_active', true)->orderBy('name')->get(),
             'plans' => AffiliationPlan::where('is_active', true)->orderBy('name')->get(),
+            'regionals' => PublicAffiliationCatalogs::regionalOptions(),
+            'maritalStatuses' => PublicAffiliationCatalogs::maritalStatusOptions(),
         ]);
     }
 
@@ -148,7 +160,11 @@ class AffiliateController extends Controller
     {
         $data = $this->validated($request, $affiliate);
         if ($request->hasFile('photo')) {
-            $data['photo_path'] = $request->file('photo')->store('affiliates/photos', 'public');
+            $data['photo_path'] = app(AffiliatePhotoProcessor::class)->process(
+                $request->file('photo'),
+                AffiliatePhotoProcessor::CREDENTIAL_WIDTH,
+                AffiliatePhotoProcessor::CREDENTIAL_HEIGHT
+            );
         }
 
         $affiliate->update($data);
@@ -225,12 +241,12 @@ class AffiliateController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
             'sector_id' => ['required', 'exists:sectors,id'],
             'affiliation_plan_id' => ['required', 'exists:affiliation_plans,id'],
-            'regional' => ['nullable', 'string', 'max:255'],
+            'regional' => ['nullable', 'string', Rule::in(PublicAffiliationCatalogs::REGIONALS)],
             'institution' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'string', 'max:255'],
-            'photo' => ['nullable', 'image', 'max:2048'],
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'birth_date' => ['nullable', 'date'],
-            'marital_status' => ['nullable', 'string', 'max:80'],
+            'marital_status' => ['nullable', 'string', Rule::in(PublicAffiliationCatalogs::MARITAL_STATUSES)],
             'status' => ['nullable', 'in:pendiente_pago,activo,inactivo,observado'],
         ]);
 
