@@ -59,6 +59,83 @@ class OfficeAffiliationTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_office_affiliation_rejects_an_existing_user_email_with_a_human_message(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $cashier = $this->internalUser('cajero');
+        User::factory()->create(['email' => 'duplicado@siafco.test']);
+        $usersBefore = User::count();
+
+        $response = $this->actingAs($cashier)
+            ->from(route('affiliates.office.create'))
+            ->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
+                'email' => 'duplicado@siafco.test',
+            ]));
+
+        $response->assertRedirect(route('affiliates.office.create'))
+            ->assertSessionHasErrors([
+                'email' => 'El correo electrónico ya está registrado en el sistema.',
+            ])
+            ->assertSessionHasInput('full_name', 'AFILIADA OFICINA');
+        $this->assertSame($usersBefore, User::count());
+        $this->assertDatabaseCount('affiliates', 0);
+        $this->assertDatabaseCount('affiliation_payments', 0);
+    }
+
+    public function test_office_affiliation_rejects_an_existing_person_ci_without_creating_partial_records(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $cashier = $this->internalUser('cajero');
+        Person::create(['full_name' => 'PERSONA EXISTENTE', 'ci' => 'OFI-001']);
+        $peopleBefore = Person::count();
+        $usersBefore = User::count();
+
+        $response = $this->actingAs($cashier)
+            ->from(route('affiliates.office.create'))
+            ->post(route('affiliates.office.store'), $this->payload($sector, $plan));
+
+        $response->assertRedirect(route('affiliates.office.create'))
+            ->assertSessionHasErrors([
+                'ci' => 'El número de CI ya se encuentra registrado.',
+            ]);
+        $this->assertSame($peopleBefore, Person::count());
+        $this->assertSame($usersBefore, User::count());
+        $this->assertDatabaseCount('affiliates', 0);
+        $this->assertDatabaseCount('affiliation_payments', 0);
+    }
+
+    public function test_repeated_office_affiliation_submission_does_not_create_duplicates(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $cashier = $this->internalUser('cajero');
+        $payload = $this->payload($sector, $plan);
+
+        $this->actingAs($cashier)->post(route('affiliates.office.store'), $payload)
+            ->assertSessionHasNoErrors();
+        $this->actingAs($cashier)->post(route('affiliates.office.store'), $payload)
+            ->assertSessionHasErrors(['ci', 'email']);
+
+        $this->assertDatabaseCount('affiliates', 1);
+        $this->assertDatabaseCount('affiliation_payments', 1);
+        $this->assertSame(1, User::where('email', $payload['email'])->count());
+    }
+
+    public function test_office_form_and_global_layout_render_confirmation_and_notifications(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $cashier = $this->internalUser('cajero');
+
+        $this->actingAs($cashier)
+            ->withSession(['status' => 'Operación completada.', 'error' => 'Operación rechazada.'])
+            ->get(route('affiliates.office.create'))
+            ->assertOk()
+            ->assertSee('data-confirm-office-affiliation', false)
+            ->assertSee('Confirmar afiliación presencial')
+            ->assertSee('data-confirm-modal', false)
+            ->assertSee('Operación completada.')
+            ->assertSee('Operación rechazada.');
+    }
+
     public function test_office_payment_is_confirmed_without_voucher_and_activates_affiliate(): void
     {
         Storage::fake('public');
@@ -463,7 +540,7 @@ class OfficeAffiliationTest extends TestCase
     {
         [$sector, $plan] = $this->catalog();
         $manager = $this->internalUser('gerente');
-        $cashierA = $this->internalUser('cajero');
+        $cashierA = $this->internalUser('caja');
         $cashierB = $this->internalUser('cajero');
 
         $this->actingAs($cashierA)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [

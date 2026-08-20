@@ -7,7 +7,12 @@
         <a class="btn-secondary" href="{{ route('affiliates.index') }}">Volver</a>
     </div>
 
-    <form method="post" enctype="multipart/form-data" action="{{ route('affiliates.office.store') }}" class="grid gap-5">
+    <form method="post" enctype="multipart/form-data" action="{{ route('affiliates.office.store') }}" class="grid gap-5"
+        data-confirm-office-affiliation
+        data-confirm-title="Confirmar afiliación presencial"
+        data-confirm-message="Al confirmar, el afiliado será registrado y el pago quedará confirmado inmediatamente."
+        data-confirm-accept="Confirmar afiliación y pago"
+        data-confirm-variant="warning">
         @csrf
         <section class="grid gap-4 rounded-lg border border-slate-200 bg-white p-5 md:grid-cols-2 xl:grid-cols-3">
             <div class="xl:col-span-3">

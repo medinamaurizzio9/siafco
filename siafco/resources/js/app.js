@@ -4,6 +4,117 @@ import { initPhotoCroppers } from './components/photo-cropper';
 
 document.addEventListener('DOMContentLoaded', () => {
     initPhotoCroppers();
+
+    document.querySelectorAll('[data-notification-close]').forEach((button) => {
+        button.addEventListener('click', () => button.closest('[data-notification]')?.remove());
+    });
+    document.querySelectorAll('[data-notification][data-auto-dismiss]').forEach((notification) => {
+        window.setTimeout(() => notification.remove(), Number(notification.dataset.autoDismiss));
+    });
+
+    const confirmModal = document.querySelector('[data-confirm-modal]');
+    if (confirmModal) {
+        const title = confirmModal.querySelector('[data-confirm-title]');
+        const message = confirmModal.querySelector('[data-confirm-message]');
+        const detail = confirmModal.querySelector('[data-confirm-detail]');
+        const accept = confirmModal.querySelector('[data-confirm-accept]');
+        const cancel = confirmModal.querySelector('[data-confirm-cancel]');
+        let pendingForm = null;
+        let pendingSubmitter = null;
+
+        const officeDetail = (form) => {
+            if (!form.hasAttribute('data-confirm-office-affiliation')) return form.dataset.confirmDetail || '';
+
+            const data = new FormData(form);
+            const selectedText = (name) => form.elements.namedItem(name)?.selectedOptions?.[0]?.textContent?.trim() || 'No seleccionado';
+            const amount = data.get('received_amount') || '0.00';
+
+            return [
+                `Nombre: ${data.get('full_name') || 'No registrado'}`,
+                `CI: ${data.get('ci') || 'No registrado'}`,
+                `Plan: ${selectedText('affiliation_plan_id')}`,
+                `Sector: ${selectedText('sector_id')}`,
+                `Monto recibido: BOB ${amount}`,
+                'Método: Efectivo / Pago en oficina',
+            ].join('\n');
+        };
+
+        const closeConfirmModal = () => {
+            confirmModal.close();
+            pendingSubmitter?.focus();
+            pendingForm = null;
+            pendingSubmitter = null;
+        };
+
+        const requiresConfirmation = (form, submitter) => {
+            if (form.hasAttribute('data-confirm-title')) return true;
+
+            const methodOverride = form.querySelector('input[name="_method"]')?.value?.toUpperCase();
+            if (methodOverride === 'DELETE') {
+                form.dataset.confirmTitle = 'Confirmar eliminación';
+                form.dataset.confirmMessage = 'Esta acción eliminará el registro seleccionado.';
+                form.dataset.confirmAccept = 'Eliminar';
+                form.dataset.confirmVariant = 'danger';
+                return true;
+            }
+
+            const actionText = submitter?.textContent?.trim() || '';
+            const sensitiveAction = /^(confirmar|aprobar|rechazar|anular|bloquear|activar|restaurar|restablecer|aplicar estado|actualizar estado|registrar pago)/i;
+            if (!sensitiveAction.test(actionText)) return false;
+
+            form.dataset.confirmTitle = actionText;
+            form.dataset.confirmMessage = 'Revise la información antes de ejecutar esta acción.';
+            form.dataset.confirmAccept = actionText;
+            form.dataset.confirmVariant = /rechazar|anular|bloquear/i.test(actionText) ? 'danger' : 'warning';
+            return true;
+        };
+
+        document.addEventListener('submit', (event) => {
+            const form = event.target;
+            if (!(form instanceof HTMLFormElement) || form.dataset.confirmed === 'true' || !requiresConfirmation(form, event.submitter)) return;
+
+            event.preventDefault();
+            pendingForm = form;
+            pendingSubmitter = event.submitter;
+            accept.disabled = false;
+            title.textContent = form.dataset.confirmTitle || 'Confirmar acción';
+            message.textContent = form.dataset.confirmMessage || 'Esta acción modificará información del sistema.';
+            accept.textContent = form.dataset.confirmAccept || 'Confirmar';
+            confirmModal.dataset.variant = form.dataset.confirmVariant || 'normal';
+
+            const detailText = officeDetail(form);
+            detail.textContent = detailText;
+            detail.classList.toggle('hidden', !detailText);
+            confirmModal.showModal();
+            cancel.focus();
+        });
+
+        cancel.addEventListener('click', closeConfirmModal);
+        confirmModal.addEventListener('cancel', (event) => {
+            event.preventDefault();
+            closeConfirmModal();
+        });
+        confirmModal.addEventListener('click', (event) => {
+            if (event.target === confirmModal) closeConfirmModal();
+        });
+        accept.addEventListener('click', () => {
+            if (!pendingForm || pendingForm.dataset.submitting === 'true') return;
+
+            const form = pendingForm;
+            const submitter = pendingSubmitter;
+            form.dataset.confirmed = 'true';
+            form.dataset.submitting = 'true';
+            accept.disabled = true;
+            accept.textContent = 'Procesando...';
+            form.querySelectorAll('button[type="submit"], button:not([type])').forEach((button) => {
+                button.disabled = true;
+                if (button === submitter) button.textContent = 'Procesando...';
+            });
+            confirmModal.close();
+            HTMLFormElement.prototype.submit.call(form);
+        });
+    }
+
     if (document.querySelector('[data-dashboard-charts]')) {
         import('./dashboard').then(({ initDashboardCharts }) => initDashboardCharts());
     }

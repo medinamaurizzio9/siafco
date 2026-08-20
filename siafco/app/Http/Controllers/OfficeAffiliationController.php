@@ -17,6 +17,7 @@ use App\Support\PaymentStatus;
 use App\Support\PublicAffiliationCatalogs;
 use App\Support\TextNormalizer;
 use Illuminate\Http\Request;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -55,7 +56,8 @@ class OfficeAffiliationController extends Controller
             ]);
         }
 
-        $payment = DB::transaction(function () use ($request, $data, $plan, $received, $required, $actor, $payments) {
+        try {
+            $payment = DB::transaction(function () use ($request, $data, $plan, $received, $required, $actor, $payments) {
             $sector = Sector::whereKey($data['sector_id'])->lockForUpdate()->firstOrFail();
             $sector->increment('current_sequence');
             $sector->refresh();
@@ -141,8 +143,11 @@ class OfficeAffiliationController extends Controller
                 'payment_method' => 'efectivo',
             ]);
 
-            return $payments->confirm($payment, $actor);
-        });
+                return $payments->confirm($payment, $actor);
+            });
+        } catch (UniqueConstraintViolationException $exception) {
+            $this->throwDuplicateValidationException($exception);
+        }
 
         return redirect()
             ->route('affiliates.office.show', $payment)
@@ -166,7 +171,14 @@ class OfficeAffiliationController extends Controller
     {
         $data = $request->validate([
             'full_name' => ['required', 'string', 'max:255'],
-            'ci' => ['required', 'string', 'max:30', Rule::unique('affiliates', 'ci')],
+            'ci' => [
+                'required',
+                'string',
+                'max:30',
+                Rule::unique('people', 'ci'),
+                Rule::unique('affiliates', 'ci'),
+                Rule::unique('users', 'ci'),
+            ],
             'phone' => ['nullable', 'string', 'max:40'],
             'email' => ['required', 'email', 'max:255', Rule::unique('affiliates', 'email'), Rule::unique('users', 'email')],
             'address' => ['nullable', 'string', 'max:255'],
@@ -182,6 +194,9 @@ class OfficeAffiliationController extends Controller
             'paid_at' => ['required', 'date'],
             'reference_number' => ['nullable', 'string', 'max:120', Rule::unique('affiliation_payments', 'reference_number')],
             'observations' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'email.unique' => 'El correo electrónico ya está registrado en el sistema.',
+            'ci.unique' => 'El número de CI ya se encuentra registrado.',
         ]);
 
         $data = TextNormalizer::fields($data, [
@@ -205,5 +220,30 @@ class OfficeAffiliationController extends Controller
         }
 
         return $username;
+    }
+
+    private function throwDuplicateValidationException(UniqueConstraintViolationException $exception): never
+    {
+        $message = mb_strtolower($exception->getMessage());
+
+        if (str_contains($message, 'email')) {
+            throw ValidationException::withMessages([
+                'email' => 'El correo electrónico ya está registrado en el sistema.',
+            ]);
+        }
+
+        if (str_contains($message, 'ci')) {
+            throw ValidationException::withMessages([
+                'ci' => 'El número de CI ya se encuentra registrado.',
+            ]);
+        }
+
+        if (str_contains($message, 'username')) {
+            throw ValidationException::withMessages([
+                'full_name' => 'No se pudo generar un usuario único. Revise los datos e intente nuevamente.',
+            ]);
+        }
+
+        throw $exception;
     }
 }

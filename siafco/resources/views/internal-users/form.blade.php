@@ -1,6 +1,6 @@
 <x-layouts.app :title="$internalUser->exists ? 'Editar usuario interno' : 'Nuevo usuario interno'">
     @php($editing = $internalUser->exists)
-    <form method="post" enctype="multipart/form-data" action="{{ $editing ? route('admin.users.update', $internalUser) : route('admin.users.store') }}" class="space-y-6">
+    <form method="post" enctype="multipart/form-data" action="{{ $editing ? route('admin.users.update', $internalUser) : route('admin.users.store') }}" class="space-y-6" data-confirm-title="{{ $editing ? 'Guardar usuario y rol' : 'Crear usuario interno' }}" data-confirm-message="Verifique los datos de acceso y el rol asignado antes de continuar." data-confirm-accept="{{ $editing ? 'Guardar cambios' : 'Crear usuario' }}" data-confirm-variant="warning">
         @csrf
         @if($editing) @method('PATCH') @endif
 

@@ -147,7 +147,7 @@
                         </form>
                     @endif
                     @if(auth()->user()->hasPermission('affiliates.change_status'))
-                        <form class="grid gap-2" method="post" action="{{ route('admin.affiliates.status.update', $affiliate) }}">
+                        <form class="grid gap-2" method="post" action="{{ route('admin.affiliates.status.update', $affiliate) }}" data-confirm-title="Cambiar estado de afiliación" data-confirm-message="El estado y las capacidades del afiliado serán actualizados." data-confirm-accept="Aplicar estado" data-confirm-variant="warning">
                             @csrf @method('patch')
                             <label class="text-sm font-bold">Accion<select class="form-input" name="action"><option value="activate">Activar</option><option value="suspend">Suspender</option><option value="deactivate">Dar de baja</option><option value="reactivate">Reactivar</option></select></label>
                             <label class="text-sm font-bold">Motivo<input class="form-input" name="reason" placeholder="Obligatorio para suspension o baja"></label>
@@ -170,13 +170,13 @@
                 </div>
                 <div class="flex flex-wrap gap-2">
                     @can('blockAccess', $affiliate)
-                        <form method="post" action="{{ route('admin.affiliates.access.block', $affiliate) }}">@csrf<button class="btn-danger">BLOQUEAR ACCESO</button></form>
+                        <form method="post" action="{{ route('admin.affiliates.access.block', $affiliate) }}" data-confirm-title="Bloquear acceso" data-confirm-message="Se cerrarán las sesiones del afiliado y no podrá volver a ingresar." data-confirm-accept="Bloquear acceso" data-confirm-variant="danger">@csrf<button class="btn-danger">BLOQUEAR ACCESO</button></form>
                     @endcan
                     @can('activateAccess', $affiliate)
-                        <form method="post" action="{{ route('admin.affiliates.access.activate', $affiliate) }}">@csrf<button class="btn-primary">ACTIVAR ACCESO</button></form>
+                        <form method="post" action="{{ route('admin.affiliates.access.activate', $affiliate) }}" data-confirm-title="Activar acceso" data-confirm-message="El afiliado podrá volver a iniciar sesión." data-confirm-accept="Activar acceso" data-confirm-variant="warning">@csrf<button class="btn-primary">ACTIVAR ACCESO</button></form>
                     @endcan
                     @can('revokeSessions', $affiliate)
-                        <form method="post" action="{{ route('admin.affiliates.access.revoke-sessions', $affiliate) }}">@csrf<button class="btn-secondary">CERRAR SESIONES</button></form>
+                        <form method="post" action="{{ route('admin.affiliates.access.revoke-sessions', $affiliate) }}" data-confirm-title="Cerrar sesiones" data-confirm-message="Todos los tokens y sesiones activas del afiliado serán revocados." data-confirm-accept="Cerrar sesiones" data-confirm-variant="warning">@csrf<button class="btn-secondary">CERRAR SESIONES</button></form>
                     @endcan
                     @can('resetPassword', $affiliate)
                         <button class="rounded border border-amber-400 bg-amber-50 px-4 py-2 font-black text-amber-950" type="button" data-password-reset-open>RESTABLECER CONTRASENA</button>

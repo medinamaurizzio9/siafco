@@ -223,7 +223,7 @@ class InternalUserManagementTest extends TestCase
         ]);
 
         $this->post(route('login.post'), ['email' => $user->email, 'password' => 'secret1234'])
-            ->assertRedirect(route('admin.dashboard'));
+            ->assertRedirect(route('password.force.edit'));
         $this->assertNotNull($user->fresh()->last_login_at);
         $this->assertSame('127.0.0.1', $user->fresh()->last_login_ip);
         $this->get(route('admin.dashboard'))->assertRedirect(route('password.force.edit'));

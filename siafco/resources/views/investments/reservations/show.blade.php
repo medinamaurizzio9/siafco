@@ -9,12 +9,12 @@
             <div><dt class="font-bold text-slate-500">Estado</dt><dd><span class="badge">{{ $reservation->status }}</span></dd></div>
         </dl>
         <div class="mt-5 flex flex-wrap gap-3">
-            @if($reservation->status === 'active')
+            @if($reservation->status === 'active' && auth()->user()->hasPermission('investors.update'))
                 <form method="post" action="{{ route('investments.reservations.convert', $reservation) }}">@csrf <button class="btn-primary">Convertir en inversion</button></form>
             @endif
         </div>
     </div>
-    @if(in_array($reservation->status, ['active','pending'], true))
+    @if(in_array($reservation->status, ['active','pending'], true) && auth()->user()->hasPermission('investors.update'))
         <form class="section-card mt-5 grid gap-3 md:grid-cols-[180px_1fr_auto]" method="post" enctype="multipart/form-data" action="{{ route('investments.reservations.close', $reservation) }}">
             @csrf
             <select class="form-input" name="status"><option value="expired">expired</option><option value="cancelled">cancelled</option></select>

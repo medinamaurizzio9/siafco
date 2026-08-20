@@ -1,5 +1,5 @@
 <x-layouts.app :title="$title">
-    <form method="post" action="{{ route('administration.roles.update', $role) }}" class="grid gap-6">
+    <form method="post" action="{{ route('administration.roles.update', $role) }}" class="grid gap-6" data-confirm-title="Guardar permisos" data-confirm-message="Los permisos del rol serán actualizados para sus usuarios." data-confirm-accept="Guardar permisos" data-confirm-variant="warning">
         @csrf
         @method('PATCH')
 

@@ -20,14 +20,19 @@
             $canViewCollectionReport = $user->isInternal() && $user->hasRole(['superadministrador', 'administrador', 'gerente', 'caja', 'cajero']);
             $canManagePaymentQr = $user->hasRole(['administrador', 'superadministrador', 'secretaria']);
             $canViewAffiliation = $canRegisterOfficeAffiliation || $canViewCollectionReport || $user->hasPermission('affiliates.view') || $user->hasPermission('payments.view') || $user->hasPermission('credentials.view') || $user->hasPermission('reports.view');
-            $canManageInvestments = $user->hasRole(['superadministrador', 'administrador', 'caja', 'cajero', 'contabilidad']);
-            $canViewCredits = $user->hasRole(['superadministrador', 'administrador', 'administrador_sector', 'secretaria', 'cajero', 'caja', 'contabilidad', 'consulta']);
+            $canManageInvestments = $user->hasPermission('investors.view')
+                && $user->hasRole(['superadministrador', 'administrador', 'gerente', 'caja', 'cajero']);
+            $canCreateInvestments = $user->hasPermission('investors.create');
+            $canUpdateInvestments = $user->hasPermission('investors.update');
+            $canViewCredits = $user->hasPermission('credits.view')
+                && $user->hasRole(['superadministrador', 'administrador', 'gerente', 'administrador_sector', 'secretaria', 'cajero', 'caja', 'consulta']);
             $canManageUsers = $user->isInternal() && $user->hasPermission('users.view');
             $canViewRoles = $user->isInternal() && $user->hasPermission('roles.view');
             $canViewAudit = $user->isInternal() && $user->hasPermission('audit.view');
             $canViewDashboard = $user->hasPermission('dashboard.view');
             $canAdmin = $canManageUsers || $canViewRoles || $canViewAudit;
-            $canGeneralSettings = $user->hasRole(['superadministrador', 'administrador', 'secretaria']);
+            $canGeneralSettings = $user->hasPermission('settings.view')
+                && $user->hasRole(['superadministrador', 'administrador', 'secretaria']);
             $canViewStore = $user->isInternal() && $user->hasPermission('store.view');
             $canManageStoreProducts = $user->isInternal() && $user->hasPermission('store.manage-products');
             $canManageStoreSettings = $user->isInternal() && $user->hasPermission('store.manage-settings');
@@ -37,6 +42,7 @@
             $isPersonalOnly = $user->hasRole(['afiliado', 'accionista']) && ! $canViewAffiliation && ! $canManageInvestments;
             $isAffiliateExperience = $user->user_type === 'affiliate' || $user->hasRole('afiliado');
             $activeAffiliateStore = $user->user_type === 'affiliate' && $user->is_active && $user->affiliate?->status === 'activo';
+            $canViewPersonalPanel = $user->hasRole(['afiliado', 'accionista']);
             $homeRoute = app(\App\Services\UserRedirectResolver::class)->homeRoute($user);
 
             $openModule = match (true) {
@@ -150,14 +156,18 @@
                                 {!! $navLink('investments.investors.index', 'Accionistas', [], ['investments.investors.*']) !!}
                                 {!! $navLink('investments.investor-types.index', 'Tipos de inversionista', [], ['investments.investor-types.*']) !!}
                                 {!! $navLink('investments.reservations.index', 'Reservas', [], ['investments.reservations.*']) !!}
-                                {!! $navLink('investments.lots.create', 'Venta de acciones', [], ['investments.lots.create']) !!}
+                                @if($canCreateInvestments)
+                                    {!! $navLink('investments.lots.create', 'Venta de acciones', [], ['investments.lots.create']) !!}
+                                @endif
                                 {!! $navLink('investments.lots.index', 'Lotes de inversion', [], ['investments.lots.index', 'investments.lots.show']) !!}
                                 {!! $navLink('investments.returns.index', 'Rendimientos mensuales', [], ['investments.returns.*']) !!}
                                 {!! $navLink('investments.returns.index', 'Bonos de produccion minera', ['bonus' => 1], ['investments.returns.*']) !!}
                                 {!! $navLink('investments.receipts.index', 'Recibos', [], ['investments.receipts.*']) !!}
                                 {!! $navLink('investments.approvals.index', 'Aprobaciones', [], ['investments.approvals.*']) !!}
                                 {!! $navLink('investments.reports.index', 'Reportes de inversiones', [], ['investments.reports.*']) !!}
-                                {!! $navLink('investments.settings.edit', 'Configuracion de inversiones', [], ['investments.settings.*']) !!}
+                                @if($canUpdateInvestments)
+                                    {!! $navLink('investments.settings.edit', 'Configuracion de inversiones', [], ['investments.settings.*']) !!}
+                                @endif
                             </div>
                         </section>
                     @endif
@@ -240,6 +250,7 @@
                     @endif
                 @endunless
 
+                @if($canViewPersonalPanel)
                 <section class="nav-module" data-accordion-module="personal">
                     <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'personal' ? 'true' : 'false' }}">
                         <span>Panel personal</span><span class="nav-chevron">⌄</span>
@@ -265,6 +276,7 @@
                         </form>
                     </div>
                 </section>
+                @endif
             </nav>
         </aside>
         <div class="fixed inset-0 z-30 hidden bg-slate-950/50 lg:hidden" data-sidebar-backdrop></div>
@@ -301,22 +313,31 @@
         @endauth
 
         <section class="ds-page">
+            <div class="global-notifications" aria-live="polite" aria-atomic="true">
             @if(session('status'))
-                <x-ui.alert variant="success" icon="check">{{ session('status') }}</x-ui.alert>
+                <x-ui.alert variant="success" icon="check" data-notification data-auto-dismiss="7000"><span>{{ session('status') }}</span><button type="button" class="notification-close" data-notification-close aria-label="Cerrar notificación">×</button></x-ui.alert>
             @endif
             @if(session('warning'))
-                <x-ui.alert variant="warning">{{ session('warning') }}</x-ui.alert>
+                <x-ui.alert variant="warning" data-notification><span>{{ session('warning') }}</span><button type="button" class="notification-close" data-notification-close aria-label="Cerrar notificación">×</button></x-ui.alert>
+            @endif
+            @if(session('error'))
+                <x-ui.alert variant="error" icon="x" data-notification><span>{{ session('error') }}</span><button type="button" class="notification-close" data-notification-close aria-label="Cerrar notificación">×</button></x-ui.alert>
+            @endif
+            @if(session('info'))
+                <x-ui.alert variant="info" data-notification data-auto-dismiss="7000"><span>{{ session('info') }}</span><button type="button" class="notification-close" data-notification-close aria-label="Cerrar notificación">×</button></x-ui.alert>
             @endif
             @if(isset($errors) && $errors->any())
-                <div class="alert alert-danger">
+                <div class="alert alert-danger" role="alert" data-notification>
                     <strong>Revise los datos ingresados.</strong>
                     <ul class="mt-2 list-disc pl-5">
                         @foreach($errors->all() as $error)
                             <li>{{ $error }}</li>
                         @endforeach
                     </ul>
+                    <button type="button" class="notification-close" data-notification-close aria-label="Cerrar notificación">×</button>
                 </div>
             @endif
+            </div>
             {{ $slot }}
         </section>
         @auth
@@ -353,6 +374,7 @@
         @endauth
     </main>
 </div>
+<x-ui.confirm-modal />
 @stack('scripts')
 @if(!empty($credentialAssets))
     @vite('resources/js/credential.js')

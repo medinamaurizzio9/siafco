@@ -306,6 +306,38 @@ class PublicAffiliationTest extends TestCase
             ->assertOk()->assertSee('Pago en revisión')->assertDontSee('UNDER REVIEW');
     }
 
+    public function test_administrative_request_without_affiliate_or_photo_renders_a_safe_placeholder(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $person = Person::create([
+            'full_name' => 'SOLICITANTE SIN FOTO',
+            'ci' => 'NO-PHOTO-1',
+            'email' => 'sin-foto@test.local',
+        ]);
+        $application = PublicAffiliationRequest::create([
+            'person_id' => $person->id,
+            'affiliate_id' => null,
+            'sector_id' => $sector->id,
+            'affiliation_plan_id' => $plan->id,
+            'public_token' => fake()->uuid(),
+            'request_code' => 'SOL-NO-PHOTO',
+            'amount_due' => 120,
+            'status' => 'under_review',
+            'submitted_at' => now(),
+        ]);
+        $secretary = User::factory()->create([
+            'role' => 'secretaria',
+            'user_type' => 'internal',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($secretary)
+            ->get(route('public-affiliation.admin.show', $application))
+            ->assertOk()
+            ->assertSee('SOLICITANTE SIN FOTO')
+            ->assertSee('SOL-NO-PHOTO');
+    }
+
     public function test_public_form_shows_closed_select_catalogs_and_accessibility(): void
     {
         $this->catalog();

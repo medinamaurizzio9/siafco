@@ -13,6 +13,10 @@ class UserRedirectResolver
     {
         $intended = $request->session()->pull('url.intended');
 
+        if ($user->must_change_password) {
+            return redirect()->route('password.force.edit');
+        }
+
         if ($this->isSafeIntendedUrl($request, $user, $intended)) {
             return redirect()->to($intended);
         }
@@ -22,6 +26,10 @@ class UserRedirectResolver
 
     public function redirectHome(Request $request, ?string $status = null): RedirectResponse
     {
+        if ($request->user()?->must_change_password) {
+            return redirect()->route('password.force.edit');
+        }
+
         $route = $this->homeRoute($request->user());
 
         if (! $route) {

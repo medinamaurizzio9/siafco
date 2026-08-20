@@ -78,7 +78,7 @@
                                     <p class="truncate text-sm text-slate-600">{{ $image->alt ?: 'Sin texto alternativo' }}</p>
                                     <div class="mt-2 flex flex-wrap gap-2">
                                         <form method="post" action="{{ route('admin.store.products.images.primary', [$product, $image]) }}">@csrf<button class="btn-secondary">Principal</button></form>
-                                        <form method="post" action="{{ route('admin.store.products.images.destroy', [$product, $image]) }}">@csrf @method('delete')<button class="btn-danger" onclick="return confirm('¿Eliminar imagen?')">Eliminar</button></form>
+                                        <form method="post" action="{{ route('admin.store.products.images.destroy', [$product, $image]) }}" data-confirm-title="Eliminar imagen" data-confirm-message="La imagen será eliminada del producto." data-confirm-accept="Eliminar" data-confirm-variant="danger">@csrf @method('delete')<button class="btn-danger">Eliminar</button></form>
                                     </div>
                                 </div>
                             </div>

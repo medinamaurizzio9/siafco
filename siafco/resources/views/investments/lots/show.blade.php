@@ -10,7 +10,7 @@
             <div><dt class="font-bold text-slate-500">Fin contrato</dt><dd>{{ $lot->contract_end_date->format('d/m/Y') }}</dd></div>
             <div><dt class="font-bold text-slate-500">Estado</dt><dd><span class="badge">{{ $lot->status }}</span></dd></div>
         </dl>
-        @if($lot->status === 'pending_approval')
+        @if($lot->status === 'pending_approval' && auth()->user()->hasPermission('investors.update'))
             <form class="mt-5" method="post" action="{{ route('investments.lots.approve', $lot) }}">@csrf <button class="btn-primary">Aprobar inversion</button></form>
         @endif
     </div>
@@ -27,7 +27,7 @@
                     <td>Bs {{ number_format($period->production_bonus_amount, 2) }}</td>
                     <td>Bs {{ number_format($period->total_amount, 2) }}</td>
                     <td><span class="badge">{{ $period->status }}</span></td>
-                    <td><a class="font-bold" href="{{ route('investments.returns.show', $period) }}">Gestionar</a></td>
+                    <td><a class="font-bold" href="{{ route('investments.returns.show', $period) }}">{{ auth()->user()->hasPermission('investors.update') ? 'Gestionar' : 'Ver' }}</a></td>
                 </tr>
             @endforeach
             </tbody>

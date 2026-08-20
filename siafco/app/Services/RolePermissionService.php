@@ -18,6 +18,15 @@ class RolePermissionService
             'roles.view', 'roles.update', 'audit.export', 'settings.update', 'users.delete',
             'users.assign-role', 'payments.void', 'affiliates.delete', 'affiliates.soft_delete',
         ],
+        'caja' => [
+            'users.view', 'users.create', 'users.update', 'users.block', 'users.activate',
+            'users.reset-password', 'users.delete', 'users.restore', 'users.assign-role',
+            'roles.view', 'roles.update', 'audit.view', 'audit.export', 'settings.view',
+            'settings.update', 'affiliates.delete', 'affiliates.soft_delete', 'affiliates.restore',
+            'payments.void', 'store.view', 'store.manage-products', 'store.manage-settings',
+            'store.manage-shipping', 'store.manage-coupons', 'store.manage-orders',
+            'store.verify-receipts',
+        ],
         'secretaria' => ['roles.update', 'users.delete', 'payments.void', 'affiliates.delete'],
         'consulta' => ['roles.view', 'roles.update', 'audit.export', 'settings.update', 'users.delete', 'payments.void'],
     ];
@@ -220,6 +229,7 @@ class RolePermissionService
             'gerente' => 'Supervision operativa y consulta ejecutiva.',
             'secretaria' => 'Operacion de afiliacion, pagos y credenciales.',
             'cajero' => 'Gestion de caja y pagos.',
+            'caja' => 'Gestion operativa de cobros, pagos y consulta financiera autorizada.',
             'consulta' => 'Acceso de solo lectura a modulos permitidos.',
             default => 'Rol interno configurado para SIAFCO.',
         };

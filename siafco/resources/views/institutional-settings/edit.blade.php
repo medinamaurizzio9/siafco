@@ -1,6 +1,6 @@
 <x-layouts.app title="Configuracion institucional">
     <div class="grid gap-5 lg:grid-cols-[1fr_360px]">
-        <form method="post" enctype="multipart/form-data" action="{{ route('institutional-settings.update') }}" class="section-card grid gap-4 md:grid-cols-2">
+        <form method="post" enctype="multipart/form-data" action="{{ route('institutional-settings.update') }}" class="section-card grid gap-4 md:grid-cols-2" data-confirm-title="Guardar configuración institucional" data-confirm-message="La identidad y los datos institucionales visibles en el sistema serán actualizados." data-confirm-accept="Guardar configuración" data-confirm-variant="warning">
             @csrf
             @method('put')
             <div class="md:col-span-2">

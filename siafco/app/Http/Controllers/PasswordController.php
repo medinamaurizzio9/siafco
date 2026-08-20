@@ -34,7 +34,10 @@ class PasswordController extends Controller
             return $redirects->redirectHome($request);
         }
 
-        return view('auth.force-password');
+        return response()
+            ->view('auth.force-password')
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, private')
+            ->header('Pragma', 'no-cache');
     }
 
     public function forceUpdate(

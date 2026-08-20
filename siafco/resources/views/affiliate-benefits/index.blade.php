@@ -9,7 +9,7 @@
             <td>{{ $benefit->order }}</td><td><strong>{{ $benefit->title }}</strong><br><span class="text-xs text-slate-500">{{ $benefit->description }}</span></td>
             <td>{{ $benefit->icon }}</td><td><span class="badge">{{ $benefit->active ? 'Activo' : 'Inactivo' }}</span></td>
             <td>{{ $benefit->visible_when_pending ? 'Visible bloqueado' : 'Oculto' }}</td>
-            <td><div class="flex gap-2"><a class="btn-secondary" href="{{ route('affiliate-benefits.edit',$benefit) }}">Editar</a><form method="post" action="{{ route('affiliate-benefits.destroy',$benefit) }}">@csrf @method('delete')<button class="btn-danger" onclick="return confirm('¿Eliminar este elemento?')">Eliminar</button></form></div></td>
+            <td><div class="flex gap-2"><a class="btn-secondary" href="{{ route('affiliate-benefits.edit',$benefit) }}">Editar</a><form method="post" action="{{ route('affiliate-benefits.destroy',$benefit) }}" data-confirm-title="Eliminar beneficio" data-confirm-message="El beneficio será eliminado." data-confirm-accept="Eliminar" data-confirm-variant="danger">@csrf @method('delete')<button class="btn-danger">Eliminar</button></form></div></td>
         </tr>@empty<tr><td colspan="6">No hay servicios configurados.</td></tr>@endforelse</tbody></table>
     </div>
 </x-layouts.app>

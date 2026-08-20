@@ -1,5 +1,5 @@
 <x-layouts.app title="Configuración de tienda">
-    <form method="post" action="{{ route('admin.store.settings.update') }}" class="section-card mx-auto grid max-w-4xl gap-5 md:grid-cols-2">
+    <form method="post" action="{{ route('admin.store.settings.update') }}" class="section-card mx-auto grid max-w-4xl gap-5 md:grid-cols-2" data-confirm-title="Guardar configuración de tienda" data-confirm-message="Los parámetros operativos de Mini Tienda serán actualizados." data-confirm-accept="Guardar configuración" data-confirm-variant="warning">
         @csrf
         @method('put')
 

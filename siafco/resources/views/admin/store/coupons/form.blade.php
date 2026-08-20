@@ -50,7 +50,7 @@
     @if($coupon->exists)
         <form class="mt-4" method="post" action="{{ route('admin.store.coupons.destroy', $coupon) }}">
             @csrf @method('delete')
-            <button class="btn-danger" onclick="return confirm('¿Eliminar este cupón?')">Eliminar cupón</button>
+            <button class="btn-danger">Eliminar cupón</button>
         </form>
     @endif
 </x-layouts.app>

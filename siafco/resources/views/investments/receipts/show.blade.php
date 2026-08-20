@@ -4,7 +4,7 @@
         <div class="mt-6 flex flex-wrap gap-3">
             <a class="btn-primary" href="{{ route('investments.receipts.pdf', $receipt) }}">Descargar PDF</a>
             <button class="btn-secondary" onclick="window.print()">Imprimir</button>
-            @if($receipt->status !== 'voided')
+            @if($receipt->status !== 'voided' && auth()->user()->hasPermission('investors.update'))
                 <form class="flex gap-2" method="post" action="{{ route('investments.receipts.void', $receipt) }}">
                     @csrf
                     <input class="form-input" name="void_reason" placeholder="Motivo de anulacion" required>

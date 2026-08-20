@@ -36,13 +36,21 @@ class DatabaseSeeder extends Seeder
                 'secretaria' => 'Secretaria',
                 'cajero' => 'Cajero',
                 'caja' => 'Caja Inversiones',
-                'contabilidad' => 'Contabilidad',
                 'accionista' => 'Accionista',
                 'consulta' => 'Consulta',
             ] as $role => $name) {
+                $attributes = [
+                    'name' => $name,
+                    'role' => $role,
+                    'password' => Hash::make('admin123456'),
+                ];
+                if ($role === 'caja') {
+                    $attributes['user_type'] = 'internal';
+                }
+
                 User::updateOrCreate(
                     ['email' => "{$role}@siafco.test"],
-                    ['name' => $name, 'role' => $role, 'password' => Hash::make('admin123456')]
+                    $attributes
                 );
             }
         }

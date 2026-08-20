@@ -20,7 +20,7 @@
     @if($variant->exists)
         <form class="mx-auto mt-4 max-w-3xl" method="post" action="{{ route('admin.store.products.variants.destroy', [$product, $variant]) }}">
             @csrf @method('delete')
-            <button class="btn-danger" onclick="return confirm('¿Eliminar esta variante?')">Eliminar variante</button>
+            <button class="btn-danger">Eliminar variante</button>
         </form>
     @endif
 </x-layouts.app>

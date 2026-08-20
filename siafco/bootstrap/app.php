@@ -18,6 +18,20 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->redirectUsersTo(function ($request) {
+            $user = $request->user();
+
+            if ($user?->must_change_password) {
+                return route('password.force.edit');
+            }
+
+            $homeRoute = $user
+                ? app(\App\Services\UserRedirectResolver::class)->homeRoute($user)
+                : null;
+
+            return $homeRoute ? route($homeRoute) : url('/');
+        });
+
         if (env('SIAFCO_MEASURE_PERFORMANCE', false)) {
             $middleware->web(append: [
                 \App\Http\Middleware\MeasureRequestPerformance::class,

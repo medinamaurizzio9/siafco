@@ -54,13 +54,13 @@
                         <a class="btn-secondary" href="{{ route('payments.edit', $payment) }}">Editar pendiente</a>
                     @endif
                     @if(auth()->user()->hasPermission('payments.confirm') && \App\Support\PaymentStatus::isEditable($payment->status))
-                        <form method="post" action="{{ route('payments.confirm', $payment) }}">@csrf<button class="btn-primary w-full">Confirmar pago</button></form>
+                        <form method="post" action="{{ route('payments.confirm', $payment) }}" data-confirm-title="Confirmar pago" data-confirm-message="El pago quedará confirmado y podrá activar la afiliación según el saldo." data-confirm-accept="Confirmar pago" data-confirm-variant="warning">@csrf<button class="btn-primary w-full">Confirmar pago</button></form>
                     @endif
                     @if(auth()->user()->hasPermission('payments.reject') && ! \App\Support\PaymentStatus::isConfirmed($payment->status) && ! \App\Support\PaymentStatus::isVoided($payment->status))
-                        <form class="grid gap-2" method="post" action="{{ route('payments.reject', $payment) }}">@csrf<textarea class="form-input" name="rejection_reason" placeholder="Motivo de rechazo" required></textarea><button class="btn-danger">Rechazar</button></form>
+                        <form class="grid gap-2" method="post" action="{{ route('payments.reject', $payment) }}" data-confirm-title="Rechazar pago" data-confirm-message="El pago será rechazado con el motivo indicado." data-confirm-accept="Rechazar pago" data-confirm-variant="danger">@csrf<textarea class="form-input" name="rejection_reason" placeholder="Motivo de rechazo" required></textarea><button class="btn-danger">Rechazar</button></form>
                     @endif
                     @if(auth()->user()->hasPermission('payments.void') && \App\Support\PaymentStatus::isConfirmed($payment->status))
-                        <form class="grid gap-2 rounded border border-red-200 bg-red-50 p-3" method="post" action="{{ route('payments.void', $payment) }}">@csrf<input class="form-input" name="confirmation" placeholder="Escriba ANULAR" required><textarea class="form-input" name="void_reason" placeholder="Motivo de anulacion" required></textarea><button class="btn-danger">Anular pago</button></form>
+                        <form class="grid gap-2 rounded border border-red-200 bg-red-50 p-3" method="post" action="{{ route('payments.void', $payment) }}" data-confirm-title="Anular pago" data-confirm-message="Esta acción anulará el pago confirmado. Verifique el motivo antes de continuar." data-confirm-accept="Anular pago" data-confirm-variant="danger">@csrf<input class="form-input" name="confirmation" placeholder="Escriba ANULAR" required><textarea class="form-input" name="void_reason" placeholder="Motivo de anulacion" required></textarea><button class="btn-danger">Anular pago</button></form>
                     @endif
                     @if(auth()->user()->hasPermission('payments.view_receipt') && $payment->voucher_path)
                         <a class="btn-secondary" href="{{ route('payments.voucher', $payment) }}" target="_blank">Ver comprobante</a>

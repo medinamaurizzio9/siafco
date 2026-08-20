@@ -10,9 +10,11 @@
             </select>
             <button class="btn-secondary">Filtrar</button>
         </form>
-        <div class="mb-4 flex justify-end">
-            <a class="btn-primary" href="{{ route('investments.investors.create') }}">Nuevo accionista</a>
-        </div>
+        @if(auth()->user()->hasPermission('investors.create'))
+            <div class="mb-4 flex justify-end">
+                <a class="btn-primary" href="{{ route('investments.investors.create') }}">Nuevo accionista</a>
+            </div>
+        @endif
         <div class="overflow-x-auto">
             <table class="table">
                 <thead><tr><th>Numero</th><th>Nombre</th><th>CI</th><th>Tipo</th><th>Estado</th><th></th></tr></thead>

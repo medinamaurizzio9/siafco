@@ -64,7 +64,7 @@
                                     <a class="btn-secondary" href="{{ route('admin.store.products.edit', $product) }}">Editar</a>
                                     <form method="post" action="{{ route('admin.store.products.destroy', $product) }}">
                                         @csrf @method('delete')
-                                        <button class="btn-danger" onclick="return confirm('¿Eliminar este producto?')">Eliminar</button>
+                                        <button class="btn-danger">Eliminar</button>
                                     </form>
                                 </div>
                             @endcan

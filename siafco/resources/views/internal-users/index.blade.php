@@ -82,14 +82,14 @@
                         <td>
                             @if($internalUser->trashed())
                                 @can('restore', $internalUser)
-                                    <form method="post" action="{{ route('admin.users.restore', $internalUser->id) }}">@csrf<button class="font-bold text-[#0b1f3a] underline">Restaurar</button></form>
+                                    <form method="post" action="{{ route('admin.users.restore', $internalUser->id) }}" data-confirm-title="Restaurar usuario" data-confirm-message="El usuario eliminado será restaurado." data-confirm-accept="Restaurar" data-confirm-variant="warning">@csrf<button class="font-bold text-[#0b1f3a] underline">Restaurar</button></form>
                                 @endcan
                             @else
                                 <div class="flex flex-wrap gap-2">
                                     @can('view', $internalUser)<a class="rounded bg-slate-100 px-2 py-1 text-xs font-black text-[#0b1f3a]" href="{{ route('admin.users.show', $internalUser) }}">Ver</a>@endcan
                                     @can('update', $internalUser)<a class="rounded bg-slate-100 px-2 py-1 text-xs font-black text-[#0b1f3a]" href="{{ route('admin.users.edit', $internalUser) }}">Editar</a>@endcan
-                                    @can('block', $internalUser)<form method="post" action="{{ route('admin.users.block', $internalUser) }}">@csrf<button class="rounded bg-red-50 px-2 py-1 text-xs font-black text-red-800">Bloquear</button></form>@endcan
-                                    @can('activate', $internalUser)<form method="post" action="{{ route('admin.users.activate', $internalUser) }}">@csrf<button class="rounded bg-emerald-50 px-2 py-1 text-xs font-black text-emerald-800">Activar</button></form>@endcan
+                                    @can('block', $internalUser)<form method="post" action="{{ route('admin.users.block', $internalUser) }}" data-confirm-title="Bloquear usuario" data-confirm-message="Se cerrarán sus sesiones y se impedirá un nuevo ingreso." data-confirm-accept="Bloquear" data-confirm-variant="danger">@csrf<button class="rounded bg-red-50 px-2 py-1 text-xs font-black text-red-800">Bloquear</button></form>@endcan
+                                    @can('activate', $internalUser)<form method="post" action="{{ route('admin.users.activate', $internalUser) }}" data-confirm-title="Activar usuario" data-confirm-message="El usuario recuperará el acceso al sistema." data-confirm-accept="Activar" data-confirm-variant="warning">@csrf<button class="rounded bg-emerald-50 px-2 py-1 text-xs font-black text-emerald-800">Activar</button></form>@endcan
                                     @can('resetPassword', $internalUser)<a class="rounded bg-amber-50 px-2 py-1 text-xs font-black text-amber-900" href="{{ route('admin.users.show', $internalUser) }}#acciones-acceso">Restablecer</a>@endcan
                                     @can('delete', $internalUser)<a class="rounded bg-red-50 px-2 py-1 text-xs font-black text-red-800" href="{{ route('admin.users.show', $internalUser) }}#acciones-acceso">Eliminar</a>@endcan
                                 </div>
@@ -123,12 +123,12 @@
                     <p class="mt-3 text-xs text-slate-500">Último acceso: {{ $internalUser->last_login_at?->diffForHumans() ?? 'Nunca ingresó' }}</p>
                     <div class="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
                         @if($internalUser->trashed())
-                            @can('restore', $internalUser)<form method="post" action="{{ route('admin.users.restore', $internalUser->id) }}">@csrf<button class="btn-secondary">RESTAURAR</button></form>@endcan
+                            @can('restore', $internalUser)<form method="post" action="{{ route('admin.users.restore', $internalUser->id) }}" data-confirm-title="Restaurar usuario" data-confirm-message="El usuario eliminado será restaurado." data-confirm-accept="Restaurar" data-confirm-variant="warning">@csrf<button class="btn-secondary">RESTAURAR</button></form>@endcan
                         @else
                             @can('view', $internalUser)<a class="btn-secondary" href="{{ route('admin.users.show', $internalUser) }}">VER</a>@endcan
                             @can('update', $internalUser)<a class="btn-primary" href="{{ route('admin.users.edit', $internalUser) }}">EDITAR</a>@endcan
-                            @can('block', $internalUser)<form method="post" action="{{ route('admin.users.block', $internalUser) }}">@csrf<button class="btn-danger">BLOQUEAR</button></form>@endcan
-                            @can('activate', $internalUser)<form method="post" action="{{ route('admin.users.activate', $internalUser) }}">@csrf<button class="btn-primary">ACTIVAR</button></form>@endcan
+                            @can('block', $internalUser)<form method="post" action="{{ route('admin.users.block', $internalUser) }}" data-confirm-title="Bloquear usuario" data-confirm-message="Se cerrarán sus sesiones y se impedirá un nuevo ingreso." data-confirm-accept="Bloquear" data-confirm-variant="danger">@csrf<button class="btn-danger">BLOQUEAR</button></form>@endcan
+                            @can('activate', $internalUser)<form method="post" action="{{ route('admin.users.activate', $internalUser) }}" data-confirm-title="Activar usuario" data-confirm-message="El usuario recuperará el acceso al sistema." data-confirm-accept="Activar" data-confirm-variant="warning">@csrf<button class="btn-primary">ACTIVAR</button></form>@endcan
                             @can('resetPassword', $internalUser)<a class="btn-secondary" href="{{ route('admin.users.show', $internalUser) }}#acciones-acceso">RESTABLECER</a>@endcan
                         @endif
                     </div>

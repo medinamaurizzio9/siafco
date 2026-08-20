@@ -118,6 +118,61 @@ class PasswordManagementTest extends TestCase
         $this->get(route('affiliate.panel'))->assertOk();
     }
 
+    public function test_browser_back_to_login_keeps_forced_user_on_password_screen_without_404(): void
+    {
+        [$user] = $this->affiliate();
+        $user->update(['must_change_password' => true]);
+
+        $this->actingAs($user)
+            ->get(route('login'))
+            ->assertRedirect(route('password.force.edit'));
+
+        $this->get('/')->assertRedirect(route('password.force.edit'));
+        $response = $this->get(route('password.force.edit'))
+            ->assertOk()
+            ->assertSee('CERRAR SESIÓN');
+        $this->assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
+    }
+
+    public function test_forced_internal_user_cannot_bypass_change_with_dashboard_or_affiliates_url(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'superadministrador',
+            'user_type' => 'internal',
+            'must_change_password' => true,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)->get(route('admin.dashboard'))
+            ->assertRedirect(route('password.force.edit'));
+        $this->get(route('affiliates.index'))
+            ->assertRedirect(route('password.force.edit'));
+        $this->get(route('password.force.edit'))->assertOk();
+    }
+
+    public function test_forced_user_can_logout_without_completing_password_change(): void
+    {
+        [$user] = $this->affiliate();
+        $user->update(['must_change_password' => true]);
+
+        $this->actingAs($user)->post(route('logout'))
+            ->assertRedirect(route('login'));
+
+        $this->assertGuest();
+        $this->assertTrue($user->fresh()->must_change_password);
+    }
+
+    public function test_non_forced_user_is_not_redirected_to_forced_password_screen(): void
+    {
+        [$user] = $this->affiliate();
+        $this->assertFalse((bool) $user->must_change_password);
+
+        $this->actingAs($user)->get(route('affiliate.panel'))
+            ->assertOk();
+        $this->get(route('login'))
+            ->assertRedirect(route('affiliate.panel'));
+    }
+
     public function test_affiliate_login_ignores_unauthorized_admin_intended_url(): void
     {
         [$user] = $this->affiliate();

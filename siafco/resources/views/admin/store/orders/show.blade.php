@@ -41,7 +41,7 @@
         <div class="section-card">
             <h3 class="mb-3 text-lg font-black text-[#0b1f3a]">Cambiar estado</h3>
             @can('store.manage-orders')
-                <form class="grid gap-3" method="post" action="{{ route('admin.store.orders.status', $order) }}">
+                <form class="grid gap-3" method="post" action="{{ route('admin.store.orders.status', $order) }}" data-confirm-title="Confirmar cambio de estado" data-confirm-message="El pedido cambiará al estado seleccionado." data-confirm-accept="Actualizar estado" data-confirm-variant="warning">
                     @csrf @method('patch')
                     <select class="form-input" name="status" required>@foreach($statuses as $status)<option value="{{ $status }}" @selected($order->status === $status)>{{ $status }}</option>@endforeach</select>
                     <textarea class="form-input" name="admin_note" rows="3" placeholder="Observacion administrativa opcional"></textarea>
@@ -67,8 +67,8 @@
                         <a class="btn-secondary" href="{{ route('admin.store.orders.receipts.show', [$order, $receipt]) }}">Descargar</a>
                         @can('store.verify-receipts')
                             @if($receipt->status === 'pending')
-                                <form method="post" action="{{ route('admin.store.orders.receipts.confirm', [$order, $receipt]) }}">@csrf<button class="btn-primary">Confirmar</button></form>
-                                <form class="flex gap-2" method="post" action="{{ route('admin.store.orders.receipts.reject', [$order, $receipt]) }}">@csrf<input class="form-input" name="reason" required placeholder="Motivo"><button class="btn-danger">Rechazar</button></form>
+                                <form method="post" action="{{ route('admin.store.orders.receipts.confirm', [$order, $receipt]) }}" data-confirm-title="Confirmar comprobante" data-confirm-message="El comprobante del pedido será marcado como confirmado." data-confirm-accept="Confirmar" data-confirm-variant="warning">@csrf<button class="btn-primary">Confirmar</button></form>
+                                <form class="flex gap-2" method="post" action="{{ route('admin.store.orders.receipts.reject', [$order, $receipt]) }}" data-confirm-title="Rechazar comprobante" data-confirm-message="El comprobante será rechazado con el motivo indicado." data-confirm-accept="Rechazar" data-confirm-variant="danger">@csrf<input class="form-input" name="reason" required placeholder="Motivo"><button class="btn-danger">Rechazar</button></form>
                             @endif
                         @endcan
                     </div>

@@ -250,52 +250,62 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
     });
 
     Route::get('/panel-accionista', [InvestorPanelController::class, 'index'])
-        ->middleware('role:accionista,afiliado,administrador,caja,cajero,contabilidad')
+        ->middleware('role:accionista,afiliado,administrador,caja,cajero')
         ->name('investments.panel');
 
-    Route::prefix('inversiones')->name('investments.')->middleware('role:administrador,caja,cajero,contabilidad')->group(function () {
+    Route::prefix('inversiones')->name('investments.')
+        ->middleware(['role:administrador,gerente,caja,cajero', 'permission:investors.view'])
+        ->group(function () {
         Route::get('/dashboard', [InvestmentDashboardController::class, 'index'])->name('dashboard');
-        Route::resource('accionistas', InvestorController::class)->except('destroy')->parameters(['accionistas' => 'investor'])->names('investors');
-        Route::resource('tipos-inversionista', InvestorTypeController::class)->except('show', 'destroy')->parameters(['tipos-inversionista' => 'investorType'])->names('investor-types');
+        Route::resource('accionistas', InvestorController::class)->except('destroy')
+            ->parameters(['accionistas' => 'investor'])->names('investors')
+            ->middlewareFor(['create', 'store'], 'permission:investors.create')
+            ->middlewareFor(['edit', 'update'], 'permission:investors.update');
+        Route::resource('tipos-inversionista', InvestorTypeController::class)->except('show', 'destroy')
+            ->parameters(['tipos-inversionista' => 'investorType'])->names('investor-types')
+            ->middlewareFor(['create', 'store'], 'permission:investors.create')
+            ->middlewareFor(['edit', 'update'], 'permission:investors.update');
 
         Route::get('reservas', [ShareReservationController::class, 'index'])->name('reservations.index');
-        Route::get('reservas/crear', [ShareReservationController::class, 'create'])->name('reservations.create');
-        Route::post('reservas', [ShareReservationController::class, 'store'])->name('reservations.store');
+        Route::get('reservas/crear', [ShareReservationController::class, 'create'])->middleware('permission:investors.create')->name('reservations.create');
+        Route::post('reservas', [ShareReservationController::class, 'store'])->middleware('permission:investors.create')->name('reservations.store');
         Route::get('reservas/{reservation}', [ShareReservationController::class, 'show'])->name('reservations.show');
-        Route::post('reservas/{reservation}/convertir', [ShareReservationController::class, 'convert'])->name('reservations.convert');
-        Route::post('reservas/{reservation}/cerrar', [ShareReservationController::class, 'close'])->name('reservations.close');
+        Route::post('reservas/{reservation}/convertir', [ShareReservationController::class, 'convert'])->middleware('permission:investors.update')->name('reservations.convert');
+        Route::post('reservas/{reservation}/cerrar', [ShareReservationController::class, 'close'])->middleware('permission:investors.update')->name('reservations.close');
 
         Route::get('lotes', [InvestmentLotController::class, 'index'])->name('lots.index');
-        Route::get('lotes/crear', [InvestmentLotController::class, 'create'])->name('lots.create');
-        Route::post('lotes', [InvestmentLotController::class, 'store'])->name('lots.store');
+        Route::get('lotes/crear', [InvestmentLotController::class, 'create'])->middleware('permission:investors.create')->name('lots.create');
+        Route::post('lotes', [InvestmentLotController::class, 'store'])->middleware('permission:investors.create')->name('lots.store');
         Route::get('lotes/{lot}', [InvestmentLotController::class, 'show'])->name('lots.show');
-        Route::post('lotes/{lot}/aprobar', [InvestmentLotController::class, 'approve'])->name('lots.approve');
+        Route::post('lotes/{lot}/aprobar', [InvestmentLotController::class, 'approve'])->middleware('permission:investors.update')->name('lots.approve');
 
         Route::get('rendimientos', [ReturnPeriodController::class, 'index'])->name('returns.index');
         Route::get('rendimientos/{period}', [ReturnPeriodController::class, 'show'])->name('returns.show');
-        Route::post('rendimientos/{period}/preparar', [ReturnPeriodController::class, 'prepare'])->name('returns.prepare');
-        Route::post('rendimientos/{period}/aprobar', [ReturnPeriodController::class, 'approve'])->name('returns.approve');
-        Route::post('rendimientos/{period}/rechazar', [ReturnPeriodController::class, 'reject'])->name('returns.reject');
-        Route::post('rendimientos/{period}/recibo', [InvestmentReceiptController::class, 'issue'])->name('receipts.issue');
+        Route::post('rendimientos/{period}/preparar', [ReturnPeriodController::class, 'prepare'])->middleware('permission:investors.update')->name('returns.prepare');
+        Route::post('rendimientos/{period}/aprobar', [ReturnPeriodController::class, 'approve'])->middleware('permission:investors.update')->name('returns.approve');
+        Route::post('rendimientos/{period}/rechazar', [ReturnPeriodController::class, 'reject'])->middleware('permission:investors.update')->name('returns.reject');
+        Route::post('rendimientos/{period}/recibo', [InvestmentReceiptController::class, 'issue'])->middleware('permission:investors.update')->name('receipts.issue');
 
         Route::get('recibos', [InvestmentReceiptController::class, 'index'])->name('receipts.index');
         Route::get('recibos/{receipt}', [InvestmentReceiptController::class, 'show'])->name('receipts.show');
         Route::get('recibos/{receipt}/pdf', [InvestmentReceiptController::class, 'pdf'])->name('receipts.pdf');
-        Route::post('recibos/{receipt}/anular', [InvestmentReceiptController::class, 'void'])->name('receipts.void');
+        Route::post('recibos/{receipt}/anular', [InvestmentReceiptController::class, 'void'])->middleware('permission:investors.update')->name('receipts.void');
 
         Route::get('aprobaciones', [ReturnPeriodController::class, 'index'])->defaults('status', 'pending_approval')->name('approvals.index');
-        Route::get('configuracion', [InvestmentSettingController::class, 'edit'])->name('settings.edit');
-        Route::put('configuracion', [InvestmentSettingController::class, 'update'])->name('settings.update');
+        Route::get('configuracion', [InvestmentSettingController::class, 'edit'])->middleware('permission:investors.update')->name('settings.edit');
+        Route::put('configuracion', [InvestmentSettingController::class, 'update'])->middleware('permission:investors.update')->name('settings.update');
         Route::get('reportes', [InvestmentReportController::class, 'index'])->name('reports.index');
         Route::get('reportes/pdf', [InvestmentReportController::class, 'pdf'])->name('reports.pdf');
         Route::get('reportes/csv', [InvestmentReportController::class, 'csv'])->name('reports.csv');
     });
 
     Route::view('/creditos', 'credits.placeholder')
-        ->middleware('role:administrador,administrador_sector,secretaria,cajero,consulta')
+        ->middleware(['role:administrador,gerente,administrador_sector,secretaria,cajero,caja,consulta', 'permission:credits.view'])
         ->name('credits.placeholder');
 
-    Route::prefix('creditos')->name('credits.')->middleware('role:administrador,administrador_sector,secretaria,cajero,caja,contabilidad,consulta')->group(function () {
+    Route::prefix('creditos')->name('credits.')
+        ->middleware(['role:administrador,gerente,administrador_sector,secretaria,cajero,caja,consulta', 'permission:credits.view'])
+        ->group(function () {
         Route::get('/productos', PlaceholderController::class)->defaults('title', 'Productos de credito')->defaults('message', 'Tipos de credito, tasas y condiciones se construiran en la fase de creditos.')->name('products.index');
         Route::get('/solicitudes', PlaceholderController::class)->defaults('title', 'Solicitudes de credito')->defaults('message', 'Registro y revision de solicitudes de credito pendiente de implementacion.')->name('applications.index');
         Route::get('/simulador', PlaceholderController::class)->defaults('title', 'Simulador de creditos')->defaults('message', 'Simulador preparado para calcular cuotas, plazos e intereses.')->name('simulator');
@@ -363,7 +373,9 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
         Route::put('/configuracion', [StoreSettingController::class, 'update'])->name('settings.update');
     });
 
-    Route::prefix('configuracion-general')->name('settings.')->middleware('role:administrador,secretaria')->group(function () {
+    Route::prefix('configuracion-general')->name('settings.')
+        ->middleware(['role:administrador,secretaria', 'permission:settings.view'])
+        ->group(function () {
         Route::get('/seguridad', PlaceholderController::class)->defaults('title', 'Seguridad')->defaults('message', 'Opciones de seguridad del sistema preparadas para una fase posterior.')->name('security');
         Route::get('/sistema', PlaceholderController::class)->defaults('title', 'Configuracion del sistema')->defaults('message', 'Zona horaria, moneda por defecto y opciones generales del sistema se ampliaran aqui.')->name('system');
     });

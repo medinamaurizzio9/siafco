@@ -39,7 +39,7 @@
     @if($rate->exists)
         <form class="mx-auto mt-4 max-w-3xl" method="post" action="{{ route('admin.store.shipping-rates.destroy', $rate) }}">
             @csrf @method('delete')
-            <button class="btn-danger" onclick="return confirm('Eliminar esta tarifa?')">Eliminar tarifa</button>
+            <button class="btn-danger">Eliminar tarifa</button>
         </form>
     @endif
 </x-layouts.app>

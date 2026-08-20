@@ -3,9 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\AuditLog;
+use App\Models\Investor;
+use App\Models\Person;
+use App\Models\RolePermissionOverride;
 use App\Models\User;
 use App\Services\AuditLogSanitizer;
+use App\Services\RolePermissionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -129,6 +134,219 @@ class AdministrationModulesTest extends TestCase
         $this->assertTrue($cashier->hasPermission('payments.confirm'));
         $this->assertFalse($cashier->hasPermission('payments.void'));
         $this->assertFalse($cashier->hasPermission('users.delete'));
+    }
+
+    public function test_cash_desk_is_known_assignable_and_has_only_operational_permissions(): void
+    {
+        $roles = app(RolePermissionService::class);
+        $cashDesk = $this->internalUser('caja');
+
+        $this->assertTrue($roles->isKnownInternalRole('caja'));
+        $this->assertContains('caja', config('internal_roles.assignable'));
+        $this->assertSame('Caja', config('internal_roles.labels.caja'));
+        $this->assertNotEmpty($roles->permissionsForRole('caja'));
+
+        foreach (['dashboard.view', 'affiliates.view', 'payments.view', 'payments.create', 'payments.confirm', 'payments.view_receipt', 'credits.view', 'investors.view'] as $permission) {
+            $this->assertTrue($cashDesk->hasPermission($permission), $permission);
+        }
+
+        foreach (['users.view', 'users.delete', 'users.assign-role', 'roles.view', 'audit.view', 'audit.export', 'settings.update', 'affiliates.delete', 'payments.void', 'store.view'] as $permission) {
+            $this->assertFalse($cashDesk->hasPermission($permission), $permission);
+        }
+    }
+
+    public function test_cash_desk_sidebar_exposes_financial_work_without_sensitive_administration(): void
+    {
+        $cashDesk = $this->internalUser('caja');
+
+        $this->actingAs($cashDesk)->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Afiliacion en oficina')
+            ->assertSee('Pagos de afiliacion')
+            ->assertSee('Reporte de cobros')
+            ->assertSee('Accionistas e inversiones')
+            ->assertSee('Creditos')
+            ->assertDontSee('Usuarios internos')
+            ->assertDontSee('Roles y permisos')
+            ->assertDontSee('Auditoria')
+            ->assertDontSee('Configuracion general')
+            ->assertDontSee('Mini tienda');
+
+        $this->actingAs($cashDesk)->get(route('admin.users.index'))->assertForbidden();
+        $this->actingAs($cashDesk)->get(route('administration.roles.index'))->assertForbidden();
+        $this->actingAs($cashDesk)->get(route('administration.audit.index'))->assertForbidden();
+    }
+
+    public function test_cash_desk_can_read_investments_but_cannot_open_or_submit_write_actions(): void
+    {
+        $cashDesk = $this->internalUser('caja');
+        $person = Person::create(['full_name' => 'INVERSIONISTA CONSULTA', 'ci' => 'INV-CONSULTA']);
+        $investor = Investor::create([
+            'person_id' => $person->id,
+            'investor_number' => 'INV-CONSULTA-001',
+            'status' => 'prospect',
+        ]);
+
+        $this->actingAs($cashDesk)->get(route('investments.dashboard'))
+            ->assertOk()
+            ->assertDontSee('Registrar venta');
+        $this->actingAs($cashDesk)->get(route('investments.investors.index'))
+            ->assertOk()
+            ->assertDontSee('Nuevo accionista');
+        $this->actingAs($cashDesk)->get(route('investments.investor-types.index'))
+            ->assertOk()
+            ->assertDontSee('Nuevo tipo')
+            ->assertDontSee('Editar');
+        $this->actingAs($cashDesk)->get(route('investments.investors.show', $investor))
+            ->assertOk()
+            ->assertSee('INVERSIONISTA CONSULTA')
+            ->assertDontSee('Editar')
+            ->assertDontSee('Venta de acciones')
+            ->assertDontSee('Crear reserva');
+
+        $this->actingAs($cashDesk)->get(route('investments.investors.create'))->assertForbidden();
+        $this->actingAs($cashDesk)->post(route('investments.investors.store'), [])->assertForbidden();
+        $this->actingAs($cashDesk)->get(route('investments.investors.edit', $investor))->assertForbidden();
+        $this->actingAs($cashDesk)->put(route('investments.investors.update', $investor), [])->assertForbidden();
+        $this->actingAs($cashDesk)->get(route('investments.lots.create'))->assertForbidden();
+        $this->actingAs($cashDesk)->post(route('investments.lots.store'), [])->assertForbidden();
+        $this->actingAs($cashDesk)->get(route('investments.settings.edit'))->assertForbidden();
+        $this->actingAs($cashDesk)->put(route('investments.settings.update'), [])->assertForbidden();
+        $this->assertFalse(Route::has('investments.investors.destroy'));
+    }
+
+    public function test_cash_desk_can_read_credits_and_module_has_no_write_routes(): void
+    {
+        $cashDesk = $this->internalUser('caja');
+
+        $this->actingAs($cashDesk)->get(route('credits.placeholder'))->assertOk();
+        $this->actingAs($cashDesk)->get(route('credits.products.index'))->assertOk();
+        $this->actingAs($cashDesk)->get(route('credits.applications.index'))->assertOk();
+
+        $creditRoutes = collect(Route::getRoutes()->getRoutes())
+            ->filter(fn ($route) => str_starts_with((string) $route->getName(), 'credits.'));
+
+        $this->assertNotEmpty($creditRoutes);
+        $this->assertTrue($creditRoutes->every(
+            fn ($route) => array_values(array_diff($route->methods(), ['HEAD'])) === ['GET']
+        ));
+    }
+
+    public function test_manager_is_read_only_and_administrators_keep_investment_write_access(): void
+    {
+        $manager = $this->internalUser('gerente');
+
+        $this->actingAs($manager)->get(route('investments.investors.index'))->assertOk();
+        $this->actingAs($manager)->get(route('investments.investors.create'))->assertForbidden();
+        $this->actingAs($manager)->post(route('investments.investors.store'), [])->assertForbidden();
+
+        foreach (['superadministrador', 'administrador'] as $role) {
+            $administrator = $this->internalUser($role);
+            $this->actingAs($administrator)->get(route('investments.investors.create'))->assertOk();
+            $this->actingAs($administrator)->get(route('investments.settings.edit'))->assertOk();
+        }
+    }
+
+    public function test_historical_accounting_role_no_longer_accesses_active_financial_modules(): void
+    {
+        $accounting = $this->internalUser('contabilidad');
+        $roles = app(RolePermissionService::class);
+
+        $this->assertFalse($roles->isKnownInternalRole('contabilidad'));
+        $this->assertSame([], $roles->permissionsForRole('contabilidad'));
+        $this->actingAs($accounting)->get(route('investments.dashboard'))->assertForbidden();
+        $this->actingAs($accounting)->get(route('credits.products.index'))->assertForbidden();
+        $this->actingAs($accounting)->get(route('investments.panel'))->assertForbidden();
+    }
+
+    public function test_cashier_sidebar_only_exposes_authorized_operational_modules(): void
+    {
+        $cashier = $this->internalUser('cajero');
+
+        $this->actingAs($cashier)->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Afiliacion en oficina')
+            ->assertSee('Reporte de cobros')
+            ->assertSee('Pagos de afiliacion')
+            ->assertSee('Creditos')
+            ->assertDontSee('Accionistas e inversiones')
+            ->assertDontSee('Mini tienda')
+            ->assertDontSee('Usuarios internos')
+            ->assertDontSee('Roles y permisos')
+            ->assertDontSee('Auditoria')
+            ->assertDontSee('Configuracion general');
+    }
+
+    public function test_cashier_cannot_open_hidden_administration_or_investment_urls(): void
+    {
+        $cashier = $this->internalUser('cajero');
+
+        $this->actingAs($cashier)->get(route('admin.users.index'))->assertForbidden();
+        $this->actingAs($cashier)->get(route('administration.roles.index'))->assertForbidden();
+        $this->actingAs($cashier)->get(route('administration.audit.index'))->assertForbidden();
+        $this->actingAs($cashier)->get(route('investments.dashboard'))->assertForbidden();
+    }
+
+    public function test_manager_sidebar_matches_permissions_and_route_authorization(): void
+    {
+        $manager = $this->internalUser('gerente');
+
+        $this->actingAs($manager)->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Afiliacion en oficina')
+            ->assertSee('Reporte de cobros')
+            ->assertSee('Accionistas e inversiones')
+            ->assertSee('Creditos')
+            ->assertSee('Mini tienda')
+            ->assertSee('Usuarios internos')
+            ->assertSee('Roles y permisos')
+            ->assertSee('Auditoria')
+            ->assertDontSee('Configuracion general');
+
+        $this->actingAs($manager)->get(route('investments.dashboard'))->assertOk();
+        $this->actingAs($manager)->get(route('credits.products.index'))->assertOk();
+    }
+
+    public function test_secretary_sidebar_hides_modules_without_effective_permission(): void
+    {
+        $secretary = $this->internalUser('secretaria');
+
+        $this->actingAs($secretary)->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Solicitudes publicas')
+            ->assertSee('Mini tienda')
+            ->assertSee('Usuarios internos')
+            ->assertSee('Configuracion general')
+            ->assertDontSee('Accionistas e inversiones')
+            ->assertDontSee('Creditos')
+            ->assertDontSee('Roles y permisos')
+            ->assertDontSee('Auditoria');
+
+        $this->actingAs($secretary)->get(route('credits.products.index'))->assertForbidden();
+    }
+
+    public function test_sidebar_does_not_render_empty_parent_modules_after_permission_override(): void
+    {
+        $super = $this->internalUser('superadministrador');
+        RolePermissionOverride::create([
+            'role' => 'consulta',
+            'permissions' => ['dashboard.view'],
+            'updated_by' => $super->id,
+        ]);
+        $viewer = $this->internalUser('consulta');
+
+        $this->actingAs($viewer)->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Dashboard general')
+            ->assertDontSee('Afiliacion</span>', false)
+            ->assertDontSee('Accionistas e inversiones')
+            ->assertDontSee('Creditos')
+            ->assertDontSee('Mini tienda')
+            ->assertDontSee('Administracion</span>', false)
+            ->assertDontSee('Configuracion general')
+            ->assertDontSee('Panel personal');
+
+        $this->actingAs($viewer)->get(route('admin.store.dashboard'))->assertForbidden();
     }
 
     public function test_audit_index_lists_filters_and_redacts_sensitive_summary(): void

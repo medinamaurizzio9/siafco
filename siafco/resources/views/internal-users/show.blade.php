@@ -45,23 +45,23 @@
             <h3 class="text-lg font-black text-[#0b1f3a]">ACCIONES DE ACCESO</h3>
             <div class="mt-4 grid gap-4 lg:grid-cols-3">
                 @can('block', $internalUser)
-                    <form method="post" action="{{ route('admin.users.block', $internalUser) }}" class="rounded border border-slate-200 p-4">@csrf
+                    <form method="post" action="{{ route('admin.users.block', $internalUser) }}" class="rounded border border-slate-200 p-4" data-confirm-title="Bloquear usuario" data-confirm-message="Se cerrarán sus sesiones y se impedirá un nuevo ingreso." data-confirm-accept="Bloquear" data-confirm-variant="danger">@csrf
                         <strong class="block text-slate-900">Bloquear usuario</strong><p class="my-3 text-sm text-slate-600">Cierra sus sesiones y evita nuevos ingresos.</p><button class="btn-danger w-full">BLOQUEAR</button>
                     </form>
                 @endcan
                 @can('activate', $internalUser)
-                    <form method="post" action="{{ route('admin.users.activate', $internalUser) }}" class="rounded border border-slate-200 p-4">@csrf
+                    <form method="post" action="{{ route('admin.users.activate', $internalUser) }}" class="rounded border border-slate-200 p-4" data-confirm-title="Activar usuario" data-confirm-message="El usuario recuperará el acceso al sistema." data-confirm-accept="Activar" data-confirm-variant="warning">@csrf
                         <strong class="block text-slate-900">Activar usuario</strong><p class="my-3 text-sm text-slate-600">Habilita nuevamente el acceso al sistema.</p><button class="btn-primary w-full">ACTIVAR</button>
                     </form>
                 @endcan
                 @can('resetPassword', $internalUser)
-                    <form method="post" action="{{ route('admin.users.password.reset', $internalUser) }}" class="rounded border border-slate-200 p-4">@csrf
+                    <form method="post" action="{{ route('admin.users.password.reset', $internalUser) }}" class="rounded border border-slate-200 p-4" data-confirm-title="Restablecer contraseña" data-confirm-message="La contraseña actual dejará de ser válida y el usuario deberá cambiar la nueva al ingresar." data-confirm-accept="Restablecer contraseña" data-confirm-variant="warning">@csrf
                         <strong class="block">Restablecer contraseña</strong><p class="my-2 text-sm text-slate-600">Escriba RESTABLECER para confirmar.</p>
                         <input class="form-input mb-3" name="confirmation" autocomplete="off" required><button class="btn-secondary w-full">RESTABLECER CONTRASEÑA</button>
                     </form>
                 @endcan
                 @can('delete', $internalUser)
-                    <form method="post" action="{{ route('admin.users.destroy', $internalUser) }}" class="rounded border border-red-200 p-4">@csrf @method('DELETE')
+                    <form method="post" action="{{ route('admin.users.destroy', $internalUser) }}" class="rounded border border-red-200 p-4" data-confirm-title="Eliminar usuario" data-confirm-message="El usuario será eliminado y perderá acceso al sistema." data-confirm-accept="Eliminar" data-confirm-variant="danger">@csrf @method('DELETE')
                         <strong class="block text-red-800">Eliminar usuario</strong><p class="my-2 text-sm text-slate-600">Escriba ELIMINAR para confirmar.</p>
                         <input class="form-input mb-3" name="confirmation" autocomplete="off" required><button class="btn-danger w-full">ELIMINAR</button>
                     </form>

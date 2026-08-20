@@ -24,7 +24,9 @@
     <div class="section-card mt-6">
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 class="text-xl font-black text-[#0b1f3a]">Capital invertido por mes</h2>
-            <a class="btn-primary" href="{{ route('investments.lots.create') }}">Registrar venta</a>
+            @if(auth()->user()->hasPermission('investors.create'))
+                <a class="btn-primary" href="{{ route('investments.lots.create') }}">Registrar venta</a>
+            @endif
         </div>
         <div class="grid gap-3">
             @forelse($salesByMonth as $row)

@@ -37,7 +37,7 @@ $env:PATH="C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64;" + $env:PATH
 - Correo: `admin@siafco.test`
 - Password: `admin123456`
 
-Tambien se crean usuarios de apoyo para `administrador_sector`, `secretaria`, `cajero`, `caja`, `contabilidad`, `accionista` y `consulta`, todos con password `admin123456`.
+Tambien se crean usuarios de apoyo para `administrador_sector`, `secretaria`, `cajero`, `caja`, `accionista` y `consulta`, todos con password `admin123456`.
 
 ## Modulos incluidos
 
@@ -100,7 +100,6 @@ Roles operativos:
 - `administrador`
 - `caja`
 - `cajero`
-- `contabilidad`
 
 El comando programado queda registrado en `routes/console.php` para ejecucion diaria a las 02:00. Detecta reservas vencidas, lotes que alcanzaron maduracion y periodos mensuales pendientes. No registra pagos ni emite recibos automaticamente.
 

@@ -6,6 +6,7 @@
     $roleLabel = str_replace(' (legado)', '', $user->roleLabel());
     $currency = 'BOB';
     $canAudit = $user->hasPermission('audit.view') && Route::has('administration.audit.index');
+    $canReviewPublicAffiliations = $user->hasRole(['superadministrador', 'administrador', 'administrador_sector', 'secretaria']);
     $statusDistribution = collect($metrics['affiliationStatusDistribution'] ?? []);
     $statusLabels = $statusDistribution->keys()
         ->map(fn ($status) => \App\Support\AffiliationStatusPresenter::label($status))
@@ -127,6 +128,7 @@
             'hint' => 'Solicitudes pendientes',
             'route' => 'public-affiliation.admin.index',
             'permission' => 'affiliates.view',
+            'visible' => $canReviewPublicAffiliations,
             'tone' => 'yellow',
         ],
         [
@@ -145,7 +147,10 @@
             'permission' => 'store.view',
             'tone' => 'green',
         ],
-    ])->filter(fn ($alert) => $alert['value'] > 0 && $user->hasPermission($alert['permission']) && Route::has($alert['route']))
+    ])->filter(fn ($alert) => $alert['value'] > 0
+            && ($alert['visible'] ?? true)
+            && $user->hasPermission($alert['permission'])
+            && Route::has($alert['route']))
         ->take(4)
         ->values();
     $notificationCount = $alerts->sum('value');

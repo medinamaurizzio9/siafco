@@ -32,11 +32,15 @@ return [
         'gerente' => 'Gerente',
         'secretaria' => 'Secretaría',
         'cajero' => 'Cajero',
+        'caja' => 'Caja',
         'administrador' => 'Administrador (legado)',
         'administrador_sector' => 'Administrador de sector',
         'consulta' => 'Consulta',
     ],
-    'assignable' => ['superadministrador', 'gerente', 'secretaria', 'cajero'],
+    'assignable' => ['superadministrador', 'gerente', 'secretaria', 'cajero', 'caja'],
+    'descriptions' => [
+        'caja' => 'Gestión operativa de cobros, pagos y consulta financiera autorizada.',
+    ],
     'roles' => [
         'superadministrador' => $permissions,
         'administrador' => $permissions,
@@ -69,6 +73,11 @@ return [
             'dashboard.view', 'affiliates.view', 'payments.view', 'payments.create', 'payments.update',
             'payments.update_pending', 'payments.verify', 'payments.confirm', 'payments.receipt',
             'payments.view_receipt', 'payments.download_receipt', 'credits.view',
+        ],
+        'caja' => [
+            'dashboard.view', 'affiliates.view', 'payments.view', 'payments.create', 'payments.update',
+            'payments.update_pending', 'payments.verify', 'payments.confirm', 'payments.receipt',
+            'payments.view_receipt', 'payments.download_receipt', 'credits.view', 'investors.view',
         ],
         'administrador_sector' => [
             'dashboard.view', 'affiliates.view', 'affiliates.create', 'affiliates.update',

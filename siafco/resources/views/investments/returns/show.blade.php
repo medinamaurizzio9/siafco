@@ -9,6 +9,7 @@
                 <div><dt class="font-bold text-slate-500">Estado</dt><dd><span class="badge">{{ $period->status }}</span></dd></div>
             </dl>
         </div>
+        @if(auth()->user()->hasPermission('investors.update'))
         <form class="section-card grid gap-3" method="post" action="{{ route('investments.returns.prepare', $period) }}">
             @csrf
             <h2 class="text-lg font-black text-[#0b1f3a]">Preparar rendimiento</h2>
@@ -19,13 +20,14 @@
             <textarea class="form-input" name="notes" rows="2" placeholder="Notas">{{ old('notes', $period->notes) }}</textarea>
             <button class="btn-primary">Solicitar aprobacion</button>
         </form>
+        @endif
     </div>
     <div class="mt-5 flex flex-wrap gap-3">
-        @if($period->status === 'pending_approval')
+        @if($period->status === 'pending_approval' && auth()->user()->hasPermission('investors.update'))
             <form method="post" action="{{ route('investments.returns.approve', $period) }}">@csrf <button class="btn-primary">Aprobar</button></form>
             <form class="flex gap-2" method="post" action="{{ route('investments.returns.reject', $period) }}">@csrf <input class="form-input" name="notes" placeholder="Motivo rechazo" required><button class="btn-danger">Rechazar</button></form>
         @endif
-        @if($period->status === 'approved')
+        @if($period->status === 'approved' && auth()->user()->hasPermission('investors.update'))
             <form class="flex flex-wrap gap-2" method="post" action="{{ route('investments.receipts.issue', $period) }}">
                 @csrf
                 <input class="form-input max-w-xs" name="payment_method" placeholder="Metodo de pago" required>

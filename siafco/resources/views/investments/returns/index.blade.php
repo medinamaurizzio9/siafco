@@ -22,7 +22,7 @@
                         <td>Bs {{ number_format($period->production_bonus_amount, 2) }}</td>
                         <td>Bs {{ number_format($period->total_amount, 2) }}</td>
                         <td><span class="badge">{{ $period->status }}</span></td>
-                        <td><a class="font-bold" href="{{ route('investments.returns.show', $period) }}">Gestionar</a></td>
+                        <td><a class="font-bold" href="{{ route('investments.returns.show', $period) }}">{{ auth()->user()->hasPermission('investors.update') ? 'Gestionar' : 'Ver' }}</a></td>
                     </tr>
                 @endforeach
                 </tbody>

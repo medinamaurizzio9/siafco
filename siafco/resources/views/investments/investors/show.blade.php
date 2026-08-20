@@ -9,9 +9,13 @@
                 <div><dt class="font-bold text-slate-500">Acciones activas</dt><dd>{{ $investor->activeShares() }}</dd></div>
             </dl>
             <div class="mt-5 flex flex-wrap gap-3">
-                <a class="btn-secondary" href="{{ route('investments.investors.edit', $investor) }}">Editar</a>
-                <a class="btn-primary" href="{{ route('investments.lots.create', ['investor_id' => $investor->id]) }}">Venta de acciones</a>
-                <a class="btn-secondary" href="{{ route('investments.reservations.create', ['investor_id' => $investor->id]) }}">Crear reserva</a>
+                @if(auth()->user()->hasPermission('investors.update'))
+                    <a class="btn-secondary" href="{{ route('investments.investors.edit', $investor) }}">Editar</a>
+                @endif
+                @if(auth()->user()->hasPermission('investors.create'))
+                    <a class="btn-primary" href="{{ route('investments.lots.create', ['investor_id' => $investor->id]) }}">Venta de acciones</a>
+                    <a class="btn-secondary" href="{{ route('investments.reservations.create', ['investor_id' => $investor->id]) }}">Crear reserva</a>
+                @endif
             </div>
         </div>
         <div class="section-card">

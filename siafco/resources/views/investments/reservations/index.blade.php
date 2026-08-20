@@ -10,7 +10,9 @@
                 </select>
                 <button class="btn-secondary">Filtrar</button>
             </form>
-            <a class="btn-primary" href="{{ route('investments.reservations.create') }}">Nueva reserva</a>
+            @if(auth()->user()->hasPermission('investors.create'))
+                <a class="btn-primary" href="{{ route('investments.reservations.create') }}">Nueva reserva</a>
+            @endif
         </div>
         <div class="overflow-x-auto">
             <table class="table">

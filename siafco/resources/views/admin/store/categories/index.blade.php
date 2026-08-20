@@ -56,7 +56,7 @@
                                     <a class="btn-secondary" href="{{ route('admin.store.categories.edit', $category) }}">Editar</a>
                                     <form method="post" action="{{ route('admin.store.categories.destroy', $category) }}">
                                         @csrf @method('delete')
-                                        <button class="btn-danger" onclick="return confirm('¿Eliminar esta categoría?')">Eliminar</button>
+                                        <button class="btn-danger">Eliminar</button>
                                     </form>
                                 </div>
                             @endcan

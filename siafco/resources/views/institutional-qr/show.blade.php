@@ -17,7 +17,7 @@
             </dl>
         </section>
 
-        <form method="post" enctype="multipart/form-data" action="{{ route('institutional-qr.update') }}" class="rounded-lg border border-slate-200 bg-white p-5">
+        <form method="post" enctype="multipart/form-data" action="{{ route('institutional-qr.update') }}" class="rounded-lg border border-slate-200 bg-white p-5" data-confirm-title="Guardar datos de pago" data-confirm-message="El QR y las instrucciones institucionales de pago serán actualizados." data-confirm-accept="Guardar datos" data-confirm-variant="warning">
             @csrf
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="sm:col-span-2">
