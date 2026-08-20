@@ -57,17 +57,47 @@
                 default => 'home',
             };
 
-            $navLink = function (string $route, string $label, array $params = [], array|string $active = []) {
+            $routeIcons = [
+                'admin.dashboard' => 'home', 'affiliates.index' => 'users', 'affiliates.office.create' => 'user-plus',
+                'public-affiliation.admin.index' => 'file-text', 'sectors.index' => 'building', 'plans.index' => 'credit-card',
+                'affiliate-benefits.index' => 'gift', 'payments.index' => 'credit-card', 'admin.collections.index' => 'chart',
+                'credentials.index' => 'credit-card', 'public-affiliation.qr.show' => 'qr-code', 'institutional-qr.show' => 'qr-code',
+                'reports.index' => 'chart', 'affiliation.settings.edit' => 'settings', 'investments.dashboard' => 'chart',
+                'investments.investors.index' => 'users', 'investments.investor-types.index' => 'users',
+                'investments.reservations.index' => 'file-text', 'investments.lots.create' => 'credit-card',
+                'investments.lots.index' => 'package', 'investments.returns.index' => 'chart',
+                'investments.receipts.index' => 'receipt', 'investments.approvals.index' => 'check',
+                'investments.reports.index' => 'chart', 'investments.settings.edit' => 'settings',
+                'credits.products.index' => 'credit-card', 'credits.applications.index' => 'file-text',
+                'credits.simulator' => 'chart', 'credits.approved.index' => 'check', 'credits.installments.index' => 'receipt',
+                'credits.payments.index' => 'credit-card', 'credits.late-fees.index' => 'receipt',
+                'credits.reports.index' => 'chart', 'credits.settings.edit' => 'settings',
+                'admin.store.dashboard' => 'home', 'admin.store.sales.index' => 'chart', 'admin.store.orders.index' => 'package',
+                'admin.store.products.index' => 'package', 'admin.store.categories.index' => 'inbox',
+                'admin.store.coupons.index' => 'credit-card', 'admin.store.shipping-rates.index' => 'package',
+                'admin.store.settings.edit' => 'settings', 'admin.users.index' => 'users',
+                'administration.roles.index' => 'key', 'administration.audit.index' => 'file-text',
+                'institutional-settings.edit' => 'building', 'settings.security' => 'key', 'settings.system' => 'settings',
+                'affiliate.panel' => 'home', 'affiliate.profile.show' => 'user', 'affiliate.credential.preview' => 'credit-card',
+                'store.catalog.index' => 'package', 'store.cart.show' => 'package', 'store.orders.index' => 'receipt',
+                'investments.panel' => 'chart',
+            ];
+
+            $navLink = function (string $route, string $label, array $params = [], array|string $active = []) use ($routeIcons) {
                 $activePatterns = $active ?: [$route];
                 $isActive = request()->routeIs(...(array) $activePatterns);
+                $icon = view('components.ui.icon', [
+                    'name' => $routeIcons[$route] ?? 'circle',
+                    'attributes' => new \Illuminate\View\ComponentAttributeBag(['class' => 'h-4 w-4']),
+                ])->render();
 
-                return '<a class="'.($isActive ? 'nav-link nav-link-active' : 'nav-link').'" href="'.route($route, $params).'" data-sidebar-link>'.$label.'</a>';
+                return '<a class="'.($isActive ? 'nav-link nav-link-active gap-3' : 'nav-link gap-3').'" href="'.route($route, $params).'" data-sidebar-link>'.$icon.'<span>'.e($label).'</span></a>';
             };
 
             $soon = fn (string $route, string $label) => $navLink($route, $label);
         @endphp
 
-        <aside class="ds-sidebar" id="mobile-sidebar" data-sidebar aria-label="Menu principal">
+        <aside class="ds-sidebar flex flex-col" id="mobile-sidebar" data-sidebar aria-label="Menu principal">
             <div class="ds-sidebar-brand">
                 <a href="{{ $homeRoute ? route($homeRoute) : route('login') }}" class="flex items-center gap-3">
                     <span class="ds-sidebar-logo">
@@ -87,12 +117,12 @@
                 </button>
             </div>
 
-            <nav class="grid gap-2 px-3 pb-4 text-sm" data-sidebar-accordion data-current-module="{{ $openModule }}">
+            <nav class="grid flex-1 content-start gap-2 px-3 pb-4 text-sm" data-sidebar-accordion data-current-module="{{ $openModule }}">
                 @unless($isPersonalOnly)
                     @if($canViewDashboard)
                     <section class="nav-module" data-accordion-module="home">
                         <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'home' ? 'true' : 'false' }}">
-                            <span>Inicio</span><span class="nav-chevron">⌄</span>
+                            <span class="flex items-center gap-3"><x-ui.icon name="home" class="h-4 w-4" />Inicio</span><span class="nav-chevron">⌄</span>
                         </button>
                         <div class="nav-module-panel {{ $openModule === 'home' ? '' : 'hidden' }}">
                             {!! $navLink('admin.dashboard', 'Dashboard general', [], ['admin.dashboard']) !!}
@@ -103,7 +133,7 @@
                     @if($canViewAffiliation)
                         <section class="nav-module" data-accordion-module="affiliation">
                             <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'affiliation' ? 'true' : 'false' }}">
-                                <span>Afiliacion</span><span class="nav-chevron">⌄</span>
+                                <span class="flex items-center gap-3"><x-ui.icon name="users" class="h-4 w-4" />Afiliacion</span><span class="nav-chevron">⌄</span>
                             </button>
                             <div class="nav-module-panel {{ $openModule === 'affiliation' ? '' : 'hidden' }}">
                                 @if($canViewDashboard)
@@ -149,7 +179,7 @@
                     @if($canManageInvestments)
                         <section class="nav-module" data-accordion-module="investments">
                             <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'investments' ? 'true' : 'false' }}">
-                                <span>Accionistas e inversiones</span><span class="nav-chevron">⌄</span>
+                                <span class="flex items-center gap-3"><x-ui.icon name="chart" class="h-4 w-4" />Accionistas e inversiones</span><span class="nav-chevron">⌄</span>
                             </button>
                             <div class="nav-module-panel {{ $openModule === 'investments' ? '' : 'hidden' }}">
                                 {!! $navLink('investments.dashboard', 'Dashboard de inversiones', [], ['investments.dashboard']) !!}
@@ -175,7 +205,7 @@
                     @if($canViewCredits)
                         <section class="nav-module" data-accordion-module="credits">
                             <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'credits' ? 'true' : 'false' }}">
-                                <span>Creditos</span><span class="nav-chevron">⌄</span>
+                                <span class="flex items-center gap-3"><x-ui.icon name="landmark" class="h-4 w-4" />Creditos</span><span class="nav-chevron">⌄</span>
                             </button>
                             <div class="nav-module-panel {{ $openModule === 'credits' ? '' : 'hidden' }}">
                                 {!! $soon('credits.products.index', 'Productos o tipos de credito') !!}
@@ -194,7 +224,7 @@
                     @if($canViewStore)
                         <section class="nav-module" data-accordion-module="store">
                             <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'store' ? 'true' : 'false' }}">
-                                <span>Mini tienda</span><span class="nav-chevron">⌄</span>
+                                <span class="flex items-center gap-3"><x-ui.icon name="package" class="h-4 w-4" />Mini tienda</span><span class="nav-chevron">⌄</span>
                             </button>
                             <div class="nav-module-panel {{ $openModule === 'store' ? '' : 'hidden' }}">
                                 {!! $navLink('admin.store.dashboard', 'Dashboard', [], ['admin.store.dashboard']) !!}
@@ -220,7 +250,7 @@
                     @if($canAdmin)
                         <section class="nav-module" data-accordion-module="administration">
                             <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'administration' ? 'true' : 'false' }}">
-                                <span>Administracion</span><span class="nav-chevron">⌄</span>
+                                <span class="flex items-center gap-3"><x-ui.icon name="key" class="h-4 w-4" />Administracion</span><span class="nav-chevron">⌄</span>
                             </button>
                             <div class="nav-module-panel {{ $openModule === 'administration' ? '' : 'hidden' }}">
                                 @if($canManageUsers)
@@ -239,7 +269,7 @@
                     @if($canGeneralSettings)
                         <section class="nav-module" data-accordion-module="general-settings">
                             <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'general-settings' ? 'true' : 'false' }}">
-                                <span>Configuracion general</span><span class="nav-chevron">⌄</span>
+                                <span class="flex items-center gap-3"><x-ui.icon name="settings" class="h-4 w-4" />Configuracion general</span><span class="nav-chevron">⌄</span>
                             </button>
                             <div class="nav-module-panel {{ $openModule === 'general-settings' ? '' : 'hidden' }}">
                                 {!! $navLink('institutional-settings.edit', 'Datos generales de SIAFCO', [], ['institutional-settings.*']) !!}
@@ -253,7 +283,7 @@
                 @if($canViewPersonalPanel)
                 <section class="nav-module" data-accordion-module="personal">
                     <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'personal' ? 'true' : 'false' }}">
-                        <span>Panel personal</span><span class="nav-chevron">⌄</span>
+                        <span class="flex items-center gap-3"><x-ui.icon name="user" class="h-4 w-4" />Panel personal</span><span class="nav-chevron">⌄</span>
                     </button>
                     <div class="nav-module-panel {{ $openModule === 'personal' ? '' : 'hidden' }}">
                         @if($user->hasRole('afiliado'))
@@ -265,19 +295,25 @@
                                 {!! $navLink('store.cart.show', 'Mi carrito ('.collect(session('store_cart.lines', []))->sum('quantity').')', [], ['store.cart.*']) !!}
                                 {!! $navLink('store.orders.index', 'Mis pedidos', [], ['store.orders.*', 'store.checkout.*']) !!}
                             @endif
-                            <a class="nav-link" href="{{ route('affiliate.profile.show') }}#payments" data-sidebar-link>Mis pagos</a>
+                            <a class="nav-link gap-3" href="{{ route('affiliate.profile.show') }}#payments" data-sidebar-link><x-ui.icon name="credit-card" class="h-4 w-4" /><span>Mis pagos</span></a>
                         @endif
                         @if($user->hasRole('accionista'))
                             {!! $navLink('investments.panel', 'Panel del accionista', [], ['investments.panel']) !!}
                         @endif
-                        <form method="post" action="{{ route('logout') }}" class="pt-2">
-                            @csrf
-                            <button class="nav-link w-full bg-white/5 text-left" data-sidebar-link>Cerrar sesion</button>
-                        </form>
                     </div>
                 </section>
                 @endif
             </nav>
+            @unless(request()->routeIs('password.force.*'))
+                <form method="post" action="{{ route('logout') }}" class="sticky bottom-0 border-t border-white/10 bg-[#07172b] px-3 py-4"
+                      data-confirm-title="Cerrar sesión"
+                      data-confirm-message="¿Deseas cerrar tu sesión actual?"
+                      data-confirm-accept="Cerrar sesión"
+                      data-confirm-variant="warning">
+                    @csrf
+                    <button type="submit" class="nav-link w-full gap-3 bg-white/5 text-left" data-sidebar-link><x-ui.icon name="log-out" class="h-4 w-4" /><span>Cerrar sesión</span></button>
+                </form>
+            @endunless
         </aside>
         <div class="fixed inset-0 z-30 hidden bg-slate-950/50 lg:hidden" data-sidebar-backdrop></div>
     @endauth

@@ -119,7 +119,11 @@ class AdministrationModulesTest extends TestCase
             ->assertSee('Usuarios internos')
             ->assertSee('Roles y permisos')
             ->assertSee('Auditoria')
-            ->assertSee('Mini tienda');
+            ->assertSee('Mini tienda')
+            ->assertSee('data-ui-icon="home"', false)
+            ->assertSee('data-ui-icon="users"', false)
+            ->assertSee('data-ui-icon="package"', false)
+            ->assertSee('data-ui-icon="log-out"', false);
     }
 
     public function test_secretary_and_cashier_keep_expected_safe_matrices(): void

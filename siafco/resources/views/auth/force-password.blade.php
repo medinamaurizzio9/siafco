@@ -14,7 +14,11 @@
                 <p class="text-sm text-slate-500">Usa al menos 8 caracteres, incluyendo letras y números.</p>
                 <button class="btn-primary mt-2 py-3" type="submit">GUARDAR NUEVA CONTRASEÑA</button>
             </form>
-            <form class="mt-4 border-t border-slate-200 pt-4" method="post" action="{{ route('logout') }}">
+            <form class="mt-4 border-t border-slate-200 pt-4" method="post" action="{{ route('logout') }}"
+                  data-confirm-title="Cerrar sesión"
+                  data-confirm-message="¿Deseas cerrar tu sesión actual?"
+                  data-confirm-accept="Cerrar sesión"
+                  data-confirm-variant="warning">
                 @csrf
                 <button class="btn-secondary w-full py-3" type="submit">CERRAR SESIÓN</button>
             </form>

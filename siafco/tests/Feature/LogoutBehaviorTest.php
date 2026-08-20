@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Affiliate;
 use App\Models\AffiliationPlan;
 use App\Models\Person;
+use App\Models\RolePermissionOverride;
 use App\Models\Sector;
 use App\Models\StoreCategory;
 use App\Models\StoreProduct;
@@ -70,6 +71,41 @@ class LogoutBehaviorTest extends TestCase
 
         $this->assertGuest();
         $this->get(route('admin.dashboard'))->assertRedirect(route('login'));
+    }
+
+    public function test_logout_is_visible_for_every_internal_role_without_permission_dependency(): void
+    {
+        foreach (['superadministrador', 'administrador', 'gerente', 'secretaria', 'cajero', 'caja'] as $role) {
+            $user = User::factory()->create([
+                'role' => $role,
+                'user_type' => 'internal',
+                'must_change_password' => false,
+                'is_active' => true,
+            ]);
+
+            $this->actingAs($user)->get(route('admin.dashboard'))
+                ->assertOk()
+                ->assertSee('Cerrar sesión')
+                ->assertSee('action="'.route('logout').'"', false)
+                ->assertSee('method="post"', false)
+                ->assertSee('data-confirm-title="Cerrar sesión"', false)
+                ->assertSee('data-confirm-message="¿Deseas cerrar tu sesión actual?"', false)
+                ->assertSee('data-confirm-accept="Cerrar sesión"', false)
+                ->assertSee('data-confirm-modal', false);
+        }
+
+        RolePermissionOverride::create(['role' => 'consulta', 'permissions' => ['dashboard.view']]);
+        $minimal = User::factory()->create([
+            'role' => 'consulta',
+            'user_type' => 'internal',
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($minimal)->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Cerrar sesión')
+            ->assertSee('data-confirm-title="Cerrar sesión"', false);
     }
 
     public function test_get_logout_is_not_destructive(): void

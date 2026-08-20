@@ -130,7 +130,11 @@ class PasswordManagementTest extends TestCase
         $this->get('/')->assertRedirect(route('password.force.edit'));
         $response = $this->get(route('password.force.edit'))
             ->assertOk()
-            ->assertSee('CERRAR SESIÓN');
+            ->assertSee('CERRAR SESIÓN')
+            ->assertSee('action="'.route('logout').'"', false)
+            ->assertSee('data-confirm-title="Cerrar sesión"', false)
+            ->assertSee('data-confirm-message="¿Deseas cerrar tu sesión actual?"', false)
+            ->assertSee('data-confirm-modal', false);
         $this->assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
     }
 

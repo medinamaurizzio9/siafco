@@ -459,7 +459,9 @@ class OfficeAffiliationTest extends TestCase
 
         $this->assertStringContainsString('Logo institucional', $html);
         $this->assertStringContainsString('SIAFCO', $html);
-        $this->assertStringContainsString('Recibo oficial de pago', $html);
+        $this->assertStringContainsString('<h1 class="receipt-title">RECIBO</h1>', $html);
+        $this->assertStringContainsString('COOPERATIVA TIERRA BENDITA', mb_strtoupper($html));
+        $this->assertStringContainsString('Total pagado', $html);
         $this->assertStringContainsString($receiptNumber, $html);
         $this->assertStringContainsString('AFILIADA RECIBO', $html);
         $this->assertStringContainsString('OFI-REC', $html);
