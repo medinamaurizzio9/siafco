@@ -13,7 +13,7 @@
                 <div><dt class="text-xs font-black uppercase text-slate-500">Afiliado</dt><dd class="font-bold">{{ $payment->affiliate?->full_name ?? 'Afiliado no disponible' }}</dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Codigo</dt><dd>{{ $payment->affiliate?->registration_number ?: 'Sin codigo' }}</dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Monto</dt><dd>{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</dd></div>
-                <div><dt class="text-xs font-black uppercase text-slate-500">Estado</dt><dd><x-affiliation-status :status="$payment->status" size="sm" /></dd></div>
+                <div><dt class="text-xs font-black uppercase text-slate-500">Estado</dt><dd><x-payment-status :status="$payment->status" size="sm" /></dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Metodo</dt><dd>{{ ucfirst((string) $payment->payment_method) }}</dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Referencia</dt><dd>{{ $payment->reference_number ?: 'Sin referencia' }}</dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Transaccion</dt><dd>{{ $payment->transaction_number ?: 'Sin transaccion' }}</dd></div>
@@ -53,10 +53,11 @@
                     @if(auth()->user()->hasPermission('payments.update_pending') && \App\Support\PaymentStatus::isEditable($payment->status))
                         <a class="btn-secondary" href="{{ route('payments.edit', $payment) }}">Editar pendiente</a>
                     @endif
-                    @if(auth()->user()->hasPermission('payments.confirm') && \App\Support\PaymentStatus::isEditable($payment->status))
-                        <form method="post" action="{{ route('payments.confirm', $payment) }}" data-confirm-title="Confirmar pago" data-confirm-message="El pago quedará confirmado y podrá activar la afiliación según el saldo." data-confirm-accept="Confirmar pago" data-confirm-variant="warning">@csrf<button class="btn-primary w-full">Confirmar pago</button></form>
+                    @php($canReviewOfficeQr = $payment->source !== 'office_qr' || (auth()->user()->hasRole(['superadministrador','administrador','gerente']) && (int) $payment->registered_by !== (int) auth()->id()))
+                    @if(auth()->user()->hasPermission('payments.confirm') && \App\Support\PaymentStatus::isEditable($payment->status) && $canReviewOfficeQr)
+                        <form method="post" action="{{ route('payments.confirm', $payment) }}" data-confirm-title="{{ $payment->source === 'office_qr' ? 'Confirmar pago QR' : 'Confirmar pago' }}" data-confirm-message="{{ $payment->source === 'office_qr' ? 'Confirme que el pago QR/transferencia por '.($payment->currency ?? 'BOB').' '.number_format((float) ($payment->paid_amount ?? $payment->amount), 2).', operación '.$payment->reference_number.', fue verificado correctamente. Afiliado: '.($payment->affiliate?->full_name ?? 'No disponible').'. CI: '.($payment->affiliate?->ci ?? 'No disponible').'. Registrado por: '.($payment->registrar?->name ?? 'No registrado').'.' : 'El pago quedará confirmado y podrá activar la afiliación según el saldo.' }}" data-confirm-accept="Confirmar pago" data-confirm-variant="warning">@csrf<button class="btn-primary w-full">Confirmar pago</button></form>
                     @endif
-                    @if(auth()->user()->hasPermission('payments.reject') && ! \App\Support\PaymentStatus::isConfirmed($payment->status) && ! \App\Support\PaymentStatus::isVoided($payment->status))
+                    @if(auth()->user()->hasPermission('payments.reject') && ! \App\Support\PaymentStatus::isConfirmed($payment->status) && ! \App\Support\PaymentStatus::isVoided($payment->status) && $canReviewOfficeQr)
                         <form class="grid gap-2" method="post" action="{{ route('payments.reject', $payment) }}" data-confirm-title="Rechazar pago" data-confirm-message="El pago será rechazado con el motivo indicado." data-confirm-accept="Rechazar pago" data-confirm-variant="danger">@csrf<textarea class="form-input" name="rejection_reason" placeholder="Motivo de rechazo" required></textarea><button class="btn-danger">Rechazar</button></form>
                     @endif
                     @if(auth()->user()->hasPermission('payments.void') && \App\Support\PaymentStatus::isConfirmed($payment->status))

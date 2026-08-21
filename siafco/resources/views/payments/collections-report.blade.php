@@ -34,6 +34,10 @@
             <input class="form-input" name="receipt_number" value="{{ $filters['receipt_number'] ?? '' }}">
         </div>
         <div>
+            <label class="form-label">N.º transferencia / operación</label>
+            <input class="form-input" name="reference_number" value="{{ $filters['reference_number'] ?? '' }}">
+        </div>
+        <div>
             <label class="form-label">CI</label>
             <input class="form-input" name="ci" value="{{ $filters['ci'] ?? '' }}">
         </div>
@@ -84,12 +88,25 @@
     </form>
 
     <div class="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <article class="metric-card"><p>Cantidad de cobros</p><strong>{{ $collectionCount }}</strong></article>
-        <article class="metric-card"><p>Total filtrado</p><strong>BOB {{ number_format($totalAmount, 2) }}</strong></article>
+        <article class="metric-card"><p>Cantidad de cobros confirmados</p><strong>{{ $collectionCount }}</strong></article>
+        <article class="metric-card"><p>Total confirmado</p><strong>BOB {{ number_format($totalAmount, 2) }}</strong></article>
+        <article class="metric-card"><p>QR pendientes</p><strong>{{ $pendingQrCount }}</strong></article>
+        <article class="metric-card"><p>Monto pendiente</p><strong>BOB {{ number_format($pendingQrAmount, 2) }}</strong></article>
         @foreach($totalsByMethod as $method => $amount)
             <article class="metric-card"><p>Total {{ ucfirst(str_replace('_', ' ', $method)) }}</p><strong>BOB {{ number_format((float) $amount, 2) }}</strong></article>
         @endforeach
     </div>
+
+    @if($pendingPayments->isNotEmpty())
+        <section class="mb-5 overflow-hidden rounded-lg border border-amber-300 bg-white">
+            <div class="border-b border-amber-200 bg-amber-50 p-4"><h3 class="font-black text-amber-950">Pagos QR pendientes de verificación</h3></div>
+            <div class="overflow-x-auto"><table class="table"><thead><tr><th>Fecha</th><th>Afiliado</th><th>CI</th><th>Monto</th><th>Operación</th><th>Registrado por</th><th>Acción</th></tr></thead><tbody>
+            @foreach($pendingPayments as $pending)
+                <tr><td>{{ $pending->paid_at?->format('d/m/Y H:i') }}</td><td>{{ $pending->affiliate?->full_name }}</td><td>{{ $pending->affiliate?->ci }}</td><td>{{ $pending->currency ?? 'BOB' }} {{ number_format((float) ($pending->paid_amount ?? $pending->amount), 2) }}</td><td>{{ $pending->reference_number }}</td><td>{{ $pending->registrar?->name ?? 'No registrado' }}</td><td><a class="btn-secondary" href="{{ route('payments.show', $pending) }}">Ver</a></td></tr>
+            @endforeach
+            </tbody></table></div>
+        </section>
+    @endif
 
     <div class="desktop-table overflow-hidden rounded-lg border border-slate-200 bg-white">
         <div class="overflow-x-auto">
@@ -122,7 +139,7 @@
                         <td>{{ $payment->affiliate?->plan?->name ?? 'Sin plan' }}</td>
                         <td>{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</td>
                         <td>{{ $payment->payment_method === 'efectivo' && $payment->source === 'office_cash' ? 'Efectivo / Oficina' : ucfirst((string) $payment->payment_method) }}</td>
-                        <td><x-affiliation-status :status="$payment->status" size="sm" /></td>
+                        <td><x-payment-status :status="$payment->status" size="sm" /></td>
                         <td>{{ $payment->cashier?->name ?? 'No registrado' }}</td>
                         <td>
                             <div class="flex flex-wrap gap-2">

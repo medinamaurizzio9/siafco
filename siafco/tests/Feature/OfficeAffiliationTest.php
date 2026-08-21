@@ -292,6 +292,134 @@ class OfficeAffiliationTest extends TestCase
             ->assertDontSee($payment->reference_number);
     }
 
+    public function test_office_qr_requires_reference_and_remains_under_review_without_activation(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $cashier = $this->internalUser('cajero');
+
+        $this->actingAs($cashier)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
+            'payment_method' => 'qr',
+            'reference_number' => '',
+        ]))->assertSessionHasErrors('reference_number');
+
+        $this->assertDatabaseCount('affiliation_payments', 0);
+
+        $this->actingAs($cashier)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
+            'payment_method' => 'qr',
+            'reference_number' => 'TRX-OFFICE-001',
+        ]))->assertSessionHasNoErrors()->assertSessionHas('status', 'Pago QR registrado correctamente. Queda pendiente de verificación por Gerencia.');
+
+        $payment = AffiliationPayment::firstOrFail();
+        $affiliate = Affiliate::with('credential')->firstOrFail();
+        $this->assertSame('qr', $payment->payment_method);
+        $this->assertSame('office_qr', $payment->source);
+        $this->assertSame(PaymentStatus::UNDER_REVIEW, $payment->status);
+        $this->assertSame('TRX-OFFICE-001', $payment->reference_number);
+        $this->assertNull($payment->confirmed_by);
+        $this->assertNull($payment->confirmed_at);
+        $this->assertNull($payment->receipt_number);
+        $this->assertSame('pendiente_pago', $affiliate->status);
+        $this->assertNull($affiliate->credential);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'office_qr_registered', 'auditable_id' => $payment->id]);
+    }
+
+    public function test_cashier_and_cash_roles_cannot_approve_or_reject_office_qr(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $registrar = $this->internalUser('cajero');
+        $this->actingAs($registrar)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
+            'payment_method' => 'qr', 'reference_number' => 'TRX-ROLE-BLOCK',
+        ]))->assertSessionHasNoErrors();
+        $payment = AffiliationPayment::firstOrFail();
+
+        foreach (['cajero', 'caja'] as $role) {
+            $actor = $this->internalUser($role);
+            $this->actingAs($actor)->post(route('payments.confirm', $payment))->assertForbidden();
+            $this->actingAs($actor)->post(route('payments.reject', $payment), ['rejection_reason' => 'REFERENCIA INVALIDA'])->assertForbidden();
+        }
+
+        $this->assertSame(PaymentStatus::UNDER_REVIEW, $payment->fresh()->status);
+    }
+
+    public function test_office_qr_registrar_cannot_approve_own_payment_even_with_review_role(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $manager = $this->internalUser('gerente');
+        $this->actingAs($manager)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
+            'payment_method' => 'qr', 'reference_number' => 'TRX-OWN-001',
+        ]))->assertSessionHasNoErrors();
+
+        $this->actingAs($manager)->post(route('payments.confirm', AffiliationPayment::firstOrFail()))->assertForbidden();
+    }
+
+    public function test_management_roles_can_approve_office_qr_through_payment_lifecycle(): void
+    {
+        foreach (['gerente', 'administrador', 'superadministrador'] as $index => $role) {
+            [$sector, $plan] = $this->catalog();
+            $registrar = $this->internalUser('cajero');
+            $this->actingAs($registrar)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
+                'ci' => 'QR-APPROVE-'.$index,
+                'email' => "qr-approve-{$index}@siafco.test",
+                'payment_method' => 'qr',
+                'reference_number' => 'TRX-APPROVE-'.$index,
+            ]))->assertSessionHasNoErrors();
+            $payment = AffiliationPayment::latest('id')->firstOrFail();
+            $reviewer = $this->internalUser($role);
+
+            $this->actingAs($reviewer)->post(route('payments.confirm', $payment))->assertSessionHasNoErrors();
+
+            $payment->refresh();
+            $this->assertSame(PaymentStatus::CONFIRMED, $payment->status);
+            $this->assertSame($reviewer->id, $payment->confirmed_by);
+            $this->assertNotNull($payment->receipt_number);
+            $this->assertSame('activo', $payment->affiliate->status);
+            $this->assertNotNull($payment->affiliate->credential);
+            $this->assertDatabaseHas('audit_logs', ['action' => 'office_qr_approved', 'auditable_id' => $payment->id]);
+        }
+    }
+
+    public function test_rejected_office_qr_does_not_activate_or_generate_receipt(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $registrar = $this->internalUser('caja');
+        $this->actingAs($registrar)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
+            'payment_method' => 'qr', 'reference_number' => 'TRX-REJECT-001',
+        ]))->assertSessionHasNoErrors();
+        $payment = AffiliationPayment::firstOrFail();
+        $reviewer = $this->internalUser('gerente');
+
+        $this->actingAs($reviewer)->post(route('payments.reject', $payment), [
+            'rejection_reason' => 'TRANSFERENCIA NO ENCONTRADA',
+        ])->assertSessionHasNoErrors();
+
+        $payment->refresh();
+        $this->assertSame(PaymentStatus::REJECTED, $payment->status);
+        $this->assertSame($reviewer->id, $payment->rejected_by);
+        $this->assertNull($payment->receipt_number);
+        $this->assertNotSame('activo', $payment->affiliate->status);
+        $this->assertNull($payment->affiliate->credential);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'office_qr_rejected', 'auditable_id' => $payment->id]);
+    }
+
+    public function test_pending_office_qr_is_separate_from_confirmed_collection_totals_and_scoped_to_registrar(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $cashierA = $this->internalUser('caja');
+        $cashierB = $this->internalUser('cajero');
+        $this->actingAs($cashierA)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
+            'payment_method' => 'qr', 'reference_number' => 'TRX-PENDING-A',
+        ]))->assertSessionHasNoErrors();
+
+        $this->actingAs($cashierA)->get(route('admin.collections.index'))
+            ->assertOk()->assertSee('QR pendientes')->assertSee('TRX-PENDING-A')->assertSee('BOB 120.00');
+
+        $this->actingAs($cashierB)->get(route('admin.collections.index'))
+            ->assertOk()->assertDontSee('TRX-PENDING-A');
+
+        $this->actingAs($this->internalUser('gerente'))->get(route('admin.collections.index'))
+            ->assertOk()->assertSee('TRX-PENDING-A')->assertSee('Total confirmado')->assertSee('BOB 0.00');
+    }
+
     public function test_office_summary_shows_registered_affiliation_details(): void
     {
         [$sector, $plan] = $this->catalog();
@@ -721,6 +849,7 @@ class OfficeAffiliationTest extends TestCase
             'position' => '',
             'received_amount' => '120.00',
             'paid_at' => now()->format('Y-m-d\TH:i'),
+            'payment_method' => 'efectivo',
             'reference_number' => 'REC-OFFICE',
             'observations' => 'COBRO PRESENCIAL',
         ], $overrides);

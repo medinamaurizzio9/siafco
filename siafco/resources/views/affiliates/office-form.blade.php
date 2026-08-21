@@ -2,7 +2,7 @@
     <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <h2 class="text-2xl font-black text-[#0b1f3a]">Nueva afiliacion presencial</h2>
-            <p class="text-sm text-slate-600">Registro interno con cobro en efectivo recibido en oficina.</p>
+            <p class="text-sm text-slate-600">Registro interno con pago en efectivo o QR/transferencia recibido en oficina.</p>
         </div>
         <a class="btn-secondary" href="{{ route('affiliates.index') }}">Volver</a>
     </div>
@@ -99,11 +99,15 @@
         <section class="grid gap-4 rounded-lg border-2 border-siafco-gold-500 bg-white p-5 md:grid-cols-2 xl:grid-cols-3">
             <div class="xl:col-span-3">
                 <h3 class="text-lg font-black text-[#0b1f3a]">Pago en oficina</h3>
-                <p class="text-sm text-slate-600">El efectivo recibido presencialmente sera confirmado directamente por el sistema.</p>
+                <p class="text-sm text-slate-600">El efectivo se confirma inmediatamente; un pago QR queda pendiente de verificación.</p>
             </div>
             <div>
                 <label class="form-label">Metodo de pago</label>
-                <input class="form-input bg-slate-100 font-bold" value="Efectivo / Pago en oficina" readonly>
+                <select class="form-input" name="payment_method" data-office-payment-method required>
+                    <option value="efectivo" @selected(old('payment_method', 'efectivo') === 'efectivo')>Efectivo / Pago en oficina</option>
+                    <option value="qr" @selected(old('payment_method') === 'qr')>QR / Transferencia</option>
+                </select>
+                @error('payment_method') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
             </div>
             <div>
                 <label class="form-label">Monto del plan</label>
@@ -123,9 +127,9 @@
                 <input class="form-input" type="datetime-local" name="paid_at" value="{{ old('paid_at', $paidAt->format('Y-m-d\TH:i')) }}" required>
                 @error('paid_at') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
             </div>
-            <div>
-                <label class="form-label">N. de recibo / referencia</label>
-                <input class="form-input" name="reference_number" value="{{ old('reference_number') }}" placeholder="Opcional; se generara recibo interno al confirmar">
+            <div data-office-qr-reference hidden>
+                <label class="form-label">N.º de transferencia / operación</label>
+                <input class="form-input" name="reference_number" value="{{ old('reference_number') }}" maxlength="120" data-office-reference>
                 @error('reference_number') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
             </div>
             <div class="xl:col-span-3">
@@ -136,7 +140,7 @@
         </section>
 
         <div class="flex flex-col gap-3 sm:flex-row">
-            <button class="btn-primary">Registrar afiliacion y confirmar pago</button>
+            <button class="btn-primary" data-office-submit>Registrar afiliacion y confirmar pago</button>
             <a class="btn-secondary" href="{{ route('affiliates.index') }}">Cancelar</a>
         </div>
     </form>
@@ -146,6 +150,11 @@
             const plan = document.querySelector('[data-office-plan]');
             const total = document.querySelector('[data-office-plan-total]');
             const received = document.querySelector('[data-office-received]');
+            const method = document.querySelector('[data-office-payment-method]');
+            const referenceBlock = document.querySelector('[data-office-qr-reference]');
+            const reference = document.querySelector('[data-office-reference]');
+            const submit = document.querySelector('[data-office-submit]');
+            const form = document.querySelector('[data-confirm-office-affiliation]');
             const syncAmount = () => {
                 const option = plan?.selectedOptions?.[0];
                 const amount = option?.dataset?.amount;
@@ -158,7 +167,21 @@
                 if (received && !received.value) received.value = Number(amount).toFixed(2);
             };
             plan?.addEventListener('change', syncAmount);
+            const syncMethod = () => {
+                const isQr = method?.value === 'qr';
+                if (referenceBlock) referenceBlock.hidden = !isQr;
+                if (reference) reference.required = isQr;
+                if (submit) submit.textContent = isQr ? 'Registrar afiliacion y enviar a verificación' : 'Registrar afiliacion y confirmar pago';
+                if (form) {
+                    form.dataset.confirmMessage = isQr
+                        ? 'Al confirmar, el afiliado será registrado y el pago QR quedará pendiente de verificación por Gerencia.'
+                        : 'Al confirmar, el afiliado será registrado y el pago quedará confirmado inmediatamente.';
+                    form.dataset.confirmAccept = isQr ? 'Registrar pago QR' : 'Confirmar afiliación y pago';
+                }
+            };
+            method?.addEventListener('change', syncMethod);
             syncAmount();
+            syncMethod();
         });
     </script>
 </x-layouts.app>

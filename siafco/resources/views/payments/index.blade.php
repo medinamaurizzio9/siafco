@@ -14,6 +14,13 @@
         </div>
     </div>
 
+    @if(auth()->user()->hasRole(['superadministrador','administrador','gerente']) && $officeQrPendingCount > 0)
+        <a class="mb-4 flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950" href="{{ route('payments.index', ['status' => \App\Support\PaymentStatus::UNDER_REVIEW, 'source' => 'office_qr']) }}">
+            <span><strong>Pagos QR pendientes de verificación</strong><span class="ml-2">{{ $officeQrPendingCount }}</span></span>
+            <span class="font-bold">Revisar</span>
+        </a>
+    @endif
+
     <form class="mb-4 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-4">
         <input class="form-input" name="search" value="{{ request('search') }}" placeholder="Nombre, CI, codigo o referencia">
         <select class="form-input" name="status">
@@ -30,7 +37,7 @@
         </select>
         <select class="form-input" name="source">
             <option value="">Todos los origenes</option>
-            @foreach(['web' => 'Web', 'mobile' => 'Movil', 'manual_admin' => 'Manual administrativo'] as $value => $label)
+            @foreach(['web' => 'Web', 'mobile' => 'Movil', 'manual_admin' => 'Manual administrativo', 'office_cash' => 'Efectivo en oficina', 'office_qr' => 'QR en oficina'] as $value => $label)
                 <option value="{{ $value }}" @selected(request('source') === $value)>{{ $label }}</option>
             @endforeach
         </select>
@@ -53,7 +60,7 @@
                 <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
                     <div><span class="text-slate-500">Monto</span><strong class="block">{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</strong></div>
                     <div><span class="text-slate-500">Metodo</span><strong class="block">{{ ucfirst((string) $payment->payment_method) }}</strong></div>
-                    <div class="col-span-2"><x-affiliation-status :status="$payment->status" size="sm" /></div>
+                    <div class="col-span-2"><x-payment-status :status="$payment->status" size="sm" /></div>
                 </div>
                 <a class="btn-secondary mt-4 min-h-12 w-full" href="{{ route('payments.show', $payment) }}">Ver</a>
             </article>
@@ -77,15 +84,16 @@
                         <td>{{ ucfirst((string) $payment->payment_method) }}</td>
                         <td>{{ $payment->reference_number ?: ($payment->transaction_number ?: 'Sin referencia') }}</td>
                         <td>{{ $payment->source ?: 'web' }}</td>
-                        <td><x-affiliation-status :status="$payment->status" size="sm" /></td>
+                        <td><x-payment-status :status="$payment->status" size="sm" /></td>
                         <td class="min-w-64">
                             <div class="flex flex-wrap gap-2">
                                 <a class="btn-secondary" href="{{ route('payments.show', $payment) }}">Ver</a>
                                 @if(auth()->user()->hasPermission('payments.update_pending') && \App\Support\PaymentStatus::isEditable($payment->status))
                                     <a class="btn-secondary" href="{{ route('payments.edit', $payment) }}">Editar</a>
                                 @endif
-                                @if(auth()->user()->hasPermission('payments.confirm') && \App\Support\PaymentStatus::isEditable($payment->status))
-                                    <form method="post" action="{{ route('payments.confirm', $payment) }}">@csrf<button class="btn-primary">Confirmar</button></form>
+                                @php($canReviewOfficeQr = $payment->source !== 'office_qr' || (auth()->user()->hasRole(['superadministrador','administrador','gerente']) && (int) $payment->registered_by !== (int) auth()->id()))
+                                @if(auth()->user()->hasPermission('payments.confirm') && \App\Support\PaymentStatus::isEditable($payment->status) && $canReviewOfficeQr)
+                                    <form method="post" action="{{ route('payments.confirm', $payment) }}" data-confirm-title="{{ $payment->source === 'office_qr' ? 'Confirmar pago QR' : 'Confirmar pago' }}" data-confirm-message="{{ $payment->source === 'office_qr' ? 'Confirme que la operación '.$payment->reference_number.' por '.($payment->currency ?? 'BOB').' '.number_format((float) ($payment->paid_amount ?? $payment->amount), 2).' fue verificada correctamente.' : 'El pago quedará confirmado.' }}" data-confirm-accept="Confirmar pago" data-confirm-variant="warning">@csrf<button class="btn-primary">Confirmar</button></form>
                                 @endif
                                 @if(auth()->user()->hasPermission('payments.view_receipt') && $payment->voucher_path)
                                     <a class="btn-secondary" href="{{ route('payments.voucher', $payment) }}" target="_blank">Comprobante</a>

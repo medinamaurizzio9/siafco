@@ -22,11 +22,21 @@ use Illuminate\Support\Facades\Storage;
 
 class PaymentController extends Controller
 {
+    private const OFFICE_QR_REVIEW_ROLES = ['superadministrador', 'administrador', 'gerente'];
+
     public function index(Request $request)
     {
         abort_unless($request->user()->hasPermission('payments.view'), 403);
 
+        $user = $request->user();
         $payments = AffiliationPayment::with('affiliate.sector', 'registrar', 'cashier')
+            ->when($user->hasRole(['caja', 'cajero']), function ($query) use ($user) {
+                $query->where(function ($scope) use ($user) {
+                    $scope->where('source', '!=', 'office_qr')
+                        ->orWhereNull('source')
+                        ->orWhere('registered_by', $user->id);
+                });
+            })
             ->when($request->status, fn ($query, $status) => $query->where('status', $status))
             ->when($request->payment_method, fn ($query, $method) => $query->where('payment_method', $method))
             ->when($request->source, fn ($query, $source) => $query->where('source', $source))
@@ -54,6 +64,7 @@ class PaymentController extends Controller
             'statuses' => PaymentStatus::allValues(),
             'users' => User::where('user_type', 'internal')->orderBy('name')->get(),
             'institution' => InstitutionalSetting::current(),
+            'officeQrPendingCount' => AffiliationPayment::where('source', 'office_qr')->where('status', PaymentStatus::UNDER_REVIEW)->count(),
         ]);
     }
 
@@ -137,14 +148,44 @@ class PaymentController extends Controller
     public function confirm(Request $request, AffiliationPayment $payment, PaymentLifecycleService $payments)
     {
         abort_unless($request->user()->hasPermission('payments.confirm'), 403);
+        $isOfficeQr = $payment->source === 'office_qr';
+        if ($isOfficeQr) {
+            abort_unless($this->canReviewOfficeQr($request->user(), $payment), 403);
+        }
         $payments->confirm($payment, $request->user());
+        if ($isOfficeQr) {
+            AuditService::record('office_qr_approved', $payment->fresh(), [
+                'payment_id' => $payment->id,
+                'affiliate_id' => $payment->affiliate_id,
+                'amount' => (string) ($payment->paid_amount ?? $payment->amount),
+                'reference_number' => $payment->reference_number,
+                'received_by' => $payment->registered_by,
+                'approved_by' => $request->user()->id,
+            ]);
+        }
 
-        return back()->with('status', 'Pago confirmado y afiliacion actualizada.');
+        return back()->with('status', $isOfficeQr
+            ? 'Pago confirmado correctamente. El afiliado ha sido activado según el saldo.'
+            : 'Pago confirmado y afiliacion actualizada.');
     }
 
     public function reject(RejectPaymentRequest $request, AffiliationPayment $payment, PaymentLifecycleService $payments)
     {
+        $isOfficeQr = $payment->source === 'office_qr';
+        if ($isOfficeQr) {
+            abort_unless($this->canReviewOfficeQr($request->user(), $payment), 403);
+        }
         $payments->reject($payment, $request->user(), $request->validated('rejection_reason'));
+        if ($isOfficeQr) {
+            AuditService::record('office_qr_rejected', $payment->fresh(), [
+                'payment_id' => $payment->id,
+                'affiliate_id' => $payment->affiliate_id,
+                'amount' => (string) ($payment->paid_amount ?? $payment->amount),
+                'reference_number' => $payment->reference_number,
+                'received_by' => $payment->registered_by,
+                'rejected_by' => $request->user()->id,
+            ]);
+        }
 
         return back()->with('status', 'Pago rechazado.');
     }
@@ -192,5 +233,12 @@ class PaymentController extends Controller
         $user = $request->user();
 
         return (bool) ($user?->hasPermission('payments.view_receipt') || ($user?->isInternal() && $user->hasRole('caja')));
+    }
+
+    private function canReviewOfficeQr(User $user, AffiliationPayment $payment): bool
+    {
+        return $user->isInternal()
+            && $user->hasRole(self::OFFICE_QR_REVIEW_ROLES)
+            && (int) $payment->registered_by !== (int) $user->id;
     }
 }

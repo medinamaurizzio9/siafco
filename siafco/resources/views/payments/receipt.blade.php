@@ -4,7 +4,7 @@
 </style></head><body>
 @php
     $affiliate = $payment->affiliate;
-    $method = $payment->payment_method === 'efectivo' && $payment->source === 'office_cash' ? 'Efectivo / Pago en oficina' : ucfirst((string) $payment->payment_method);
+    $method = $payment->source === 'office_qr' ? 'QR / Transferencia' : ($payment->payment_method === 'efectivo' && $payment->source === 'office_cash' ? 'Efectivo / Pago en oficina' : ucfirst((string) $payment->payment_method));
     $amount = (float) ($payment->paid_amount ?? $payment->amount);
     $date = $payment->confirmed_at ?? $payment->paid_at ?? $payment->payment_date;
 @endphp
@@ -24,10 +24,11 @@
 <section class="section"><h2 class="section-title">Detalle del pago</h2><table class="detail-table">
 <tr><th>Concepto</th><td>Afiliación</td></tr><tr><th>Sector</th><td>{{ $affiliate?->sector?->name ?? 'Sin sector' }}</td></tr>
 <tr><th>Plan</th><td>{{ $affiliate?->plan?->name ?? $payment->plan?->name ?? 'Sin plan' }}</td></tr><tr><th>Método de pago</th><td>{{ $method }}</td></tr>
+@if($payment->reference_number)<tr><th>Referencia</th><td>{{ $payment->reference_number }}</td></tr>@endif
 <tr><th>Estado</th><td class="status">{{ mb_strtoupper($statusLabel) }}</td></tr></table></section>
 <section class="section"><h2 class="section-title">Datos de caja</h2><table class="cash-table">
-<tr><th>Recibido por</th><td>{{ $payment->cashier?->name ?? $payment->registrar?->name ?? 'No registrado' }}</td></tr>
-<tr><th>Usuario responsable</th><td>{{ $payment->registrar?->name ?? $payment->cashier?->name ?? 'No registrado' }}</td></tr>
+<tr><th>Registrado por</th><td>{{ $payment->registrar?->name ?? 'No registrado' }}</td></tr>
+<tr><th>Verificado por</th><td>{{ $payment->cashier?->name ?? 'No registrado' }}</td></tr>
 @if($payment->observations)<tr><th>Observaciones</th><td>{{ $payment->observations }}</td></tr>@endif
 </table></section>
 <table class="total-table"><tr><td class="total-label">Total pagado</td><td class="total-value">{{ $payment->currency ?? 'BOB' }} {{ number_format($amount, 2) }}</td></tr></table>
