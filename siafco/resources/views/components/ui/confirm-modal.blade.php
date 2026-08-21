@@ -1,4 +1,4 @@
-<dialog class="confirm-modal" data-confirm-modal aria-labelledby="global-confirm-title" aria-describedby="global-confirm-message">
+<dialog class="confirm-modal" data-confirm-modal role="dialog" aria-modal="true" aria-labelledby="global-confirm-title" aria-describedby="global-confirm-message">
     <div class="confirm-modal__accent" data-confirm-accent></div>
     <div class="confirm-modal__body">
         <div class="confirm-modal__icon" data-confirm-icon aria-hidden="true">!</div>

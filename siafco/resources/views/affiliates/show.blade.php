@@ -203,10 +203,10 @@
         </section>
 
         @can('resetPassword', $affiliate)
-            <dialog class="w-[min(92vw,520px)] rounded-lg p-0 shadow-xl backdrop:bg-slate-950/70" data-password-reset-dialog>
+            <dialog class="responsive-dialog w-[min(92vw,520px)] rounded-lg p-0 shadow-xl backdrop:bg-slate-950/70" data-password-reset-dialog role="dialog" aria-modal="true" aria-labelledby="password-reset-title">
                 <form method="post" action="{{ route('admin.affiliates.password.reset', $affiliate) }}" class="p-5">
                     @csrf
-                    <h2 class="text-xl font-black text-[#0b1f3a]">RESTABLECER CONTRASENA</h2>
+                    <h2 id="password-reset-title" class="text-xl font-black text-[#0b1f3a]">RESTABLECER CONTRASENA</h2>
                     <p class="mt-3 text-sm text-slate-600">La contrasena temporal corresponde al CI del afiliado. Debera cambiarla al ingresar.</p>
                     <dl class="mt-4 grid gap-2 rounded bg-slate-50 p-4 text-sm">
                         <div><dt class="font-bold text-slate-500">Afiliado</dt><dd>{{ $affiliate->full_name }}</dd></div>

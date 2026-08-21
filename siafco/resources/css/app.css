@@ -32,6 +32,63 @@
     --ease-siafco: cubic-bezier(.2, 0, 0, 1);
 }
 
+/* Global responsive safeguards for legacy views that predate the design system. */
+img,
+svg,
+video,
+canvas {
+    max-width: 100%;
+}
+
+.ds-page .overflow-x-auto {
+    max-width: 100%;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 639px) {
+    .ds-page form.grid,
+    .ds-page fieldset.grid,
+    .ds-page dl.grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ds-page .section-card,
+    .ds-page .card-form,
+    .ds-page .card-summary {
+        padding: 16px;
+    }
+
+    .ds-page .mobile-actions,
+    .ds-page [data-responsive-actions] {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
+    }
+
+    .ds-page [data-responsive-actions] > *,
+    .ds-page [data-responsive-actions] form,
+    .ds-page [data-responsive-actions] a,
+    .ds-page [data-responsive-actions] button {
+        width: 100%;
+    }
+
+    .global-notifications {
+        top: 12px;
+        right: 12px;
+        width: calc(100vw - 24px);
+    }
+
+    .confirm-modal {
+        width: calc(100vw - 24px);
+        max-height: calc(100dvh - 24px);
+    }
+
+    .confirm-modal__body {
+        max-height: calc(100dvh - 112px);
+    }
+}
+
 :root {
     --ds-color-primary: var(--color-siafco-primary-900);
     --ds-color-primary-raised: var(--color-siafco-primary-700);
@@ -119,8 +176,11 @@
 }
 
 .confirm-modal {
+    position: fixed;
+    inset: 0;
     width: min(540px, calc(100vw - 32px));
-    max-height: calc(100vh - 32px);
+    max-height: min(90vh, calc(100dvh - 24px));
+    margin: auto;
     padding: 0;
     overflow: hidden;
     border: 0;
@@ -134,10 +194,20 @@
     backdrop-filter: blur(2px);
 }
 
+.responsive-dialog {
+    position: fixed;
+    inset: 0;
+    max-height: min(90vh, calc(100dvh - 24px));
+    margin: auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
 .confirm-modal__accent { height: 6px; background: var(--ds-color-secondary); }
 .confirm-modal[data-variant="danger"] .confirm-modal__accent { background: #dc2626; }
 .confirm-modal[data-variant="warning"] .confirm-modal__accent { background: #d97706; }
 .confirm-modal__body { display: grid; grid-template-columns: auto 1fr; gap: 16px; padding: 24px; }
+.confirm-modal__body { max-height: calc(90dvh - 86px); overflow-y: auto; overscroll-behavior: contain; }
 .confirm-modal__icon { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 50%; background: var(--ds-warning-bg); color: var(--ds-warning-text); font-size: 22px; font-weight: 900; }
 .confirm-modal[data-variant="danger"] .confirm-modal__icon { background: var(--ds-danger-bg); color: var(--ds-danger-text); }
 .confirm-modal__detail { margin-top: 16px; padding: 12px; white-space: pre-line; border: 1px solid var(--ds-color-border); border-radius: 8px; background: var(--ds-color-canvas); color: var(--ds-color-text); font-size: 13px; line-height: 1.6; }
@@ -537,8 +607,9 @@
 
 @layer components {
     .ds-shell { @apply min-h-screen lg:flex; background: var(--ds-color-canvas); }
-    .ds-main { @apply flex-1 min-w-0; }
-    .ds-page { @apply mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:py-8; }
+    .ds-main { @apply flex-1 min-w-0; max-width: 100%; }
+    .ds-page { @apply mx-auto w-full min-w-0 max-w-7xl px-4 py-6 sm:px-6 lg:py-8; }
+    .ds-page > * { max-width: 100%; }
     .ds-sidebar { @apply fixed inset-y-0 left-0 z-50 w-80 overflow-y-auto text-white lg:static lg:block lg:w-72; background: linear-gradient(180deg, var(--ds-color-primary) 0%, #07172b 100%); box-shadow: var(--ds-shadow-md); transform: translateX(-100%); transition: transform var(--ds-duration-base) ease; pointer-events: none; }
     .ds-sidebar.is-open { transform: translateX(0); pointer-events: auto; }
     @media (min-width: 1024px) {
@@ -577,6 +648,9 @@
     .btn, .btn-primary, .btn-secondary, .btn-danger, .btn-success, .btn-warning, .btn-outline, .btn-ghost, .btn-icon {
         @apply inline-flex min-h-10 items-center justify-center gap-2 px-4 py-2 text-sm font-bold transition disabled:pointer-events-none disabled:opacity-50;
         border-radius: var(--ds-radius-md);
+        max-width: 100%;
+        white-space: normal;
+        text-align: center;
         transition-duration: var(--ds-duration-fast);
     }
     .btn-primary { background: var(--ds-color-secondary); color: var(--ds-color-primary); box-shadow: var(--ds-shadow-sm); }

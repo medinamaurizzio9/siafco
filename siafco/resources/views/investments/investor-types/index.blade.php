@@ -3,6 +3,7 @@
         @if(auth()->user()->hasPermission('investors.create'))
             <div class="mb-4 flex justify-end"><a class="btn-primary" href="{{ route('investments.investor-types.create') }}">Nuevo tipo</a></div>
         @endif
+        <div class="overflow-x-auto">
         <table class="table">
             <thead><tr><th>Nombre</th><th>Acciones</th><th>Estado</th><th>Orden</th><th></th></tr></thead>
             <tbody>
@@ -21,6 +22,7 @@
             @endforeach
             </tbody>
         </table>
+        </div>
         <div class="mt-4">{{ $types->links() }}</div>
     </div>
 </x-layouts.app>

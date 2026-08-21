@@ -332,10 +332,10 @@
                             <p class="text-xs font-black text-siafco-gold-600 sm:hidden">SIAFCO</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span class="hidden text-right sm:block">
-                            <span class="block text-xs font-bold text-siafco-muted">{{ $institution->institution_name }}</span>
-                            <span class="block text-sm font-black text-siafco-primary-900">{{ auth()->user()->name }}</span>
+                    <div class="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
+                        <span class="hidden min-w-0 max-w-64 text-right sm:block">
+                            <span class="block truncate text-xs font-bold text-siafco-muted">{{ $institution->institution_name }}</span>
+                            <span class="block truncate text-sm font-black text-siafco-primary-900">{{ auth()->user()->name }}</span>
                         </span>
                         <button class="btn-icon" type="button" aria-label="Notificaciones preparadas">
                             <x-ui.icon name="bell" class="h-5 w-5" />

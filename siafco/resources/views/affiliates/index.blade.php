@@ -81,8 +81,8 @@
     </div>
     <div class="mt-4">{{ $affiliates->links() }}</div>
 
-    <div class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/65 p-4" data-delete-affiliate-modal role="dialog" aria-modal="true" aria-labelledby="delete-affiliate-title">
-        <div class="w-full max-w-lg rounded-lg bg-white p-6 shadow-2xl">
+    <div class="fixed inset-0 z-50 hidden items-center justify-center overflow-y-auto bg-slate-950/65 p-3 sm:p-4" data-delete-affiliate-modal role="dialog" aria-modal="true" aria-labelledby="delete-affiliate-title">
+        <div class="my-auto max-h-[calc(100dvh-24px)] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-5 shadow-2xl sm:max-h-[calc(100dvh-32px)] sm:p-6">
             <div class="flex items-start gap-4">
                 <div class="grid h-11 w-11 flex-none place-items-center rounded-full bg-red-100 text-red-800" aria-hidden="true">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
