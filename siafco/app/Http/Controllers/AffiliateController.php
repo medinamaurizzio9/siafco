@@ -23,6 +23,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -58,67 +59,74 @@ class AffiliateController extends Controller
     public function store(Request $request)
     {
         $data = $this->validated($request);
+        $photoPath = $request->hasFile('photo')
+            ? app(AffiliatePhotoProcessor::class)->process(
+                $request->file('photo'),
+                AffiliatePhotoProcessor::CREDENTIAL_WIDTH,
+                AffiliatePhotoProcessor::CREDENTIAL_HEIGHT
+            )
+            : null;
+        $institutionalQrPath = InstitutionalSetting::current()->payment_qr_path;
 
-        $affiliate = DB::transaction(function () use ($request, $data) {
-            $sector = Sector::lockForUpdate()->findOrFail($data['sector_id']);
-            $plan = AffiliationPlan::findOrFail($data['affiliation_plan_id']);
-            $sector->increment('current_sequence');
+        try {
+            $affiliate = DB::transaction(function () use ($data, $photoPath, $institutionalQrPath) {
+                $sector = Sector::lockForUpdate()->findOrFail($data['sector_id']);
+                $plan = AffiliationPlan::findOrFail($data['affiliation_plan_id']);
+                $sector->increment('current_sequence');
+                $registration = sprintf('%s-%06d', strtoupper($sector->code), $sector->current_sequence);
+                $person = Person::updateOrCreate(
+                    ['ci' => $data['ci']],
+                    [
+                        'full_name' => $data['full_name'],
+                        'phone' => $data['phone'] ?? null,
+                        'email' => $data['email'],
+                        'address' => $data['address'] ?? null,
+                        'birth_date' => $data['birth_date'] ?? null,
+                        'marital_status' => $data['marital_status'] ?? null,
+                        'photo' => $photoPath,
+                    ]
+                );
 
-            $photoPath = $request->hasFile('photo')
-                ? app(AffiliatePhotoProcessor::class)->process(
-                    $request->file('photo'),
-                    AffiliatePhotoProcessor::CREDENTIAL_WIDTH,
-                    AffiliatePhotoProcessor::CREDENTIAL_HEIGHT
-                )
-                : null;
-            $registration = sprintf('%s-%06d', strtoupper($sector->code), $sector->current_sequence);
-            $person = Person::updateOrCreate(
-                ['ci' => $data['ci']],
-                [
-                    'full_name' => $data['full_name'],
-                    'phone' => $data['phone'] ?? null,
+                $user = User::create([
+                    'person_id' => $person->id,
+                    'name' => $data['full_name'],
                     'email' => $data['email'],
-                    'address' => $data['address'] ?? null,
-                    'birth_date' => $data['birth_date'] ?? null,
-                    'marital_status' => $data['marital_status'] ?? null,
-                    'photo' => $photoPath,
-                ]
-            );
+                    'username' => $this->uniqueAffiliateUsername($registration),
+                    'role' => 'afiliado',
+                    'user_type' => 'affiliate',
+                    'is_active' => true,
+                    'must_change_password' => true,
+                    'password' => Hash::make(app(AffiliatePasswordService::class)->temporaryPasswordFromCi($data['ci'])),
+                ]);
 
-            $user = User::create([
-                'person_id' => $person->id,
-                'name' => $data['full_name'],
-                'email' => $data['email'],
-                'username' => $this->uniqueAffiliateUsername($registration),
-                'role' => 'afiliado',
-                'user_type' => 'affiliate',
-                'is_active' => true,
-                'must_change_password' => true,
-                'password' => Hash::make(app(AffiliatePasswordService::class)->temporaryPasswordFromCi($data['ci'])),
-            ]);
+                $affiliate = Affiliate::create($data + [
+                    'user_id' => $user->id,
+                    'person_id' => $person->id,
+                    'regional' => ($data['regional'] ?? null) ?: $sector->regional,
+                    'institution' => ($data['institution'] ?? null) ?: $sector->institution,
+                    'photo_path' => $photoPath,
+                    'registration_number' => $registration,
+                    'status' => 'pendiente_pago',
+                    'verification_token' => Str::uuid()->toString(),
+                ]);
 
-            $affiliate = Affiliate::create($data + [
-                'user_id' => $user->id,
-                'person_id' => $person->id,
-                'regional' => ($data['regional'] ?? null) ?: $sector->regional,
-                'institution' => ($data['institution'] ?? null) ?: $sector->institution,
-                'photo_path' => $photoPath,
-                'registration_number' => $registration,
-                'status' => 'pendiente_pago',
-                'verification_token' => Str::uuid()->toString(),
-            ]);
+                AffiliationPayment::create([
+                    'affiliate_id' => $affiliate->id,
+                    'amount' => $plan->total_amount,
+                    'institutional_qr_path' => $institutionalQrPath,
+                    'status' => 'pendiente',
+                ]);
 
-            AffiliationPayment::create([
-                'affiliate_id' => $affiliate->id,
-                'amount' => $plan->total_amount,
-                'institutional_qr_path' => InstitutionalSetting::current()->payment_qr_path,
-                'status' => 'pendiente',
-            ]);
+                AuditService::record('afiliado.registrado', $affiliate);
 
-            AuditService::record('afiliado.registrado', $affiliate);
-
-            return $affiliate;
-        });
+                return $affiliate;
+            });
+        } catch (\Throwable $exception) {
+            if ($photoPath) {
+                Storage::disk('public')->delete($photoPath);
+            }
+            throw $exception;
+        }
 
         return redirect()->route('affiliates.show', $affiliate)
             ->with('status', 'Afiliado registrado con pago pendiente. El correo sera utilizado para iniciar sesion en el portal y en la aplicacion movil. La contrasena temporal corresponde al CI del afiliado y debera cambiarla al ingresar.');

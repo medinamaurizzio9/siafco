@@ -18,13 +18,13 @@ class CredentialService
     ) {
     }
 
-    public function generate(Affiliate $affiliate): DigitalCredential
+    public function generate(Affiliate $affiliate, bool $generateExports = true): DigitalCredential
     {
-        $affiliate->load('sector');
+        $affiliate->loadMissing('sector', 'credential');
         $institution = InstitutionalSetting::current();
         $existingCredential = $affiliate->credential;
 
-        if ($existingCredential && ! $this->shouldRegenerate($existingCredential, $affiliate, $institution)) {
+        if ($existingCredential && ! $this->shouldRegenerate($existingCredential, $affiliate, $institution, $generateExports)) {
             return $existingCredential;
         }
 
@@ -44,10 +44,14 @@ class CredentialService
             storage_path('app/public/'.$qrPath)
         );
 
-        $this->generatePdf($affiliate, $institution, $credentialData, $sources, $pdfPath);
+        $generatedPdfPath = null;
+        if ($generateExports) {
+            $this->generatePdf($affiliate, $institution, $credentialData, $sources, $pdfPath);
+            $generatedPdfPath = $pdfPath;
+        }
 
         $generatedPngPath = null;
-        if ($this->capabilities->canExportPng()) {
+        if ($generateExports && $this->capabilities->canExportPng()) {
             $generatedPngPath = $this->generatePng(
                 $affiliate,
                 $institution,
@@ -61,7 +65,7 @@ class CredentialService
             ['affiliate_id' => $affiliate->id],
             [
                 'qr_path' => $qrPath,
-                'pdf_path' => $pdfPath,
+                'pdf_path' => $generatedPdfPath,
                 'png_path' => $generatedPngPath,
                 'generated_at' => now(),
             ]
@@ -195,20 +199,28 @@ class CredentialService
         }
     }
 
-    private function shouldRegenerate(DigitalCredential $credential, Affiliate $affiliate, InstitutionalSetting $institution): bool
+    private function shouldRegenerate(
+        DigitalCredential $credential,
+        Affiliate $affiliate,
+        InstitutionalSetting $institution,
+        bool $requireExports = true
+    ): bool
     {
-        if (! $credential->pdf_path || ! $credential->qr_path) {
+        if (! $credential->qr_path || ($requireExports && ! $credential->pdf_path)) {
+            return true;
+        }
+
+        if (! Storage::disk('public')->exists($credential->qr_path)) {
+            return true;
+        }
+
+        if ($requireExports && ! Storage::disk('public')->exists($credential->pdf_path)) {
             return true;
         }
 
         if (
-            ! Storage::disk('public')->exists($credential->pdf_path)
-            || ! Storage::disk('public')->exists($credential->qr_path)
-        ) {
-            return true;
-        }
-
-        if (
+            $requireExports
+            &&
             $this->capabilities->canExportPng()
             && (! $credential->png_path || ! Storage::disk('public')->exists($credential->png_path))
         ) {

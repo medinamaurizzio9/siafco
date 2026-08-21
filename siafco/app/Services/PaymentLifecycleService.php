@@ -207,8 +207,8 @@ class PaymentLifecycleService
             $credential = null;
             $credentialWasExisting = false;
             if ($covered) {
-                $credentialWasExisting = $affiliate->credential()->exists();
-                $credential = $this->credentials->generate($affiliate->fresh('sector', 'credential'));
+                $credentialWasExisting = $affiliate->credential !== null;
+                $credential = $this->credentials->generate($affiliate, false);
             }
 
             $metadata = [

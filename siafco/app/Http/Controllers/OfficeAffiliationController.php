@@ -58,24 +58,24 @@ class OfficeAffiliationController extends Controller
             ]);
         }
 
+        $photoPath = $request->hasFile('photo')
+            ? app(AffiliatePhotoProcessor::class)->process(
+                $request->file('photo'),
+                AffiliatePhotoProcessor::CREDENTIAL_WIDTH,
+                AffiliatePhotoProcessor::CREDENTIAL_HEIGHT
+            )
+            : null;
+        $institutionalQrPath = InstitutionalSetting::current()->payment_qr_path;
+
         try {
-            $payment = DB::transaction(function () use ($request, $data, $plan, $received, $required, $actor, $payments, $isQr) {
-            $sector = Sector::whereKey($data['sector_id'])->lockForUpdate()->firstOrFail();
-            $sector->increment('current_sequence');
-            $sector->refresh();
+            $payment = DB::transaction(function () use ($data, $plan, $received, $required, $actor, $payments, $isQr, $photoPath, $institutionalQrPath) {
+                $sector = Sector::whereKey($data['sector_id'])->lockForUpdate()->firstOrFail();
+                $sector->increment('current_sequence');
+                $registration = sprintf('%s-%06d', mb_strtoupper($sector->code), $sector->current_sequence);
 
-            $photoPath = $request->hasFile('photo')
-                ? app(AffiliatePhotoProcessor::class)->process(
-                    $request->file('photo'),
-                    AffiliatePhotoProcessor::CREDENTIAL_WIDTH,
-                    AffiliatePhotoProcessor::CREDENTIAL_HEIGHT
-                )
-                : null;
-            $registration = sprintf('%s-%06d', mb_strtoupper($sector->code), $sector->current_sequence);
-
-            $person = Person::updateOrCreate(
-                ['ci' => $data['ci']],
-                [
+                $person = Person::updateOrCreate(
+                    ['ci' => $data['ci']],
+                    [
                     'full_name' => $data['full_name'],
                     'phone' => $data['phone'] ?? null,
                     'email' => $data['email'],
@@ -83,10 +83,10 @@ class OfficeAffiliationController extends Controller
                     'birth_date' => $data['birth_date'] ?? null,
                     'marital_status' => $data['marital_status'] ?? null,
                     'photo' => $photoPath,
-                ]
-            );
+                    ]
+                );
 
-            $user = User::create([
+                $user = User::create([
                 'person_id' => $person->id,
                 'name' => $data['full_name'],
                 'email' => $data['email'],
@@ -96,9 +96,9 @@ class OfficeAffiliationController extends Controller
                 'is_active' => true,
                 'must_change_password' => true,
                 'password' => Hash::make(app(AffiliatePasswordService::class)->temporaryPasswordFromCi($data['ci'])),
-            ]);
+                ]);
 
-            $affiliate = Affiliate::create([
+                $affiliate = Affiliate::create([
                 ...$data,
                 'user_id' => $user->id,
                 'person_id' => $person->id,
@@ -108,16 +108,16 @@ class OfficeAffiliationController extends Controller
                 'registration_number' => $registration,
                 'status' => 'pendiente_pago',
                 'verification_token' => Str::uuid()->toString(),
-            ]);
+                ]);
 
-            $payment = AffiliationPayment::create([
+                $payment = AffiliationPayment::create([
                 'affiliate_id' => $affiliate->id,
                 'affiliation_plan_id' => $plan->id,
                 'amount' => $received,
                 'expected_amount' => $required,
                 'paid_amount' => $received,
                 'currency' => $plan->currency ?? 'BOB',
-                'institutional_qr_path' => InstitutionalSetting::current()->payment_qr_path,
+                'institutional_qr_path' => $institutionalQrPath,
                 'payment_method' => $isQr ? 'qr' : 'efectivo',
                 'reference_number' => $data['reference_number'] ?? null,
                 'observations' => $data['observations'] ?? null,
@@ -127,29 +127,35 @@ class OfficeAffiliationController extends Controller
                 'status' => $isQr ? PaymentStatus::UNDER_REVIEW : PaymentStatus::PENDING,
                 'source' => $isQr ? 'office_qr' : 'office_cash',
                 'registered_by' => $actor->id,
-            ]);
+                ]);
 
-            AuditService::record('office_affiliation_registered', $affiliate, [
+                AuditService::record('office_affiliation_registered', $affiliate, [
                 'affiliate_id' => $affiliate->id,
                 'registration_number' => $affiliate->registration_number,
                 'actor_id' => $actor->id,
                 'payment_id' => $payment->id,
                 'amount' => number_format($received, 2, '.', ''),
                 'payment_method' => $isQr ? 'qr' : 'efectivo',
-            ]);
+                ]);
 
-            AuditService::record($isQr ? 'office_qr_registered' : 'office_cash_payment_received', $payment, [
+                AuditService::record($isQr ? 'office_qr_registered' : 'office_cash_payment_received', $payment, [
                 'affiliate_id' => $affiliate->id,
                 'actor_id' => $actor->id,
                 'amount' => number_format($received, 2, '.', ''),
                 'payment_method' => $isQr ? 'qr' : 'efectivo',
                 'reference_number' => $isQr ? $payment->reference_number : null,
-            ]);
+                ]);
 
                 return $isQr ? $payment : $payments->confirm($payment, $actor);
             });
-        } catch (UniqueConstraintViolationException $exception) {
-            $this->throwDuplicateValidationException($exception);
+        } catch (\Throwable $exception) {
+            if ($photoPath) {
+                Storage::disk('public')->delete($photoPath);
+            }
+            if ($exception instanceof UniqueConstraintViolationException) {
+                $this->throwDuplicateValidationException($exception);
+            }
+            throw $exception;
         }
 
         return redirect()
