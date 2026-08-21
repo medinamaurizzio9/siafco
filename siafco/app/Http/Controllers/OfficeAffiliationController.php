@@ -16,6 +16,7 @@ use App\Services\PaymentLifecycleService;
 use App\Support\PaymentStatus;
 use App\Support\PublicAffiliationCatalogs;
 use App\Support\TextNormalizer;
+use App\Rules\ActivePlanForSector;
 use Illuminate\Http\Request;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -33,7 +34,7 @@ class OfficeAffiliationController extends Controller
         return view('affiliates.office-form', [
             'affiliate' => new Affiliate(),
             'sectors' => Sector::where('is_active', true)->orderBy('name')->get(),
-            'plans' => AffiliationPlan::where('is_active', true)->orderBy('name')->get(),
+            'plans' => AffiliationPlan::available()->orderBy('name')->get(),
             'regionals' => PublicAffiliationCatalogs::regionalOptions(),
             'maritalStatuses' => PublicAffiliationCatalogs::maritalStatusOptions(),
             'paidAt' => now(),
@@ -183,7 +184,7 @@ class OfficeAffiliationController extends Controller
             'email' => ['required', 'email', 'max:255', Rule::unique('affiliates', 'email'), Rule::unique('users', 'email')],
             'address' => ['nullable', 'string', 'max:255'],
             'sector_id' => ['required', 'exists:sectors,id'],
-            'affiliation_plan_id' => ['required', 'exists:affiliation_plans,id'],
+            'affiliation_plan_id' => ['required', new ActivePlanForSector($request->input('sector_id'))],
             'regional' => ['nullable', 'string', Rule::in(PublicAffiliationCatalogs::REGIONALS)],
             'institution' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'string', 'max:255'],

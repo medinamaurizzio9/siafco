@@ -13,6 +13,7 @@ use App\Support\PublicAffiliationCatalogs;
 use App\Support\PublicAffiliationValidation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use App\Rules\ActivePlanForSector;
 
 class PublicAffiliationController extends Controller
 {
@@ -25,10 +26,7 @@ class PublicAffiliationController extends Controller
     {
         return view('public-affiliation.create', [
             'sectors' => Sector::where('is_active', true)->orderBy('name')->get(),
-            'plans' => AffiliationPlan::where('is_active', true)
-                ->where(fn ($q) => $q->whereNull('valid_from')->orWhereDate('valid_from', '<=', today()))
-                ->where(fn ($q) => $q->whereNull('valid_until')->orWhereDate('valid_until', '>=', today()))
-                ->orderBy('name')->get(),
+            'plans' => AffiliationPlan::available()->orderBy('name')->get(),
             'expeditionPlaces' => PublicAffiliationCatalogs::issuedInSelectOptions(),
             'maritalStatuses' => PublicAffiliationCatalogs::maritalStatusOptions(),
             'regionals' => PublicAffiliationCatalogs::regionalOptions(),
@@ -37,8 +35,10 @@ class PublicAffiliationController extends Controller
 
     public function store(Request $request, PublicAffiliationService $service, AffiliatePhotoProcessor $photoProcessor)
     {
+        $rules = PublicAffiliationValidation::registrationRules();
+        $rules['affiliation_plan_id'] = ['required', new ActivePlanForSector($request->input('sector_id'))];
         $data = $request->validate(
-            PublicAffiliationValidation::registrationRules(),
+            $rules,
             PublicAffiliationValidation::registrationMessages()
         );
 

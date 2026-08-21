@@ -6,7 +6,7 @@
     <form method="post" enctype="multipart/form-data" action="{{ $affiliate->exists ? route('affiliates.update', $affiliate) : route('affiliates.store') }}" class="grid gap-4 rounded-lg border border-slate-200 bg-white p-5 md:grid-cols-2 xl:grid-cols-3">
         @csrf
         @if($affiliate->exists) @method('put') @endif
-        <div>
+        <div data-sector-plan-controller>
             <label class="form-label">Nombre completo</label>
             <input class="form-input" name="full_name" value="{{ old('full_name', $affiliate->full_name) }}" data-uppercase required>
         </div>
@@ -25,17 +25,19 @@
         </div>
         <div>
             <label class="form-label">Sector</label>
-            <select class="form-input" name="sector_id" required>
+            <select class="form-input" name="sector_id" data-sector-select required>
+                <option value="">Seleccione sector</option>
                 @foreach($sectors as $sector)
                     <option value="{{ $sector->id }}" @selected(old('sector_id', $affiliate->sector_id) == $sector->id)>{{ $sector->code }} - {{ $sector->name }}</option>
                 @endforeach
             </select>
         </div>
-        <div>
+        <div data-sector-plan-controller>
             <label class="form-label">Plan</label>
-            <select class="form-input" name="affiliation_plan_id" required>
+            <select class="form-input" name="affiliation_plan_id" data-sector-plan-select required>
+                <option value="">Seleccione primero un sector</option>
                 @foreach($plans as $plan)
-                    <option value="{{ $plan->id }}" @selected(old('affiliation_plan_id', $affiliate->affiliation_plan_id) == $plan->id)>{{ $plan->name }} - Bs {{ number_format($plan->total_amount, 2) }}</option>
+                    <option value="{{ $plan->id }}" data-sector="{{ $plan->sector_id }}" @selected(old('affiliation_plan_id', $affiliate->affiliation_plan_id) == $plan->id)>{{ $plan->name }} - Bs {{ number_format($plan->total_amount, 2) }}</option>
                 @endforeach
             </select>
         </div>

@@ -43,23 +43,23 @@
 
         <fieldset class="section-card grid gap-4 sm:grid-cols-2">
             <legend class="mb-3 text-lg font-black text-[#0b1f3a]">Sector y plan</legend>
-            <label for="sector_id" data-field-wrapper>
+            <label for="sector_id" data-field-wrapper data-sector-plan-controller>
                 <span class="form-label" data-field-label>Sector <span class="text-red-600" aria-hidden="true">*</span></span>
                 <select id="sector_id" class="form-input @error('sector_id') border-red-500 bg-red-50 @enderror"
                     name="sector_id" required aria-required="true" aria-invalid="{{ $errors->has('sector_id') ? 'true' : 'false' }}"
-                    aria-describedby="sector_id-error" data-validate-field data-touched="{{ $errors->has('sector_id') ? 'true' : 'false' }}">
+                    aria-describedby="sector_id-error" data-sector-select data-validate-field data-touched="{{ $errors->has('sector_id') ? 'true' : 'false' }}">
                     <option value="" disabled @selected(!old('sector_id'))>Seleccione una opción</option>
                     @foreach($sectors as $sector)<option value="{{ $sector->id }}" @selected(old('sector_id') == $sector->id)>{{ $sector->name }}</option>@endforeach
                 </select>
                 <x-forms.field-error name="sector_id" />
             </label>
-            <label for="affiliation_plan_id" data-field-wrapper>
+            <label for="affiliation_plan_id" data-field-wrapper data-sector-plan-controller>
                 <span class="form-label" data-field-label>Plan <span class="text-red-600" aria-hidden="true">*</span></span>
                 <select id="affiliation_plan_id" class="form-input @error('affiliation_plan_id') border-red-500 bg-red-50 @enderror"
-                    name="affiliation_plan_id" data-plan-select required aria-required="true"
+                    name="affiliation_plan_id" data-plan-select data-sector-plan-select required aria-required="true"
                     aria-invalid="{{ $errors->has('affiliation_plan_id') ? 'true' : 'false' }}" aria-describedby="affiliation_plan_id-error"
                     data-validate-field data-touched="{{ $errors->has('affiliation_plan_id') ? 'true' : 'false' }}">
-                    <option value="" disabled @selected(!old('affiliation_plan_id'))>Seleccione una opción</option>
+                    <option value="" @selected(!old('affiliation_plan_id'))>Seleccione primero un sector</option>
                     @foreach($plans as $plan)<option value="{{ $plan->id }}" data-sector="{{ $plan->sector_id }}" data-amount="{{ number_format($plan->total_amount, 2, '.', '') }}" @selected(old('affiliation_plan_id') == $plan->id)>{{ $plan->name }} — {{ $plan->currency }} {{ number_format($plan->total_amount, 2) }}</option>@endforeach
                 </select>
                 <x-forms.field-error name="affiliation_plan_id" />
@@ -79,12 +79,8 @@
         const sector = document.querySelector('[name="sector_id"]');
         const plan = document.querySelector('[data-plan-select]');
         const amount = document.querySelector('[data-plan-amount]');
-        function syncPlans() {
-            [...plan.options].forEach(option => option.hidden = option.dataset.sector && option.dataset.sector !== sector.value);
-            if (plan.selectedOptions[0]?.hidden) plan.value = '';
-            amount.textContent = plan.selectedOptions[0]?.dataset.amount ? `BOB ${plan.selectedOptions[0].dataset.amount}` : 'Seleccione un plan';
-        }
-        sector.addEventListener('change', syncPlans); plan.addEventListener('change', syncPlans); syncPlans();
+        const syncAmount = () => amount.textContent = plan.selectedOptions[0]?.dataset.amount ? `BOB ${plan.selectedOptions[0].dataset.amount}` : 'Seleccione un plan';
+        sector.addEventListener('change', syncAmount); plan.addEventListener('change', syncAmount); syncAmount();
         document.querySelector('[data-numeric-only]')?.addEventListener('input', event => event.target.value = event.target.value.replace(/\D/g, '').slice(0, 8));
     </script>
     @endpush

@@ -17,6 +17,7 @@ use App\Services\AffiliatePhotoProcessor;
 use App\Services\PaymentBalanceService;
 use App\Support\PublicAffiliationCatalogs;
 use App\Support\TextNormalizer;
+use App\Rules\ActivePlanForSector;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -48,7 +49,7 @@ class AffiliateController extends Controller
         return view('affiliates.form', [
             'affiliate' => new Affiliate(),
             'sectors' => Sector::where('is_active', true)->orderBy('name')->get(),
-            'plans' => AffiliationPlan::where('is_active', true)->orderBy('name')->get(),
+            'plans' => AffiliationPlan::available()->orderBy('name')->get(),
             'regionals' => PublicAffiliationCatalogs::regionalOptions(),
             'maritalStatuses' => PublicAffiliationCatalogs::maritalStatusOptions(),
         ]);
@@ -141,7 +142,7 @@ class AffiliateController extends Controller
                 ? \App\Models\AuditLog::where('auditable_type', Affiliate::class)->where('auditable_id', $affiliate->id)->latest()->limit(20)->get()
                 : collect(),
             'sectors' => Sector::where('is_active', true)->orderBy('name')->get(),
-            'plans' => AffiliationPlan::where('is_active', true)->orderBy('name')->get(),
+            'plans' => AffiliationPlan::available()->orderBy('name')->get(),
         ]);
     }
 
@@ -150,7 +151,7 @@ class AffiliateController extends Controller
         return view('affiliates.form', [
             'affiliate' => $affiliate,
             'sectors' => Sector::where('is_active', true)->orderBy('name')->get(),
-            'plans' => AffiliationPlan::where('is_active', true)->orderBy('name')->get(),
+            'plans' => AffiliationPlan::available()->orderBy('name')->get(),
             'regionals' => PublicAffiliationCatalogs::regionalOptions(),
             'maritalStatuses' => PublicAffiliationCatalogs::maritalStatusOptions(),
         ]);
@@ -240,7 +241,7 @@ class AffiliateController extends Controller
             'email' => ['required', 'email', 'max:255', Rule::unique('affiliates')->ignore($affiliate), Rule::unique('users', 'email')->ignore($affiliate?->user_id)],
             'address' => ['nullable', 'string', 'max:255'],
             'sector_id' => ['required', 'exists:sectors,id'],
-            'affiliation_plan_id' => ['required', 'exists:affiliation_plans,id'],
+            'affiliation_plan_id' => ['required', new ActivePlanForSector($request->input('sector_id'))],
             'regional' => ['nullable', 'string', Rule::in(PublicAffiliationCatalogs::REGIONALS)],
             'institution' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'string', 'max:255'],

@@ -3,7 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
+use App\Rules\ActivePlanForSector;
 
 class ChangeAffiliatePlanRequest extends FormRequest
 {
@@ -15,7 +15,7 @@ class ChangeAffiliatePlanRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'affiliation_plan_id' => ['required', Rule::exists('affiliation_plans', 'id')->where('is_active', true)],
+            'affiliation_plan_id' => ['required', new ActivePlanForSector($this->route('affiliate')?->sector_id)],
         ];
     }
 }

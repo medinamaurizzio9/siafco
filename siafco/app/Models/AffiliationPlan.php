@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 
 class AffiliationPlan extends Model
 {
@@ -19,6 +20,13 @@ class AffiliationPlan extends Model
     public function getTotalAmountAttribute(): float
     {
         return (float) $this->affiliation_fee + (float) $this->credential_fee;
+    }
+
+    public function scopeAvailable(Builder $query): Builder
+    {
+        return $query->where('is_active', true)
+            ->where(fn (Builder $builder) => $builder->whereNull('valid_from')->orWhereDate('valid_from', '<=', today()))
+            ->where(fn (Builder $builder) => $builder->whereNull('valid_until')->orWhereDate('valid_until', '>=', today()));
     }
 
     public function sector() { return $this->belongsTo(Sector::class); }

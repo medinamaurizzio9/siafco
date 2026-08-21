@@ -67,11 +67,13 @@ class AffiliateAdministrationTest extends TestCase
         [, $affiliate] = $this->affiliate();
         $credential = $this->credential($affiliate);
         $newSector = Sector::create(['name' => 'SALUD', 'code' => 'SAL', 'regional' => 'LA PAZ', 'institution' => 'HOSPITAL', 'is_active' => true]);
+        $newPlan = AffiliationPlan::create(['sector_id' => $newSector->id, 'name' => 'PLAN SALUD', 'affiliation_fee' => 100, 'credential_fee' => 20, 'is_active' => true]);
         $oldNumber = $affiliate->registration_number;
         $oldToken = $affiliate->verification_token;
 
         $this->actingAs($this->internalUser('gerente'))->patch(route('admin.affiliates.sector.update', $affiliate), [
             'sector_id' => $newSector->id,
+            'affiliation_plan_id' => $newPlan->id,
         ])->assertRedirect();
 
         $affiliate->refresh();
@@ -92,7 +94,7 @@ class AffiliateAdministrationTest extends TestCase
     {
         [, $affiliate] = $this->affiliate();
         AffiliationPayment::create(['affiliate_id' => $affiliate->id, 'amount' => 100, 'paid_amount' => 100, 'status' => 'confirmado']);
-        $newPlan = AffiliationPlan::create(['name' => 'PLAN MAYOR', 'affiliation_fee' => 200, 'credential_fee' => 50, 'is_active' => true]);
+        $newPlan = AffiliationPlan::create(['sector_id' => $affiliate->sector_id, 'name' => 'PLAN MAYOR', 'affiliation_fee' => 200, 'credential_fee' => 50, 'is_active' => true]);
 
         $this->actingAs($this->internalUser('gerente'))->patch(route('admin.affiliates.plan.update', $affiliate), [
             'affiliation_plan_id' => $newPlan->id,
@@ -268,7 +270,7 @@ class AffiliateAdministrationTest extends TestCase
     {
         $person = Person::create(['full_name' => 'AFILIADO ADMIN', 'ci' => Str::random(8), 'email' => $email]);
         $sector = Sector::create(['name' => 'MAGISTERIO', 'code' => 'MAG'.Str::upper(Str::random(4)), 'is_active' => true]);
-        $plan = AffiliationPlan::create(['name' => 'PLAN BASE', 'affiliation_fee' => 100, 'credential_fee' => 20, 'is_active' => true]);
+        $plan = AffiliationPlan::create(['sector_id' => $sector->id, 'name' => 'PLAN BASE', 'affiliation_fee' => 100, 'credential_fee' => 20, 'is_active' => true]);
         $user = User::factory()->create([
             'person_id' => $person->id,
             'name' => 'AFILIADO ADMIN',

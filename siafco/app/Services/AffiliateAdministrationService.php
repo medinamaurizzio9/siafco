@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class AffiliateAdministrationService
 {
@@ -67,15 +68,20 @@ class AffiliateAdministrationService
         });
     }
 
-    public function changeSector(Affiliate $affiliate, Sector $sector, User $actor): Affiliate
+    public function changeSector(Affiliate $affiliate, Sector $sector, AffiliationPlan $plan, User $actor): Affiliate
     {
-        return DB::transaction(function () use ($affiliate, $sector, $actor): Affiliate {
+        return DB::transaction(function () use ($affiliate, $sector, $plan, $actor): Affiliate {
             $affiliate = Affiliate::query()->with('sector', 'credential')->lockForUpdate()->findOrFail($affiliate->id);
             $sector = Sector::query()->where('is_active', true)->lockForUpdate()->findOrFail($sector->id);
+            $plan = AffiliationPlan::query()->available()->lockForUpdate()->findOrFail($plan->id);
+            if ((int) $plan->sector_id !== (int) $sector->id) {
+                throw ValidationException::withMessages(['affiliation_plan_id' => 'El plan seleccionado no pertenece al sector indicado.']);
+            }
             $old = $affiliate->sector?->only(['id', 'name', 'code']);
 
             $affiliate->update([
                 'sector_id' => $sector->id,
+                'affiliation_plan_id' => $plan->id,
                 'regional' => $affiliate->regional ?: $sector->regional,
                 'institution' => $affiliate->institution ?: $sector->institution,
             ]);
@@ -97,6 +103,9 @@ class AffiliateAdministrationService
         return DB::transaction(function () use ($affiliate, $plan, $actor): Affiliate {
             $affiliate = Affiliate::query()->with('plan', 'publicRequest')->lockForUpdate()->findOrFail($affiliate->id);
             $plan = AffiliationPlan::query()->where('is_active', true)->lockForUpdate()->findOrFail($plan->id);
+            if ((int) $plan->sector_id !== (int) $affiliate->sector_id) {
+                throw ValidationException::withMessages(['affiliation_plan_id' => 'El plan seleccionado no pertenece al sector indicado.']);
+            }
             $old = $affiliate->plan?->only(['id', 'name']);
 
             $affiliate->update(['affiliation_plan_id' => $plan->id]);

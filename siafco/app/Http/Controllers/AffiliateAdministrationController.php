@@ -42,9 +42,10 @@ class AffiliateAdministrationController extends Controller
     public function changeSector(ChangeAffiliateSectorRequest $request, Affiliate $affiliate): RedirectResponse
     {
         $sector = Sector::findOrFail($request->validated('sector_id'));
-        $this->affiliates->changeSector($affiliate, $sector, $request->user());
+        $plan = AffiliationPlan::findOrFail($request->validated('affiliation_plan_id'));
+        $this->affiliates->changeSector($affiliate, $sector, $plan, $request->user());
 
-        return back()->with('status', 'Sector actualizado sin regenerar el numero de afiliado.');
+        return back()->with('status', 'Sector y plan actualizados sin regenerar el numero de afiliado.');
     }
 
     public function changePlan(ChangeAffiliatePlanRequest $request, Affiliate $affiliate): RedirectResponse

@@ -135,14 +135,16 @@
                     @if(auth()->user()->hasPermission('affiliates.change_sector'))
                         <form class="grid gap-2" method="post" action="{{ route('admin.affiliates.sector.update', $affiliate) }}">
                             @csrf @method('patch')
-                            <label class="text-sm font-bold">Sector<select class="form-input" name="sector_id">@foreach($sectors as $sector)<option value="{{ $sector->id }}" @selected($affiliate->sector_id === $sector->id)>{{ $sector->name }}</option>@endforeach</select></label>
-                            <button class="btn-secondary">Cambiar sector</button>
+                            <label class="text-sm font-bold">Sector<select class="form-input" name="sector_id" data-sector-select>@foreach($sectors as $sector)<option value="{{ $sector->id }}" @selected($affiliate->sector_id === $sector->id)>{{ $sector->name }}</option>@endforeach</select></label>
+                            <label class="text-sm font-bold">Plan del nuevo sector<select class="form-input" name="affiliation_plan_id" data-sector-plan-select><option value="">Seleccione primero un sector</option>@foreach($plans as $plan)<option value="{{ $plan->id }}" data-sector="{{ $plan->sector_id }}" @selected($affiliate->affiliation_plan_id === $plan->id)>{{ $plan->name }} - {{ $plan->currency ?? 'BOB' }} {{ number_format($plan->total_amount, 2) }}</option>@endforeach</select></label>
+                            <button class="btn-secondary">Cambiar sector y plan</button>
                         </form>
                     @endif
                     @if(auth()->user()->hasPermission('affiliates.change_plan'))
                         <form class="grid gap-2" method="post" action="{{ route('admin.affiliates.plan.update', $affiliate) }}">
                             @csrf @method('patch')
-                            <label class="text-sm font-bold">Plan<select class="form-input" name="affiliation_plan_id">@foreach($plans as $plan)<option value="{{ $plan->id }}" @selected($affiliate->affiliation_plan_id === $plan->id)>{{ $plan->name }} - {{ $plan->currency ?? 'BOB' }} {{ number_format($plan->total_amount, 2) }}</option>@endforeach</select></label>
+                            <input type="hidden" name="sector_id" value="{{ $affiliate->sector_id }}" data-sector-select>
+                            <label class="text-sm font-bold">Plan<select class="form-input" name="affiliation_plan_id" data-sector-plan-select><option value="">Seleccione plan</option>@foreach($plans as $plan)<option value="{{ $plan->id }}" data-sector="{{ $plan->sector_id }}" @selected($affiliate->affiliation_plan_id === $plan->id)>{{ $plan->name }} - {{ $plan->currency ?? 'BOB' }} {{ number_format($plan->total_amount, 2) }}</option>@endforeach</select></label>
                             <button class="btn-secondary">Cambiar plan</button>
                         </form>
                     @endif

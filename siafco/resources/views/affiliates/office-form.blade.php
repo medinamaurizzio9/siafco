@@ -19,7 +19,7 @@
                 <h3 class="text-lg font-black text-[#0b1f3a]">Datos del afiliado</h3>
                 <p class="text-sm text-slate-600">Use datos reales del afiliado atendido presencialmente.</p>
             </div>
-            <div>
+            <div data-sector-plan-controller>
                 <label class="form-label">Nombre completo</label>
                 <input class="form-input" name="full_name" value="{{ old('full_name') }}" data-uppercase required>
                 @error('full_name') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
@@ -41,7 +41,7 @@
             </div>
             <div>
                 <label class="form-label">Sector</label>
-                <select class="form-input" name="sector_id" required>
+                <select class="form-input" name="sector_id" data-sector-select required>
                     <option value="">Seleccione sector</option>
                     @foreach($sectors as $sector)
                         <option value="{{ $sector->id }}" @selected(old('sector_id') == $sector->id)>{{ $sector->code }} - {{ $sector->name }}</option>
@@ -49,12 +49,12 @@
                 </select>
                 @error('sector_id') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
             </div>
-            <div>
+            <div data-sector-plan-controller>
                 <label class="form-label">Plan</label>
-                <select class="form-input" name="affiliation_plan_id" data-office-plan required>
-                    <option value="">Seleccione plan</option>
+                <select class="form-input" name="affiliation_plan_id" data-sector-plan-select data-office-plan required>
+                    <option value="">Seleccione primero un sector</option>
                     @foreach($plans as $plan)
-                        <option value="{{ $plan->id }}" data-amount="{{ number_format((float) $plan->total_amount, 2, '.', '') }}" data-currency="{{ $plan->currency ?? 'BOB' }}" @selected(old('affiliation_plan_id') == $plan->id)>
+                        <option value="{{ $plan->id }}" data-sector="{{ $plan->sector_id }}" data-amount="{{ number_format((float) $plan->total_amount, 2, '.', '') }}" data-currency="{{ $plan->currency ?? 'BOB' }}" @selected(old('affiliation_plan_id') == $plan->id)>
                             {{ $plan->name }} - {{ $plan->currency ?? 'BOB' }} {{ number_format((float) $plan->total_amount, 2) }}
                         </option>
                     @endforeach

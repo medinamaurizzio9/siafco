@@ -12,4 +12,9 @@ class Sector extends Model
     {
         return $this->hasMany(Affiliate::class);
     }
+
+    public function affiliationPlans()
+    {
+        return $this->hasMany(AffiliationPlan::class);
+    }
 }

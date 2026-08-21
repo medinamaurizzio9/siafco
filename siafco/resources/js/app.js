@@ -149,6 +149,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    const sectorSelects = document.querySelectorAll('[data-sector-select]');
+    sectorSelects.forEach((sector) => {
+        const form = sector.closest('form');
+        const plan = form?.querySelector('[data-sector-plan-select]');
+        if (!plan) return;
+
+        const syncPlans = (sectorChanged = false) => {
+            const sectorId = sector.value;
+            let available = 0;
+            Array.from(plan.options).forEach((option) => {
+                if (!option.value) return;
+                const matches = Boolean(sectorId) && option.dataset.sector === sectorId;
+                option.hidden = !matches;
+                option.disabled = !matches;
+                if (matches) available += 1;
+            });
+
+            if (sectorChanged || plan.selectedOptions[0]?.disabled) plan.value = '';
+            plan.disabled = !sectorId || available === 0;
+            plan.options[0].textContent = !sectorId
+                ? 'Seleccione primero un sector'
+                : available === 0 ? 'No existen planes disponibles para este sector' : 'Seleccione plan';
+            plan.dispatchEvent(new Event('change'));
+        };
+
+        sector.addEventListener('change', () => syncPlans(true));
+        syncPlans(false);
+    });
+
     const appearanceEditor = document.querySelector('[data-login-appearance-editor]');
     if (appearanceEditor) {
         const preview = document.querySelector('[data-login-preview]');

@@ -27,6 +27,7 @@ class PublicAffiliationTest extends TestCase
     {
         $sector = Sector::create(['name' => 'Salud', 'code' => 'SAL', 'is_active' => true]);
         $plan = AffiliationPlan::create([
+            'sector_id' => $sector->id,
             'name' => 'Independiente', 'type' => 'independiente',
             'affiliation_fee' => 100, 'credential_fee' => 20,
             'currency' => 'BOB', 'is_active' => true,
@@ -70,6 +71,21 @@ class PublicAffiliationTest extends TestCase
         $this->assertMatchesRegularExpression('/^affiliates\/photos\/[0-9a-f-]{36}\.jpg$/', $photoPath);
         [$width, $height] = getimagesize(Storage::disk('public')->path($photoPath));
         $this->assertSame([600, 600], [$width, $height]);
+    }
+
+    public function test_public_affiliation_rejects_plan_from_another_sector_without_partial_records(): void
+    {
+        Storage::fake('public');
+        [$sector, $plan] = $this->catalog();
+        $otherSector = Sector::create(['name' => 'EDUCACION', 'code' => 'EDU', 'is_active' => true]);
+        $plan->update(['sector_id' => $otherSector->id]);
+
+        $this->post(route('public-affiliation.store'), $this->form($sector, $plan))
+            ->assertSessionHasErrors(['affiliation_plan_id']);
+
+        $this->assertDatabaseCount('people', 0);
+        $this->assertDatabaseCount('affiliates', 0);
+        $this->assertDatabaseCount('affiliation_payments', 0);
     }
 
     public function test_public_affiliation_accepts_optional_position_and_institution(): void

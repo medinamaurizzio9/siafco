@@ -10,9 +10,17 @@ use App\Support\TextNormalizer;
 
 class AffiliationPlanController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return view('plans.index', ['plans' => AffiliationPlan::latest()->paginate(10)]);
+        $filters = $request->validate(['sector_id' => ['nullable', 'integer', 'exists:sectors,id']]);
+
+        return view('plans.index', [
+            'plans' => AffiliationPlan::with('sector')
+                ->when($filters['sector_id'] ?? null, fn ($query, $sectorId) => $query->where('sector_id', $sectorId))
+                ->latest()->paginate(10)->withQueryString(),
+            'sectors' => Sector::orderBy('name')->get(),
+            'filters' => $filters,
+        ]);
     }
 
     public function create()

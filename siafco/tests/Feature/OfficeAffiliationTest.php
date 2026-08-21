@@ -632,6 +632,56 @@ class OfficeAffiliationTest extends TestCase
         }
     }
 
+    public function test_office_affiliation_rejects_plan_from_another_sector_without_partial_records(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $otherSector = Sector::create(['name' => 'OTRO SECTOR', 'code' => 'OTR', 'is_active' => true]);
+        $plan->update(['sector_id' => $otherSector->id]);
+
+        $this->actingAs($this->internalUser('cajero'))
+            ->post(route('affiliates.office.store'), $this->payload($sector, $plan))
+            ->assertSessionHasErrors(['affiliation_plan_id']);
+
+        $this->assertDatabaseCount('people', 0);
+        $this->assertDatabaseCount('affiliates', 0);
+        $this->assertDatabaseCount('affiliation_payments', 0);
+    }
+
+    public function test_office_form_exposes_only_available_sector_plan_options(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $inactive = AffiliationPlan::create([
+            'sector_id' => $sector->id, 'name' => 'PLAN INACTIVO', 'type' => 'independiente',
+            'affiliation_fee' => 50, 'credential_fee' => 10, 'currency' => 'BOB', 'is_active' => false,
+        ]);
+
+        $this->actingAs($this->internalUser('cajero'))->get(route('affiliates.office.create'))
+            ->assertOk()
+            ->assertSee('data-sector-plan-select', false)
+            ->assertSee('data-sector="'.$sector->id.'"', false)
+            ->assertSee($plan->name)
+            ->assertDontSee($inactive->name);
+    }
+
+    public function test_plan_listing_shows_and_filters_sector_and_keeps_historical_general_plan(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $general = AffiliationPlan::create([
+            'name' => 'PLAN HISTORICO GENERAL', 'type' => 'independiente',
+            'affiliation_fee' => 50, 'credential_fee' => 0, 'currency' => 'BOB', 'is_active' => true,
+        ]);
+        $admin = $this->internalUser('superadministrador');
+
+        $this->actingAs($admin)->get(route('plans.index'))
+            ->assertOk()->assertSee($sector->name)->assertSee('General / Sin sector');
+
+        $this->actingAs($admin)->get(route('plans.index', ['sector_id' => $sector->id]))
+            ->assertOk()->assertSee($plan->name)->assertDontSee($general->name);
+
+        $this->actingAs($admin)->get(route('plans.edit', $plan))
+            ->assertOk()->assertSee('value="'.$sector->id.'" selected', false);
+    }
+
     private function catalog(): array
     {
         $sector = Sector::create([
@@ -642,6 +692,7 @@ class OfficeAffiliationTest extends TestCase
             'is_active' => true,
         ]);
         $plan = AffiliationPlan::create([
+            'sector_id' => $sector->id,
             'name' => 'PLAN OFICINA',
             'type' => 'independiente',
             'affiliation_fee' => 100,
