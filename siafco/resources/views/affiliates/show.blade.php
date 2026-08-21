@@ -276,10 +276,10 @@
                         <td><x-payment-status :status="$payment->status" size="sm" /></td>
                         <td>
                             <a class="btn-secondary" href="{{ route('payments.show', $payment) }}">Ver</a>
-                            @if(auth()->user()->hasPermission('payments.confirm') && \App\Support\PaymentStatus::isEditable($payment->status))
+                            @if(app(\App\Services\PaymentActionAuthorization::class)->canConfirm(auth()->user(), $payment))
                                 <form class="inline" method="post" action="{{ route('payments.confirm', $payment) }}">@csrf<button class="btn-primary">Confirmar</button></form>
                             @endif
-                            @if(auth()->user()->hasPermission('payments.reject') && ! \App\Support\PaymentStatus::isConfirmed($payment->status) && ! \App\Support\PaymentStatus::isVoided($payment->status))
+                            @if(app(\App\Services\PaymentActionAuthorization::class)->canReject(auth()->user(), $payment))
                                 <form class="mt-2 flex gap-2" method="post" action="{{ route('payments.reject', $payment) }}">@csrf<input class="form-input" name="rejection_reason" placeholder="Motivo"><button class="btn-danger">Rechazar</button></form>
                             @endif
                         </td>

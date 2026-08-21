@@ -91,8 +91,7 @@
                                 @if(auth()->user()->hasPermission('payments.update_pending') && \App\Support\PaymentStatus::isEditable($payment->status))
                                     <a class="btn-secondary" href="{{ route('payments.edit', $payment) }}">Editar</a>
                                 @endif
-                                @php($canReviewOfficeQr = $payment->source !== 'office_qr' || (auth()->user()->hasRole(['superadministrador','administrador','gerente']) && (int) $payment->registered_by !== (int) auth()->id()))
-                                @if(auth()->user()->hasPermission('payments.confirm') && \App\Support\PaymentStatus::isEditable($payment->status) && $canReviewOfficeQr)
+                                @if(app(\App\Services\PaymentActionAuthorization::class)->canConfirm(auth()->user(), $payment))
                                     <form method="post" action="{{ route('payments.confirm', $payment) }}" data-confirm-title="{{ $payment->source === 'office_qr' ? 'Confirmar pago QR' : 'Confirmar pago' }}" data-confirm-message="{{ $payment->source === 'office_qr' ? 'Confirme que la operación '.$payment->reference_number.' por '.($payment->currency ?? 'BOB').' '.number_format((float) ($payment->paid_amount ?? $payment->amount), 2).' fue verificada correctamente.' : 'El pago quedará confirmado.' }}" data-confirm-accept="Confirmar pago" data-confirm-variant="warning">@csrf<button class="btn-primary">Confirmar</button></form>
                                 @endif
                                 @if(auth()->user()->hasPermission('payments.view_receipt') && $payment->voucher_path)
