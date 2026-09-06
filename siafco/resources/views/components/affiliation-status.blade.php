@@ -2,12 +2,13 @@
     'status',
     'showDescription' => false,
     'size' => 'md',
+    'label' => null,
 ])
 
 @php
     use App\Support\AffiliationStatusPresenter;
 
-    $label = AffiliationStatusPresenter::label($status);
+    $label = $label ?: AffiliationStatusPresenter::label($status);
     $description = AffiliationStatusPresenter::description($status);
     $badgeClasses = AffiliationStatusPresenter::badgeClasses($status);
     $sizeClasses = match ($size) {

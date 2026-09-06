@@ -36,5 +36,7 @@ class AffiliationStatusPresenterTest extends TestCase
         $this->assertTrue(AffiliationStatusPresenter::isPaymentSubmitted('PAYMENT-SUBMITTED'));
         $this->assertSame(3, AffiliationStatusPresenter::currentStep('payment_submitted'));
         $this->assertStringContainsString('bg-orange-100', AffiliationStatusPresenter::badgeClasses('payment_submitted'));
+        $this->assertSame('En revisión', AffiliationStatusPresenter::officeSummaryLabel('under_review'));
+        $this->assertSame('Afiliado activo', AffiliationStatusPresenter::officeSummaryLabel('activo'));
     }
 }

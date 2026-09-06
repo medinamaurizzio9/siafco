@@ -47,7 +47,7 @@ class StoreManualPaymentRequest extends FormRequest
             'reference_number' => ['nullable', 'string', 'max:120'],
             'transaction_number' => ['nullable', 'string', 'max:120'],
             'observations' => ['nullable', 'string', 'max:500'],
-            'status' => ['required', Rule::in([PaymentStatus::PENDING, PaymentStatus::UNDER_REVIEW])],
+            'status' => ['sometimes', Rule::in([PaymentStatus::PENDING, PaymentStatus::UNDER_REVIEW])],
             'voucher' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/webp,application/pdf', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
             'duplicate_confirmed' => ['sometimes', 'accepted'],
         ];

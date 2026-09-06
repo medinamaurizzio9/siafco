@@ -2,7 +2,7 @@
     <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <h2 class="text-2xl font-black text-[#0b1f3a]">Nueva afiliacion presencial</h2>
-            <p class="text-sm text-slate-600">Registro interno con pago en efectivo o QR/transferencia recibido en oficina.</p>
+            <p class="text-sm text-slate-600">Registro interno con pago en efectivo, QR o transferencia recibido en oficina.</p>
         </div>
         <a class="btn-secondary" href="{{ route('affiliates.index') }}">Volver</a>
     </div>
@@ -10,8 +10,8 @@
     <form method="post" enctype="multipart/form-data" action="{{ route('affiliates.office.store') }}" class="grid gap-5"
         data-confirm-office-affiliation
         data-confirm-title="Confirmar afiliación presencial"
-        data-confirm-message="Al confirmar, el afiliado será registrado y el pago quedará confirmado inmediatamente."
-        data-confirm-accept="Confirmar afiliación y pago"
+        data-confirm-message="Al continuar, el afiliado y el pago serán registrados para revisión por Gerencia o Administración."
+        data-confirm-accept="Registrar para revisión"
         data-confirm-variant="warning">
         @csrf
         <section class="grid gap-4 rounded-lg border border-slate-200 bg-white p-5 md:grid-cols-2 xl:grid-cols-3">
@@ -99,13 +99,14 @@
         <section class="grid gap-4 rounded-lg border-2 border-siafco-gold-500 bg-white p-5 md:grid-cols-2 xl:grid-cols-3">
             <div class="xl:col-span-3">
                 <h3 class="text-lg font-black text-[#0b1f3a]">Pago en oficina</h3>
-                <p class="text-sm text-slate-600">El efectivo se confirma inmediatamente; un pago QR queda pendiente de verificación.</p>
+                <p class="text-sm text-slate-600">Todo pago queda pendiente de verificación por Gerencia o Administración.</p>
             </div>
             <div>
                 <label class="form-label">Metodo de pago</label>
                 <select class="form-input" name="payment_method" data-office-payment-method required>
-                    <option value="efectivo" @selected(old('payment_method', 'efectivo') === 'efectivo')>Efectivo / Pago en oficina</option>
-                    <option value="qr" @selected(old('payment_method') === 'qr')>QR / Transferencia</option>
+                    <option value="efectivo" @selected(old('payment_method', 'efectivo') === 'efectivo')>Efectivo</option>
+                    <option value="qr" @selected(old('payment_method') === 'qr')>QR</option>
+                    <option value="transferencia" @selected(old('payment_method') === 'transferencia')>Transferencia</option>
                 </select>
                 @error('payment_method') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
             </div>
@@ -140,7 +141,7 @@
         </section>
 
         <div class="flex flex-col gap-3 sm:flex-row">
-            <button class="btn-primary" data-office-submit>Registrar afiliacion y confirmar pago</button>
+            <button class="btn-primary" data-office-submit>Registrar afiliacion y enviar a revisión</button>
             <a class="btn-secondary" href="{{ route('affiliates.index') }}">Cancelar</a>
         </div>
     </form>
@@ -168,15 +169,16 @@
             };
             plan?.addEventListener('change', syncAmount);
             const syncMethod = () => {
-                const isQr = method?.value === 'qr';
-                if (referenceBlock) referenceBlock.hidden = !isQr;
-                if (reference) reference.required = isQr;
-                if (submit) submit.textContent = isQr ? 'Registrar afiliacion y enviar a verificación' : 'Registrar afiliacion y confirmar pago';
+                const selectedMethod = method?.value;
+                const isElectronic = selectedMethod === 'qr' || selectedMethod === 'transferencia';
+                if (referenceBlock) referenceBlock.hidden = !isElectronic;
+                if (reference) reference.required = isElectronic;
+                if (submit) submit.textContent = 'Registrar afiliacion y enviar a revisión';
                 if (form) {
-                    form.dataset.confirmMessage = isQr
-                        ? 'Al confirmar, el afiliado será registrado y el pago QR quedará pendiente de verificación por Gerencia.'
-                        : 'Al confirmar, el afiliado será registrado y el pago quedará confirmado inmediatamente.';
-                    form.dataset.confirmAccept = isQr ? 'Registrar pago QR' : 'Confirmar afiliación y pago';
+                    const labels = { efectivo: 'Efectivo', qr: 'QR', transferencia: 'Transferencia' };
+                    const buttons = { efectivo: 'Registrar pago en efectivo', qr: 'Registrar pago QR', transferencia: 'Registrar transferencia' };
+                    form.dataset.confirmMessage = `Método: ${labels[selectedMethod] || 'No seleccionado'}. Al confirmar, el afiliado será registrado y el pago quedará pendiente de verificación por Gerencia o Administración.`;
+                    form.dataset.confirmAccept = buttons[selectedMethod] || 'Registrar para revisión';
                 }
             };
             method?.addEventListener('change', syncMethod);

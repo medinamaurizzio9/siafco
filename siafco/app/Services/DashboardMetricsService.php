@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Affiliate;
 use App\Models\AffiliationPayment;
+use App\Models\CashDeposit;
 use App\Models\DigitalCredential;
 use App\Models\PublicAffiliationRequest;
 use App\Models\Sector;
@@ -38,6 +39,7 @@ class DashboardMetricsService
             ['label' => 'Nuevo usuario', 'route' => 'admin.users.create', 'permission' => 'users.create', 'icon' => 'user', 'tone' => 'violet'],
             ['label' => 'Mini tienda', 'route' => 'admin.store.dashboard', 'permission' => 'store.view', 'icon' => 'briefcase', 'tone' => 'cyan'],
             ['label' => 'Reportes', 'route' => 'reports.index', 'permission' => 'reports.view', 'icon' => 'chart', 'tone' => 'slate'],
+            ['label' => 'Revisar rendiciones', 'route' => 'cash-deposits.admin.index', 'permission' => 'cash_deposits.view_all', 'icon' => 'credit-card', 'tone' => 'gold'],
         ])->filter(fn (array $action) => $user->hasPermission($action['permission']) && \Illuminate\Support\Facades\Route::has($action['route']))
             ->values()
             ->all();
@@ -140,6 +142,8 @@ class DashboardMetricsService
                 ->where('last_login_at', '>=', now()->subDay())
                 ->count(),
             'pendingStoreOrders' => StoreOrder::whereIn('status', $attentionOrderStatuses)->count(),
+            'pendingCashDeposits' => CashDeposit::where('status', CashDeposit::UNDER_REVIEW)->count(),
+            'pendingCashDepositAmount' => (float) CashDeposit::where('status', CashDeposit::UNDER_REVIEW)->sum('amount'),
             'sectors' => Sector::count(),
             'affiliationTrend' => $affiliationTrend,
             'revenueTrend' => $revenueTrend,
@@ -160,6 +164,8 @@ class DashboardMetricsService
             'active_internal_users' => $metrics['activeInternalUsers'],
             'recent_accesses' => $metrics['recentAccesses'],
             'pending_store_orders' => $metrics['pendingStoreOrders'],
+            'pending_cash_deposits' => $metrics['pendingCashDeposits'],
+            'pending_cash_deposit_amount' => $metrics['pendingCashDepositAmount'],
         ];
     }
 

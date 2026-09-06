@@ -149,11 +149,12 @@ class DashboardRedesignTest extends TestCase
             ->assertDontSee('Nuevo usuario')
             ->assertDontSee('Roles y permisos');
 
-        $this->actingAs($cashier)->get(route('admin.dashboard'))
+        $this->followingRedirects()->actingAs($cashier)->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertSee('Pagos hoy')
-            ->assertSee('Recaudacion')
-            ->assertSee('Registrar pago')
+            ->assertSee('Panel Caja')
+            ->assertSee('Registrar afiliación')
+            ->assertSee('Buscar persona')
+            ->assertSee('Registrar depósito')
             ->assertDontSee('Mini tienda')
             ->assertDontSee('Nuevo usuario');
 

@@ -17,6 +17,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class PublicAffiliationTest extends TestCase
@@ -48,6 +49,44 @@ class PublicAffiliationTest extends TestCase
         ], $overrides);
     }
 
+    private function pendingAdministrativeApplication(): PublicAffiliationRequest
+    {
+        [$sector, $plan] = $this->catalog();
+        $person = Person::create([
+            'full_name' => 'SOLICITANTE ASISTIDO',
+            'ci' => 'ASISTIDO-1',
+            'email' => 'asistido@example.test',
+        ]);
+        $affiliateUser = User::factory()->create([
+            'person_id' => $person->id,
+            'role' => 'afiliado',
+            'user_type' => 'external',
+        ]);
+        $affiliate = Affiliate::create([
+            'person_id' => $person->id,
+            'user_id' => $affiliateUser->id,
+            'sector_id' => $sector->id,
+            'affiliation_plan_id' => $plan->id,
+            'full_name' => $person->full_name,
+            'ci' => $person->ci,
+            'email' => $person->email,
+            'status' => 'pendiente_pago',
+        ]);
+
+        return PublicAffiliationRequest::create([
+            'person_id' => $person->id,
+            'affiliate_id' => $affiliate->id,
+            'user_id' => $affiliateUser->id,
+            'sector_id' => $sector->id,
+            'affiliation_plan_id' => $plan->id,
+            'public_token' => fake()->uuid(),
+            'request_code' => 'SOL-ASISTIDA-1',
+            'amount_due' => 120,
+            'status' => 'pending_payment',
+            'submitted_at' => now(),
+        ]);
+    }
+
     public function test_registers_new_person_pending_affiliate_user_and_amount_snapshot(): void
     {
         Storage::fake('public');
@@ -67,6 +106,14 @@ class PublicAffiliationTest extends TestCase
         $this->assertTrue(Hash::check('clave-segura-123', User::where('email', 'ana@example.test')->firstOrFail()->password));
         $this->assertSame('120.00', $application->amount_due);
         $this->assertSame('pending_payment', $application->status);
+        $manager = User::factory()->create([
+            'role' => 'gerente',
+            'user_type' => 'internal',
+            'is_active' => true,
+        ]);
+        $this->actingAs($manager)->get(route('affiliates.index'))
+            ->assertOk()
+            ->assertDontSee('ANA PÉREZ LIMA');
         $photoPath = Affiliate::firstOrFail()->photo_path;
         $this->assertMatchesRegularExpression('/^affiliates\/photos\/[0-9a-f-]{36}\.jpg$/', $photoPath);
         [$width, $height] = getimagesize(Storage::disk('public')->path($photoPath));
@@ -147,6 +194,37 @@ class PublicAffiliationTest extends TestCase
             ->assertSee(route('public-affiliation.create'), false);
     }
 
+    public function test_public_navigation_and_sensitive_payment_submission_use_separate_rate_limits(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+        RateLimiter::clear('public-affiliation:read:127.0.0.1');
+        [$sector, $plan] = $this->catalog();
+        $this->post(route('public-affiliation.store'), $this->form($sector, $plan))->assertRedirect();
+        $application = PublicAffiliationRequest::firstOrFail();
+
+        for ($attempt = 1; $attempt <= 30; $attempt++) {
+            $this->get(route('public-affiliation.payment', $application))->assertOk();
+        }
+        $this->get(route('public-affiliation.payment', $application))->assertTooManyRequests();
+
+        $paymentPayload = [
+            'transaction_number' => 'TRX-RATE-LIMIT',
+            'payment_date' => today()->toDateString(),
+            'payer_name' => 'ANA PEREZ',
+            'paid_amount' => 120,
+            'receipt' => UploadedFile::fake()->image('receipt.jpg'),
+        ];
+        $this->post(route('public-affiliation.payment.store', $application), $paymentPayload)
+            ->assertRedirect(route('public-affiliation.completed', $application));
+
+        for ($attempt = 2; $attempt <= 5; $attempt++) {
+            $this->post(route('public-affiliation.payment.store', $application), $paymentPayload)->assertRedirect();
+        }
+        $this->post(route('public-affiliation.payment.store', $application), $paymentPayload)
+            ->assertTooManyRequests();
+    }
+
     public function test_reuses_existing_investor_person_and_does_not_expose_private_data_in_status(): void
     {
         Storage::fake('public');
@@ -188,7 +266,9 @@ class PublicAffiliationTest extends TestCase
         Storage::disk('local')->assertExists($payment->voucher_path);
         $this->assertSame('payment_submitted', $application->fresh()->status);
         $this->assertSame('pago_en_revision', $application->affiliate->fresh()->status);
-        $this->assertSame('pending', $payment->status);
+        $this->assertSame('under_review', $payment->status);
+        $this->assertNull($application->affiliate->fresh()->registration_number);
+        $this->assertNull($application->affiliate->credential);
 
         $this->get(route('public-affiliation.status', $application))
             ->assertOk()
@@ -352,6 +432,291 @@ class PublicAffiliationTest extends TestCase
             ->assertOk()
             ->assertSee('SOLICITANTE SIN FOTO')
             ->assertSee('SOL-NO-PHOTO');
+    }
+
+    public function test_cashier_can_register_an_assisted_cash_payment_for_a_pending_application(): void
+    {
+        Storage::fake('local');
+        $application = $this->pendingAdministrativeApplication();
+        $cashier = User::factory()->create([
+            'role' => 'caja',
+            'user_type' => 'internal',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($cashier)
+            ->get(route('public-affiliation.admin.show', $application))
+            ->assertOk()
+            ->assertSee('+ Cargar pago')
+            ->assertSee('role="dialog"', false)
+            ->assertSee('aria-modal="true"', false)
+            ->assertSee('fixed inset-0 m-auto', false)
+            ->assertSee('max-h-[calc(100dvh-2rem)]', false)
+            ->assertSee('backdrop:bg-black/60', false)
+            ->assertSee('id="assisted-payment-reference-group" hidden', false)
+            ->assertSee("referenceGroup.hidden = !requiresReference", false)
+            ->assertSee("if (!requiresReference) reference.value = ''", false);
+
+        $this->actingAs($cashier)->post(route('public-affiliation.admin.payment.store', $application), [
+            'payment_method' => 'efectivo',
+            'amount' => '120.00',
+            'observations' => 'Pago recibido en caja',
+        ])->assertRedirect(route('public-affiliation.admin.show', $application));
+
+        $payment = AffiliationPayment::firstOrFail();
+        $this->assertSame('under_review', $payment->status);
+        $this->assertSame('manual_admin', $payment->source);
+        $this->assertSame($cashier->id, $payment->registered_by);
+        $this->assertEquals(120.00, $payment->paid_amount);
+        $this->assertNull($payment->confirmed_at);
+        $this->assertNull($payment->receipt_number);
+        $this->assertSame('payment_submitted', $application->fresh()->status);
+        $this->assertSame('pago_en_revision', $application->affiliate->fresh()->status);
+        $this->assertNull($application->affiliate->fresh()->registration_number);
+        $this->assertNull($application->affiliate->credential);
+
+        $this->actingAs($cashier)
+            ->get(route('public-affiliation.admin.show', $application))
+            ->assertOk()
+            ->assertSee('En revision')
+            ->assertDontSee('+ Cargar pago')
+            ->assertDontSee('Confirmar pago');
+        $this->actingAs($cashier)
+            ->post(route('public-affiliation.admin.approve', $payment))
+            ->assertForbidden();
+
+        $this->actingAs($cashier)->get(route('payments.index'))
+            ->assertOk()
+            ->assertSee('SOLICITANTE ASISTIDO')
+            ->assertSee('manual_admin');
+        $this->actingAs($cashier)->get(route('admin.collections.index'))
+            ->assertOk()
+            ->assertSee('SOLICITANTE ASISTIDO');
+    }
+
+    public function test_cash_desk_searches_existing_registration_by_ci_name_phone_email_and_request_code(): void
+    {
+        $application = $this->pendingAdministrativeApplication();
+        $application->person->update(['phone' => '76543210']);
+        $cashier = User::factory()->create([
+            'role' => 'caja',
+            'user_type' => 'internal',
+            'is_active' => true,
+        ]);
+
+        $page = $this->actingAs($cashier)->get(route('public-affiliation.admin.secretary-payments'));
+        $page->assertOk()
+            ->assertSee('Pago en secretaría')
+            ->assertSee('Buscar por CI, nombre, teléfono o código de solicitud')
+            ->assertSeeInOrder(['Afiliados', 'Pago en secretaria', 'Solicitudes publicas', 'Pagos de afiliacion']);
+
+        foreach ([$application->person->ci, 'SOLICITANTE', '76543210', $application->person->email, $application->request_code] as $search) {
+            $this->actingAs($cashier)
+                ->get(route('public-affiliation.admin.secretary-payments', ['search' => $search]))
+                ->assertOk()
+                ->assertSee($application->person->full_name)
+                ->assertSee('Cargar pago')
+                ->assertSee('cargar_pago=1', false);
+        }
+
+        $this->assertDatabaseCount('people', 1);
+        $this->assertDatabaseCount('affiliates', 1);
+        $this->assertDatabaseCount('affiliation_payments', 0);
+    }
+
+    public function test_payment_secretary_requires_payment_create_permission(): void
+    {
+        $viewer = User::factory()->create([
+            'role' => 'consulta',
+            'user_type' => 'internal',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($viewer)
+            ->get(route('public-affiliation.admin.secretary-payments'))
+            ->assertForbidden();
+    }
+
+    public function test_payment_secretary_does_not_offer_second_initial_payment_for_protected_states(): void
+    {
+        $application = $this->pendingAdministrativeApplication();
+        $cashier = User::factory()->create([
+            'role' => 'cajero',
+            'user_type' => 'internal',
+            'is_active' => true,
+        ]);
+        $payment = AffiliationPayment::create([
+            'affiliate_id' => $application->affiliate_id,
+            'public_affiliation_request_id' => $application->id,
+            'affiliation_plan_id' => $application->affiliation_plan_id,
+            'amount' => 120,
+            'paid_amount' => 120,
+            'status' => 'under_review',
+            'source' => 'manual_admin',
+            'registered_by' => $cashier->id,
+        ]);
+
+        $url = route('public-affiliation.admin.secretary-payments', ['search' => $application->person->ci]);
+        $this->actingAs($cashier)->get($url)
+            ->assertOk()->assertSee('En revision')->assertDontSee('Cargar pago');
+
+        $payment->update(['status' => 'confirmed']);
+        $this->actingAs($cashier)->get($url)
+            ->assertOk()->assertSee('Confirmado')->assertDontSee('Cargar pago');
+
+        $application->affiliate->update(['status' => 'activo']);
+        $this->actingAs($cashier)->get($url)
+            ->assertOk()->assertSee('Afiliado activo')->assertDontSee('Cargar pago');
+    }
+
+    public function test_assisted_transfer_requires_reference_and_cannot_duplicate_an_active_payment(): void
+    {
+        $application = $this->pendingAdministrativeApplication();
+        $cashier = User::factory()->create([
+            'role' => 'cajero',
+            'user_type' => 'internal',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($cashier)->post(route('public-affiliation.admin.payment.store', $application), [
+            'payment_method' => 'transferencia',
+            'amount' => '120.00',
+        ])->assertSessionHasErrors('reference_number');
+        $this->assertDatabaseCount('affiliation_payments', 0);
+
+        $this->actingAs($cashier)->post(route('public-affiliation.admin.payment.store', $application), [
+            'payment_method' => 'transferencia',
+            'amount' => '120.00',
+            'reference_number' => 'REF-ASISTIDA-1',
+        ])->assertRedirect();
+
+        $this->actingAs($cashier)->post(route('public-affiliation.admin.payment.store', $application->fresh()), [
+            'payment_method' => 'efectivo',
+            'amount' => '120.00',
+        ])->assertSessionHasErrors('payment');
+        $this->assertDatabaseCount('affiliation_payments', 1);
+    }
+
+    public function test_assisted_qr_requires_and_accepts_a_transaction_number(): void
+    {
+        $application = $this->pendingAdministrativeApplication();
+        $cashier = User::factory()->create([
+            'role' => 'caja',
+            'user_type' => 'internal',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($cashier)->post(route('public-affiliation.admin.payment.store', $application), [
+            'payment_method' => 'qr',
+            'amount' => '120.00',
+        ])->assertSessionHasErrors('reference_number');
+        $this->assertDatabaseCount('affiliation_payments', 0);
+
+        $this->actingAs($cashier)->post(route('public-affiliation.admin.payment.store', $application), [
+            'payment_method' => 'qr',
+            'amount' => '120.00',
+            'reference_number' => 'QR-VALIDO-1',
+        ])->assertRedirect(route('public-affiliation.admin.show', $application));
+
+        $this->assertDatabaseHas('affiliation_payments', [
+            'payment_method' => 'qr',
+            'reference_number' => 'QR-VALIDO-1',
+            'status' => 'under_review',
+        ]);
+    }
+
+    public function test_payment_review_presents_transaction_number_only_for_qr_and_transfer(): void
+    {
+        $cashier = User::factory()->create([
+            'role' => 'caja',
+            'user_type' => 'internal',
+            'is_active' => true,
+        ]);
+
+        $application = $this->pendingAdministrativeApplication();
+        $payment = AffiliationPayment::create([
+            'affiliate_id' => $application->affiliate_id,
+            'public_affiliation_request_id' => $application->id,
+            'affiliation_plan_id' => $application->affiliation_plan_id,
+            'amount' => 120,
+            'paid_amount' => 120,
+            'payment_method' => 'qr',
+            'reference_number' => 'QR-VISIBLE-1',
+            'status' => 'under_review',
+            'source' => 'manual_admin',
+            'registered_by' => $cashier->id,
+        ]);
+
+        foreach (['qr' => 'QR-VISIBLE-1', 'transferencia' => 'TRANSFER-VISIBLE-1'] as $method => $reference) {
+            $payment->update(['payment_method' => $method, 'reference_number' => $reference]);
+
+            $this->actingAs($cashier)
+                ->get(route('public-affiliation.admin.show', $application))
+                ->assertOk()
+                ->assertSee('N.º de transacción')
+                ->assertSee($reference)
+                ->assertDontSee('>Referencia<', false);
+        }
+
+        $payment->update([
+            'payment_method' => 'efectivo',
+            'reference_number' => 'CASH-MUST-NOT-RENDER',
+        ]);
+
+        $this->actingAs($cashier)
+            ->get(route('public-affiliation.admin.show', $application))
+            ->assertOk()
+            ->assertDontSee('N.º de transacción')
+            ->assertDontSee('CASH-MUST-NOT-RENDER');
+    }
+
+    public function test_rejected_assisted_payment_is_reused_for_a_new_attempt(): void
+    {
+        $application = $this->pendingAdministrativeApplication();
+        $cashier = User::factory()->create([
+            'role' => 'caja',
+            'user_type' => 'internal',
+            'is_active' => true,
+        ]);
+        $payment = AffiliationPayment::create([
+            'affiliate_id' => $application->affiliate_id,
+            'public_affiliation_request_id' => $application->id,
+            'affiliation_plan_id' => $application->affiliation_plan_id,
+            'amount' => 120,
+            'paid_amount' => 120,
+            'expected_amount' => 120,
+            'payment_method' => 'transferencia',
+            'reference_number' => 'REF-RECHAZADA',
+            'status' => 'rejected',
+            'source' => 'manual_admin',
+        ]);
+
+        $this->actingAs($cashier)->post(route('public-affiliation.admin.payment.store', $application), [
+            'payment_method' => 'qr',
+            'amount' => '120.00',
+            'reference_number' => 'REF-NUEVA',
+        ])->assertRedirect();
+
+        $this->assertDatabaseCount('affiliation_payments', 1);
+        $this->assertSame($payment->id, AffiliationPayment::firstOrFail()->id);
+        $this->assertSame('REF-NUEVA', $payment->fresh()->reference_number);
+        $this->assertSame('under_review', $payment->fresh()->status);
+    }
+
+    public function test_user_without_payment_create_permission_cannot_register_assisted_payment(): void
+    {
+        $application = $this->pendingAdministrativeApplication();
+        $viewer = User::factory()->create([
+            'role' => 'consulta',
+            'user_type' => 'internal',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($viewer)->post(route('public-affiliation.admin.payment.store', $application), [
+            'payment_method' => 'efectivo',
+            'amount' => '120.00',
+        ])->assertForbidden();
+        $this->assertDatabaseCount('affiliation_payments', 0);
     }
 
     public function test_public_form_shows_closed_select_catalogs_and_accessibility(): void

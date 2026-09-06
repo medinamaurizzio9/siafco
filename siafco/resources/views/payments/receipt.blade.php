@@ -24,7 +24,7 @@
 <section class="section"><h2 class="section-title">Detalle del pago</h2><table class="detail-table">
 <tr><th>Concepto</th><td>Afiliación</td></tr><tr><th>Sector</th><td>{{ $affiliate?->sector?->name ?? 'Sin sector' }}</td></tr>
 <tr><th>Plan</th><td>{{ $affiliate?->plan?->name ?? $payment->plan?->name ?? 'Sin plan' }}</td></tr><tr><th>Método de pago</th><td>{{ $method }}</td></tr>
-@if($payment->reference_number)<tr><th>Referencia</th><td>{{ $payment->reference_number }}</td></tr>@endif
+@if(\App\Support\PaymentMethodPresenter::showsTransactionNumber($payment->payment_method) && $payment->reference_number)<tr><th>N.º de transacción</th><td>{{ $payment->reference_number }}</td></tr>@endif
 <tr><th>Estado</th><td class="status">{{ mb_strtoupper($statusLabel) }}</td></tr></table></section>
 <section class="section"><h2 class="section-title">Datos de caja</h2><table class="cash-table">
 <tr><th>Registrado por</th><td>{{ $payment->registrar?->name ?? 'No registrado' }}</td></tr>

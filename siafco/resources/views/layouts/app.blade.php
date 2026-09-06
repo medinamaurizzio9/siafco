@@ -30,6 +30,7 @@
             $canViewRoles = $user->isInternal() && $user->hasPermission('roles.view');
             $canViewAudit = $user->isInternal() && $user->hasPermission('audit.view');
             $canViewDashboard = $user->hasPermission('dashboard.view');
+            $isCashOperator = $user->isInternal() && $user->hasRole(['caja', 'cajero']);
             $canAdmin = $canManageUsers || $canViewRoles || $canViewAudit;
             $canGeneralSettings = $user->hasPermission('settings.view')
                 && $user->hasRole(['superadministrador', 'administrador', 'secretaria']);
@@ -46,8 +47,9 @@
             $homeRoute = app(\App\Services\UserRedirectResolver::class)->homeRoute($user);
 
             $openModule = match (true) {
+                request()->routeIs('cash-deposits.dashboard', 'cash-deposits.store') => 'cash',
                 request()->routeIs('admin.dashboard') => 'home',
-                request()->routeIs('affiliates.*', 'affiliate-benefits.*', 'sectors.*', 'plans.*', 'payments.*', 'admin.collections.*', 'admin.payments.*', 'credentials.*', 'credenciales.*', 'institutional-qr.*', 'reports.*', 'affiliation.*', 'public-affiliation.admin.*') => 'affiliation',
+                request()->routeIs('affiliates.*', 'affiliate-benefits.*', 'sectors.*', 'plans.*', 'payments.*', 'admin.collections.*', 'admin.payments.*', 'cash-deposits.*', 'credentials.*', 'credenciales.*', 'institutional-qr.*', 'reports.*', 'affiliation.*', 'public-affiliation.admin.*') => 'affiliation',
                 request()->routeIs('investments.*') && ! request()->routeIs('investments.panel') => 'investments',
                 request()->routeIs('credits.*') => 'credits',
                 request()->routeIs('admin.store.*') => 'store',
@@ -59,8 +61,10 @@
 
             $routeIcons = [
                 'admin.dashboard' => 'home', 'affiliates.index' => 'users', 'affiliates.office.create' => 'user-plus',
+                'public-affiliation.admin.secretary-payments' => 'credit-card',
                 'public-affiliation.admin.index' => 'file-text', 'sectors.index' => 'building', 'plans.index' => 'credit-card',
                 'affiliate-benefits.index' => 'gift', 'payments.index' => 'credit-card', 'admin.collections.index' => 'chart',
+                'cash-deposits.dashboard' => 'credit-card',
                 'credentials.index' => 'credit-card', 'public-affiliation.qr.show' => 'qr-code', 'institutional-qr.show' => 'qr-code',
                 'reports.index' => 'chart', 'affiliation.settings.edit' => 'settings', 'investments.dashboard' => 'chart',
                 'investments.investors.index' => 'users', 'investments.investor-types.index' => 'users',
@@ -119,7 +123,9 @@
 
             <nav class="grid flex-1 content-start gap-2 px-3 pb-4 text-sm" data-sidebar-accordion data-current-module="{{ $openModule }}">
                 @unless($isPersonalOnly)
-                    @if($canViewDashboard)
+                    @if($isCashOperator)
+                        {!! $navLink('cash-deposits.dashboard', 'PANEL CAJA', [], ['cash-deposits.dashboard', 'cash-deposits.store']) !!}
+                    @elseif($canViewDashboard)
                     <section class="nav-module" data-accordion-module="home">
                         <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'home' ? 'true' : 'false' }}">
                             <span class="flex items-center gap-3"><x-ui.icon name="home" class="h-4 w-4" />Inicio</span><span class="nav-chevron">⌄</span>
@@ -136,26 +142,37 @@
                                 <span class="flex items-center gap-3"><x-ui.icon name="users" class="h-4 w-4" />Afiliacion</span><span class="nav-chevron">⌄</span>
                             </button>
                             <div class="nav-module-panel {{ $openModule === 'affiliation' ? '' : 'hidden' }}">
-                                @if($canViewDashboard)
+                                @if($canViewDashboard && ! $isCashOperator)
                                     {!! $navLink('admin.dashboard', 'Dashboard', [], ['admin.dashboard']) !!}
                                 @endif
                                 @if($user->hasPermission('affiliates.view'))
                                     {!! $navLink('affiliates.index', 'Afiliados', [], ['affiliates.*']) !!}
                                 @endif
-                                @if($canRegisterOfficeAffiliation)
-                                    {!! $navLink('affiliates.office.create', '+ Afiliacion en oficina', [], ['affiliates.office.*']) !!}
+                                @if($user->hasPermission('payments.create'))
+                                    {!! $navLink('public-affiliation.admin.secretary-payments', 'Pago en secretaria', [], ['public-affiliation.admin.secretary-payments']) !!}
                                 @endif
-                                @if($canManageAffiliation)
-                                    {!! $navLink('public-affiliation.admin.index', 'Solicitudes publicas', [], ['public-affiliation.admin.*']) !!}
-                                    {!! $navLink('sectors.index', 'Sectores', [], ['sectors.*']) !!}
-                                    {!! $navLink('plans.index', 'Planes de afiliacion', [], ['plans.*']) !!}
-                                    {!! $navLink('affiliate-benefits.index', 'Servicios y beneficios', [], ['affiliate-benefits.*']) !!}
+                                @if($user->hasPermission('payments.view'))
+                                    {!! $navLink('public-affiliation.admin.index', 'Solicitudes publicas', [], ['public-affiliation.admin.index', 'public-affiliation.admin.show']) !!}
                                 @endif
                                 @if($user->hasPermission('payments.view'))
                                     {!! $navLink('payments.index', 'Pagos de afiliacion', [], ['payments.*']) !!}
                                 @endif
+                                @if($canRegisterOfficeAffiliation)
+                                    {!! $navLink('affiliates.office.create', '+ Afiliacion en oficina', [], ['affiliates.office.*']) !!}
+                                @endif
+                                @if($canManageAffiliation)
+                                    {!! $navLink('sectors.index', 'Sectores', [], ['sectors.*']) !!}
+                                    {!! $navLink('plans.index', 'Planes de afiliacion', [], ['plans.*']) !!}
+                                    {!! $navLink('affiliate-benefits.index', 'Servicios y beneficios', [], ['affiliate-benefits.*']) !!}
+                                @endif
                                 @if($canViewCollectionReport)
                                     {!! $navLink('admin.collections.index', 'Reporte de cobros', [], ['admin.collections.*']) !!}
+                                @endif
+                                @if($user->hasPermission('cash_deposits.view_own') && ! $isCashOperator)
+                                    {!! $navLink('cash-deposits.dashboard', 'Panel de caja', [], ['cash-deposits.dashboard', 'cash-deposits.store']) !!}
+                                @endif
+                                @if($user->hasPermission('cash_deposits.view_all'))
+                                    {!! $navLink('cash-deposits.admin.index', 'Rendiciones de caja', [], ['cash-deposits.admin.*']) !!}
                                 @endif
                                 @if($user->hasPermission('credentials.view'))
                                     {!! $navLink('credentials.index', 'Credenciales', [], ['credentials.*', 'credenciales.*']) !!}

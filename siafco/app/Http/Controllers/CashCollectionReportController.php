@@ -31,7 +31,8 @@ class CashCollectionReportController extends Controller
             'sector_id' => ['nullable', 'integer', 'exists:sectors,id'],
             'affiliation_plan_id' => ['nullable', 'integer', 'exists:affiliation_plans,id'],
             'payment_method' => ['nullable', 'string', 'max:40', Rule::in(['efectivo', 'qr', 'transferencia', 'deposito', 'pos', 'otro'])],
-            'status' => ['nullable', 'string', Rule::in(PaymentStatus::confirmedValues())],
+            'source' => ['nullable', 'string', 'max:40', Rule::in(['web', 'mobile', 'manual_admin', 'office_cash', 'office_qr'])],
+            'status' => ['nullable', 'string', Rule::in(PaymentStatus::allValues())],
         ]);
 
         $canFilterAnyCashier = $user->hasRole(self::GLOBAL_ROLES);
@@ -41,7 +42,7 @@ class CashCollectionReportController extends Controller
 
         $baseQuery = $this->query($data);
         $payments = (clone $baseQuery)
-            ->with('affiliate.sector', 'affiliate.plan', 'cashier')
+            ->with('affiliate.sector', 'affiliate.plan', 'registrar', 'cashier')
             ->latest('confirmed_at')
             ->paginate(15)
             ->withQueryString();
@@ -51,20 +52,39 @@ class CashCollectionReportController extends Controller
             ->groupBy(fn (AffiliationPayment $payment) => $payment->payment_method ?: 'sin_metodo')
             ->map(fn ($rows) => (float) $rows->sum(fn (AffiliationPayment $payment) => (float) ($payment->paid_amount ?? $payment->amount)));
 
-        $pendingQuery = $this->pendingQrQuery($data);
+        $pendingQuery = $this->underReviewQuery($data);
         $pendingPayments = (clone $pendingQuery)
             ->with('affiliate.sector', 'affiliate.plan', 'registrar')
             ->latest('submitted_at')
             ->limit(15)
             ->get();
         $pendingSummary = (clone $pendingQuery)->get(['id', 'paid_amount', 'amount']);
+        $rejectedCount = $this->rejectedQuery($data)->count();
+        $collectorRows = $this->collectorSummaryQuery($data)
+            ->with('registrar:id,name')
+            ->get(['id', 'registered_by', 'status', 'paid_amount', 'amount']);
+        $collectorSummaries = $collectorRows
+            ->groupBy('registered_by')
+            ->map(function ($rows) {
+                $registrar = $rows->first()?->registrar;
+
+                return [
+                    'name' => $registrar?->name ?? 'Sin registro',
+                    'registered_count' => $rows->count(),
+                    'confirmed_amount' => (float) $rows->filter(fn ($payment) => PaymentStatus::isConfirmed($payment->status))
+                        ->sum(fn ($payment) => (float) ($payment->paid_amount ?? $payment->amount)),
+                    'under_review_amount' => (float) $rows->where('status', PaymentStatus::UNDER_REVIEW)
+                        ->sum(fn ($payment) => (float) ($payment->paid_amount ?? $payment->amount)),
+                ];
+            })
+            ->sortBy('name')
+            ->values();
 
         return view('payments.collections-report', [
             'payments' => $payments,
             'filters' => $data,
             'cashiers' => User::query()
                 ->where(fn ($query) => $query->where('user_type', 'internal')->orWhereNull('user_type'))
-                ->whereIn('role', self::REPORT_ROLES)
                 ->orderBy('name')
                 ->get(),
             'sectors' => Sector::orderBy('name')->get(),
@@ -76,6 +96,8 @@ class CashCollectionReportController extends Controller
             'pendingPayments' => $pendingPayments,
             'pendingQrCount' => $pendingSummary->count(),
             'pendingQrAmount' => (float) $pendingSummary->sum(fn (AffiliationPayment $payment) => (float) ($payment->paid_amount ?? $payment->amount)),
+            'rejectedCount' => $rejectedCount,
+            'collectorSummaries' => $collectorSummaries,
         ]);
     }
 
@@ -89,6 +111,7 @@ class CashCollectionReportController extends Controller
             ->when($filters['receipt_number'] ?? null, fn ($query, $receipt) => $query->where('receipt_number', 'like', "%{$receipt}%"))
             ->when($filters['reference_number'] ?? null, fn ($query, $reference) => $query->where('reference_number', 'like', "%{$reference}%"))
             ->when($filters['payment_method'] ?? null, fn ($query, $method) => $query->where('payment_method', $method))
+            ->when($filters['source'] ?? null, fn ($query, $source) => $query->where('source', $source))
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filters['sector_id'] ?? null, fn ($query, $sectorId) => $query->whereHas('affiliate', fn ($affiliate) => $affiliate->where('sector_id', $sectorId)))
             ->when($filters['affiliation_plan_id'] ?? null, fn ($query, $planId) => $query->whereHas('affiliate', fn ($affiliate) => $affiliate->where('affiliation_plan_id', $planId)))
@@ -96,16 +119,53 @@ class CashCollectionReportController extends Controller
             ->when($filters['affiliate_name'] ?? null, fn ($query, $name) => $query->whereHas('affiliate', fn ($affiliate) => $affiliate->where('full_name', 'like', "%{$name}%")));
     }
 
-    private function pendingQrQuery(array $filters)
+    private function underReviewQuery(array $filters)
     {
         return AffiliationPayment::query()
-            ->where('source', 'office_qr')
             ->where('status', PaymentStatus::UNDER_REVIEW)
             ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('paid_at', '>=', $date))
             ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('paid_at', '<=', $date))
             ->when($filters['cashier_id'] ?? null, fn ($query, $id) => $query->where('registered_by', $id))
             ->when($filters['reference_number'] ?? null, fn ($query, $reference) => $query->where('reference_number', 'like', "%{$reference}%"))
             ->when($filters['payment_method'] ?? null, fn ($query, $method) => $query->where('payment_method', $method))
+            ->when($filters['source'] ?? null, fn ($query, $source) => $query->where('source', $source))
+            ->when($filters['sector_id'] ?? null, fn ($query, $sectorId) => $query->whereHas('affiliate', fn ($affiliate) => $affiliate->where('sector_id', $sectorId)))
+            ->when($filters['affiliation_plan_id'] ?? null, fn ($query, $planId) => $query->whereHas('affiliate', fn ($affiliate) => $affiliate->where('affiliation_plan_id', $planId)))
+            ->when($filters['ci'] ?? null, fn ($query, $ci) => $query->whereHas('affiliate', fn ($affiliate) => $affiliate->where('ci', 'like', "%{$ci}%")))
+            ->when($filters['affiliate_name'] ?? null, fn ($query, $name) => $query->whereHas('affiliate', fn ($affiliate) => $affiliate->where('full_name', 'like', "%{$name}%")));
+    }
+
+    private function collectorSummaryQuery(array $filters)
+    {
+        return AffiliationPayment::query()
+            ->where(function ($query) {
+                $query->whereIn('status', PaymentStatus::confirmedValues())
+                    ->orWhere('status', PaymentStatus::UNDER_REVIEW);
+            })
+            ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('paid_at', '>=', $date))
+            ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('paid_at', '<=', $date))
+            ->when($filters['cashier_id'] ?? null, fn ($query, $id) => $query->where('registered_by', $id))
+            ->when($filters['reference_number'] ?? null, fn ($query, $reference) => $query->where('reference_number', 'like', "%{$reference}%"))
+            ->when($filters['payment_method'] ?? null, fn ($query, $method) => $query->where('payment_method', $method))
+            ->when($filters['source'] ?? null, fn ($query, $source) => $query->where('source', $source))
+            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->when($filters['sector_id'] ?? null, fn ($query, $sectorId) => $query->whereHas('affiliate', fn ($affiliate) => $affiliate->where('sector_id', $sectorId)))
+            ->when($filters['affiliation_plan_id'] ?? null, fn ($query, $planId) => $query->whereHas('affiliate', fn ($affiliate) => $affiliate->where('affiliation_plan_id', $planId)))
+            ->when($filters['ci'] ?? null, fn ($query, $ci) => $query->whereHas('affiliate', fn ($affiliate) => $affiliate->where('ci', 'like', "%{$ci}%")))
+            ->when($filters['affiliate_name'] ?? null, fn ($query, $name) => $query->whereHas('affiliate', fn ($affiliate) => $affiliate->where('full_name', 'like', "%{$name}%")));
+    }
+
+    private function rejectedQuery(array $filters)
+    {
+        return AffiliationPayment::query()
+            ->whereIn('status', PaymentStatus::rejectedValues())
+            ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('paid_at', '>=', $date))
+            ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('paid_at', '<=', $date))
+            ->when($filters['cashier_id'] ?? null, fn ($query, $id) => $query->where('registered_by', $id))
+            ->when($filters['reference_number'] ?? null, fn ($query, $reference) => $query->where('reference_number', 'like', "%{$reference}%"))
+            ->when($filters['payment_method'] ?? null, fn ($query, $method) => $query->where('payment_method', $method))
+            ->when($filters['source'] ?? null, fn ($query, $source) => $query->where('source', $source))
+            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filters['sector_id'] ?? null, fn ($query, $sectorId) => $query->whereHas('affiliate', fn ($affiliate) => $affiliate->where('sector_id', $sectorId)))
             ->when($filters['affiliation_plan_id'] ?? null, fn ($query, $planId) => $query->whereHas('affiliate', fn ($affiliate) => $affiliate->where('affiliation_plan_id', $planId)))
             ->when($filters['ci'] ?? null, fn ($query, $ci) => $query->whereHas('affiliate', fn ($affiliate) => $affiliate->where('ci', 'like', "%{$ci}%")))

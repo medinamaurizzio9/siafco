@@ -8,6 +8,7 @@ use App\Models\AffiliationPlan;
 use App\Models\Person;
 use App\Models\PublicAffiliationRequest;
 use App\Models\User;
+use App\Support\PaymentStatus;
 use App\Support\TextNormalizer;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -148,9 +149,24 @@ class PublicAffiliationService
 
     public function submitPayment(PublicAffiliationRequest $request, array $data, ?string $receiptPath): AffiliationPayment
     {
+        return $this->storePayment($request, $data, $receiptPath, PaymentStatus::PENDING);
+    }
+
+    public function submitWebPayment(PublicAffiliationRequest $request, array $data, ?string $receiptPath): AffiliationPayment
+    {
+        return $this->storePayment($request, $data, $receiptPath, PaymentStatus::UNDER_REVIEW);
+    }
+
+    private function storePayment(
+        PublicAffiliationRequest $request,
+        array $data,
+        ?string $receiptPath,
+        string $initialStatus
+    ): AffiliationPayment
+    {
         $data = TextNormalizer::fields($data, ['bank_name', 'payer_name', 'observations']);
 
-        return DB::transaction(function () use ($request, $data, $receiptPath) {
+        return DB::transaction(function () use ($request, $data, $receiptPath, $initialStatus) {
             $request = PublicAffiliationRequest::whereKey($request->id)->lockForUpdate()->firstOrFail();
             if (in_array($request->status, ['approved', 'cancelled'], true)) {
                 throw ValidationException::withMessages(['transaction_number' => 'Esta solicitud ya no admite pagos.']);
@@ -171,7 +187,7 @@ class PublicAffiliationService
                     'payer_name' => $data['payer_name'],
                     'voucher_path' => $receiptPath ?: $request->payment?->voucher_path,
                     'observations' => $data['observations'] ?? null,
-                    'status' => 'pending',
+                    'status' => $initialStatus,
                     'submitted_at' => now(),
                 ]
             );

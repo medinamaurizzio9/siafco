@@ -83,7 +83,7 @@ class LogoutBehaviorTest extends TestCase
                 'is_active' => true,
             ]);
 
-            $this->actingAs($user)->get(route('admin.dashboard'))
+            $this->followingRedirects()->actingAs($user)->get(route('admin.dashboard'))
                 ->assertOk()
                 ->assertSee('Cerrar sesión')
                 ->assertSee('action="'.route('logout').'"', false)

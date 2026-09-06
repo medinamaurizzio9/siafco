@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Services\CredentialService;
 use App\Services\PaymentBalanceService;
 use App\Services\PaymentLifecycleService;
+use App\Support\PaymentStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
@@ -33,6 +34,7 @@ class ManualTreasuryPaymentTest extends TestCase
         Storage::fake('local');
         [$affiliate] = $this->affiliateFixture();
         $secretary = $this->internalUser('secretaria');
+        $manager = $this->internalUser('gerente');
 
         $response = $this->actingAs($secretary)->post(route('payments.store'), $this->paymentPayload($affiliate, [
             'voucher' => UploadedFile::fake()->image('voucher.jpg'),
@@ -52,10 +54,10 @@ class ManualTreasuryPaymentTest extends TestCase
         ]))->assertRedirect(route('payments.show', $payment));
         $this->assertDatabaseHas('audit_logs', ['action' => 'payment_updated', 'auditable_id' => $payment->id]);
 
-        $this->actingAs($secretary)->post(route('payments.confirm', $payment))->assertRedirect();
+        $this->actingAs($manager)->post(route('payments.confirm', $payment))->assertRedirect();
         $payment->refresh();
         $this->assertSame('confirmed', $payment->status);
-        $this->assertSame($secretary->id, $payment->confirmed_by);
+        $this->assertSame($manager->id, $payment->confirmed_by);
         $this->assertNotNull($payment->confirmed_at);
         $this->assertNotNull($payment->receipt_number);
         $this->assertSame('activo', $affiliate->fresh()->status);
@@ -73,6 +75,7 @@ class ManualTreasuryPaymentTest extends TestCase
     {
         [$affiliate, $user] = $this->affiliateFixture(['registration_number' => null, 'verification_token' => 'token-original']);
         $secretary = $this->internalUser('secretaria');
+        $manager = $this->internalUser('gerente');
         $request = PublicAffiliationRequest::create([
             'person_id' => $affiliate->person_id,
             'affiliate_id' => $affiliate->id,
@@ -100,7 +103,7 @@ class ManualTreasuryPaymentTest extends TestCase
             'paid_at' => now(),
         ]);
 
-        $this->actingAs($secretary)->post(route('payments.confirm', $payment))->assertRedirect();
+        $this->actingAs($manager)->post(route('payments.confirm', $payment))->assertRedirect();
         $payment->refresh();
         $affiliate->refresh();
         $receipt = $payment->receipt_number;
@@ -113,7 +116,7 @@ class ManualTreasuryPaymentTest extends TestCase
         $this->assertSame('token-original', $affiliate->verification_token);
         $this->assertDatabaseCount('digital_credentials', 1);
 
-        $this->actingAs($secretary)->post(route('payments.confirm', $payment))
+        $this->actingAs($manager)->post(route('payments.confirm', $payment))
             ->assertSessionHasErrors('payment');
         $this->assertSame($receipt, $payment->fresh()->receipt_number);
         $this->assertSame($credentialId, $affiliate->credential()->value('id'));
@@ -251,6 +254,7 @@ class ManualTreasuryPaymentTest extends TestCase
         Storage::fake('local');
         [$affiliate, $user] = $this->affiliateFixture();
         $secretary = $this->internalUser('secretaria');
+        $manager = $this->internalUser('gerente');
         $admin = $this->internalUser('administrador');
         $cashier = $this->internalUser('cajero');
 
@@ -270,12 +274,12 @@ class ManualTreasuryPaymentTest extends TestCase
             'paid_at' => now(),
         ]);
 
-        $this->actingAs($secretary)->post(route('payments.reject', $payment), [
+        $this->actingAs($manager)->post(route('payments.reject', $payment), [
             'rejection_reason' => 'COMPROBANTE ILEGIBLE',
         ])->assertRedirect();
         $payment->refresh();
         $this->assertSame('rejected', $payment->status);
-        $this->assertSame($secretary->id, $payment->rejected_by);
+        $this->assertSame($manager->id, $payment->rejected_by);
         Storage::disk('local')->assertExists($payment->voucher_path);
 
         $second = $payment->replicate(['rejection_reason', 'rejected_by', 'rejected_at']);
@@ -283,7 +287,8 @@ class ManualTreasuryPaymentTest extends TestCase
         $second->reference_number = 'REF-CONFIRM';
         $second->save();
 
-        $this->actingAs($cashier)->post(route('payments.confirm', $second))->assertRedirect();
+        $this->actingAs($cashier)->post(route('payments.confirm', $second))->assertForbidden();
+        $this->actingAs($admin)->post(route('payments.confirm', $second))->assertRedirect();
         $this->actingAs($secretary)->get(route('payments.receipt.download', $second))->assertOk()
             ->assertHeader('Content-Type', 'application/pdf');
         $this->actingAs($cashier)->post(route('payments.void', $second), [
@@ -333,6 +338,43 @@ class ManualTreasuryPaymentTest extends TestCase
 
         $this->actingAs($admin)->delete('/pagos/'.$payment->id)->assertStatus(405);
         $this->assertDatabaseHas('affiliation_payments', ['id' => $payment->id]);
+    }
+
+    public function test_every_new_manual_payment_method_enters_review_and_keeps_historical_payments_unchanged(): void
+    {
+        [$affiliate] = $this->affiliateFixture();
+        $secretary = $this->internalUser('secretaria');
+        $historical = AffiliationPayment::create([
+            'affiliate_id' => $affiliate->id,
+            'affiliation_plan_id' => $affiliate->affiliation_plan_id,
+            'amount' => 120,
+            'paid_amount' => 120,
+            'expected_amount' => 120,
+            'currency' => 'BOB',
+            'payment_method' => 'efectivo',
+            'status' => PaymentStatus::CONFIRMED,
+            'source' => 'manual_admin',
+            'confirmed_at' => now()->subDay(),
+            'paid_at' => now()->subDay(),
+        ]);
+
+        foreach (['efectivo', 'qr', 'transferencia'] as $index => $method) {
+            $this->actingAs($secretary)->post(route('payments.store'), $this->paymentPayload($affiliate, [
+                'payment_method' => $method,
+                'reference_number' => 'REVIEW-'.$index,
+                'transaction_number' => 'TRX-REVIEW-'.$index,
+                'status' => PaymentStatus::PENDING,
+            ]))->assertSessionHasNoErrors();
+
+            $payment = AffiliationPayment::where('reference_number', 'REVIEW-'.$index)->firstOrFail();
+            $this->assertSame(PaymentStatus::UNDER_REVIEW, $payment->status);
+            $this->assertSame($secretary->id, $payment->registered_by);
+            $this->assertNull($payment->confirmed_by);
+            $this->assertNull($payment->receipt_number);
+        }
+
+        $this->assertSame(PaymentStatus::CONFIRMED, $historical->fresh()->status);
+        $this->assertSame('pendiente_pago', $affiliate->fresh()->status);
     }
 
     private function affiliateFixture(array $overrides = []): array

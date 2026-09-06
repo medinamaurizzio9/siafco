@@ -77,7 +77,7 @@ class PublicAffiliationController extends Controller
             config('siafco.public_affiliation_receipt_max_kb', 6144)
         ));
         $receipt = $request->file('receipt')?->store('affiliation-receipts', 'local');
-        $service->submitPayment($application, $data, $receipt);
+        $service->submitWebPayment($application, $data, $receipt);
         if ($temporaryPassword = $request->session()->get($passwordKey)) {
             $request->session()->flash('completed_password.'.$application->public_token, $temporaryPassword);
         }

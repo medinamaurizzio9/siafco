@@ -49,16 +49,15 @@
                     @endforeach
                 </select>
             </label>
-            <label class="grid gap-2 text-sm font-bold text-slate-700">Estado inicial
-                <select class="form-input" name="status" required>
-                    <option value="pending" @selected(old('status', $payment->status) === 'pending')>Pendiente</option>
-                    <option value="under_review" @selected(old('status', $payment->status) === 'under_review')>En revision</option>
-                </select>
-            </label>
+            <div class="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+                <span class="block font-black">Estado inicial: En revisión</span>
+                <span>El pago deberá ser confirmado por Gerencia o Administración.</span>
+                <input type="hidden" name="status" value="under_review">
+            </div>
             <label class="grid gap-2 text-sm font-bold text-slate-700">Banco
                 <input class="form-input" name="bank_name" value="{{ old('bank_name', $payment->bank_name) }}" maxlength="120">
             </label>
-            <label class="grid gap-2 text-sm font-bold text-slate-700">Referencia
+            <label class="grid gap-2 text-sm font-bold text-slate-700">N.º de transacción
                 <input class="form-input" name="reference_number" value="{{ old('reference_number', $payment->reference_number) }}" maxlength="120">
             </label>
             <label class="grid gap-2 text-sm font-bold text-slate-700">Numero de transaccion

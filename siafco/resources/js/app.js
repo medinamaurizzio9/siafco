@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `Plan: ${selectedText('affiliation_plan_id')}`,
                 `Sector: ${selectedText('sector_id')}`,
                 `Monto recibido: BOB ${amount}`,
-                'Método: Efectivo / Pago en oficina',
+                `Método: ${selectedText('payment_method')}`,
             ].join('\n');
         };
 
@@ -229,51 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {
         opacityInput?.addEventListener('input', () => {
             document.querySelector('[data-login-opacity-output]').textContent = `${opacityInput.value}%`;
             document.querySelector('[data-login-preview-overlay]').style.opacity = String(Number(opacityInput.value) / 100);
-        });
-    }
-
-    const deleteModal = document.querySelector('[data-delete-affiliate-modal]');
-    if (deleteModal) {
-        const deleteForm = deleteModal.querySelector('[data-delete-affiliate-form]');
-        const confirmation = deleteModal.querySelector('[data-delete-confirmation]');
-        const reason = deleteModal.querySelector('[data-delete-reason]');
-        const submit = deleteModal.querySelector('[data-delete-submit]');
-        const cancel = deleteModal.querySelector('[data-delete-cancel]');
-        let trigger = null;
-
-        const updateDeleteState = () => {
-            submit.disabled = confirmation.value !== 'ELIMINAR' || reason.value.trim().length < 5;
-        };
-
-        const closeDeleteModal = () => {
-            deleteModal.classList.add('hidden');
-            deleteModal.classList.remove('flex');
-            deleteForm.reset();
-            updateDeleteState();
-            trigger?.focus();
-        };
-
-        document.querySelectorAll('[data-delete-affiliate-trigger]').forEach((button) => {
-            button.addEventListener('click', () => {
-                trigger = button;
-                deleteForm.action = button.dataset.deleteUrl;
-                deleteModal.querySelector('[data-delete-name]').textContent = button.dataset.affiliateName;
-                deleteModal.querySelector('[data-delete-number]').textContent = button.dataset.affiliateNumber;
-                deleteModal.querySelector('[data-delete-ci]').textContent = button.dataset.affiliateCi;
-                deleteModal.classList.remove('hidden');
-                deleteModal.classList.add('flex');
-                confirmation.focus();
-            });
-        });
-
-        confirmation.addEventListener('input', updateDeleteState);
-        reason.addEventListener('input', updateDeleteState);
-        cancel.addEventListener('click', closeDeleteModal);
-        deleteModal.addEventListener('click', (event) => {
-            if (event.target === deleteModal) closeDeleteModal();
-        });
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && !deleteModal.classList.contains('hidden')) closeDeleteModal();
         });
     }
 

@@ -15,6 +15,8 @@ $permissions = [
     'affiliate_access.change_email',
     'payments.view', 'payments.create', 'payments.update', 'payments.update_pending',
     'payments.verify', 'payments.confirm', 'payments.reject', 'payments.void',
+    'cash_deposits.view_own', 'cash_deposits.create', 'cash_deposits.view_all',
+    'cash_deposits.confirm', 'cash_deposits.reject',
     'payments.cancel', 'payments.receipt', 'payments.view_receipt', 'payments.download_receipt',
     'credentials.view', 'credentials.download', 'credentials.print',
     'settings.view', 'settings.update', 'reports.view', 'reports.export',
@@ -51,6 +53,7 @@ return [
             'affiliates.change_status', 'affiliates.view_timeline', 'affiliates.view_audit',
             'affiliates.manage_credential',
             'payments.confirm', 'payments.reject', 'payments.view_receipt',
+            'cash_deposits.view_all', 'cash_deposits.confirm', 'cash_deposits.reject',
             'affiliate_access.view',
             'credits.view', 'investors.view', 'store.view',
         ],
@@ -71,12 +74,14 @@ return [
         ],
         'cajero' => [
             'dashboard.view', 'affiliates.view', 'payments.view', 'payments.create', 'payments.update',
-            'payments.update_pending', 'payments.verify', 'payments.confirm', 'payments.receipt',
+            'payments.update_pending', 'payments.verify', 'payments.receipt',
+            'cash_deposits.view_own', 'cash_deposits.create',
             'payments.view_receipt', 'payments.download_receipt', 'credits.view',
         ],
         'caja' => [
             'dashboard.view', 'affiliates.view', 'payments.view', 'payments.create', 'payments.update',
-            'payments.update_pending', 'payments.verify', 'payments.confirm', 'payments.receipt',
+            'payments.update_pending', 'payments.verify', 'payments.receipt',
+            'cash_deposits.view_own', 'cash_deposits.create',
             'payments.view_receipt', 'payments.download_receipt', 'credits.view', 'investors.view',
         ],
         'administrador_sector' => [

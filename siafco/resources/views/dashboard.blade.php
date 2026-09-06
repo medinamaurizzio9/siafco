@@ -140,6 +140,14 @@
             'tone' => 'blue',
         ],
         [
+            'label' => 'Rendiciones',
+            'value' => (int) ($metrics['pending_cash_deposits'] ?? 0),
+            'hint' => 'BOB '.number_format((float) ($metrics['pending_cash_deposit_amount'] ?? 0), 2).' por revisar',
+            'route' => 'cash-deposits.admin.index',
+            'permission' => 'cash_deposits.view_all',
+            'tone' => 'yellow',
+        ],
+        [
             'label' => 'Tienda',
             'value' => (int) ($metrics['pending_store_orders'] ?? 0),
             'hint' => 'Pedidos abiertos',

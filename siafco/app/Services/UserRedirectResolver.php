@@ -17,6 +17,10 @@ class UserRedirectResolver
             return redirect()->route('password.force.edit');
         }
 
+        if ($user->hasRole(['caja', 'cajero'])) {
+            return redirect()->route('cash-deposits.dashboard');
+        }
+
         if ($this->isSafeIntendedUrl($request, $user, $intended)) {
             return redirect()->to($intended);
         }
@@ -55,6 +59,10 @@ class UserRedirectResolver
 
         if ($user->role === 'accionista') {
             return 'investments.panel';
+        }
+
+        if ($user->hasRole(['caja', 'cajero'])) {
+            return 'cash-deposits.dashboard';
         }
 
         return $this->firstAuthorizedInternalRoute($user);

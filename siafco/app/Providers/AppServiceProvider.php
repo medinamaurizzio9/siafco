@@ -20,10 +20,13 @@ use App\Models\InstitutionalSetting;
 use App\Models\User;
 use App\Policies\UserPolicy;
 use Illuminate\Database\QueryException;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 
 class AppServiceProvider extends ServiceProvider
@@ -42,6 +45,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(User::class, UserPolicy::class);
+        $this->registerPublicAffiliationRateLimiters();
         $this->registerDomainListeners();
         foreach (['store.view', 'store.manage-products', 'store.manage-settings', 'store.manage-shipping', 'store.manage-coupons', 'store.manage-orders', 'store.verify-receipts'] as $permission) {
             Gate::define($permission, fn (User $user) => $user->isInternal() && $user->hasPermission($permission));
@@ -52,6 +56,25 @@ class AppServiceProvider extends ServiceProvider
             : InstitutionalSetting::fallback();
 
         View::share('institution', $institution);
+    }
+
+    private function registerPublicAffiliationRateLimiters(): void
+    {
+        RateLimiter::for('public-affiliation-read', fn (Request $request) => Limit::perMinute(30)
+            ->by('public-affiliation:read:'.$request->ip()));
+
+        RateLimiter::for('public-affiliation-register', fn (Request $request) => Limit::perMinute(5)
+            ->by('public-affiliation:register:'.$request->ip()));
+
+        RateLimiter::for('public-affiliation-payment', function (Request $request) {
+            $application = $request->route('application');
+            $applicationKey = is_object($application) && method_exists($application, 'getRouteKey')
+                ? $application->getRouteKey()
+                : (string) $application;
+
+            return Limit::perMinute(5)
+                ->by('public-affiliation:payment:'.$request->ip().':'.$applicationKey);
+        });
     }
 
     private function registerDomainListeners(): void

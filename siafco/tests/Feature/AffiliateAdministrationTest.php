@@ -179,22 +179,18 @@ class AffiliateAdministrationTest extends TestCase
         Storage::disk('public')->assertMissing('credentials/old.pdf');
     }
 
-    public function test_soft_delete_and_restore_preserve_relations_without_reactivating_user_or_credential(): void
+    public function test_active_affiliate_deletion_is_blocked_and_preserves_user_and_credential(): void
     {
         [, $affiliate] = $this->affiliate();
         $credential = $this->credential($affiliate, ['status' => 'suspendida']);
         $affiliate->user->update(['is_active' => false]);
         $admin = $this->internalUser('administrador');
 
-        $this->actingAs($admin)->delete(route('affiliates.destroy', $affiliate), [
-            'confirmation' => 'ELIMINAR',
-            'deletion_reason' => 'Baja solicitada.',
-        ])->assertRedirect();
+        $this->actingAs($admin)->from(route('affiliates.index'))->delete(route('affiliates.destroy', $affiliate))
+            ->assertRedirect(route('affiliates.index'))->assertSessionHas('error');
 
-        $this->assertSoftDeleted('affiliates', ['id' => $affiliate->id]);
-        $this->actingAs($admin)->post(route('affiliates.restore', $affiliate->id))->assertRedirect();
         $this->assertDatabaseHas('affiliates', ['id' => $affiliate->id, 'deleted_at' => null]);
-        $this->assertFalse($affiliate->user()->withTrashed()->first()->is_active);
+        $this->assertFalse($affiliate->user->fresh()->is_active);
         $this->assertSame('suspendida', $credential->fresh()->status);
     }
 

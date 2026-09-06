@@ -30,11 +30,7 @@ class PaymentController extends Controller
         $user = $request->user();
         $payments = AffiliationPayment::with('affiliate.sector', 'registrar', 'cashier')
             ->when($user->hasRole(['caja', 'cajero']), function ($query) use ($user) {
-                $query->where(function ($scope) use ($user) {
-                    $scope->where('source', '!=', 'office_qr')
-                        ->orWhereNull('source')
-                        ->orWhere('registered_by', $user->id);
-                });
+                $query->where('registered_by', $user->id);
             })
             ->when($request->status, fn ($query, $status) => $query->where('status', $status))
             ->when($request->payment_method, fn ($query, $method) => $query->where('payment_method', $method))
@@ -63,7 +59,7 @@ class PaymentController extends Controller
             'statuses' => PaymentStatus::allValues(),
             'users' => User::where('user_type', 'internal')->orderBy('name')->get(),
             'institution' => InstitutionalSetting::current(),
-            'officeQrPendingCount' => AffiliationPayment::where('source', 'office_qr')->where('status', PaymentStatus::UNDER_REVIEW)->count(),
+            'underReviewCount' => AffiliationPayment::where('status', PaymentStatus::UNDER_REVIEW)->count(),
         ]);
     }
 
@@ -138,8 +134,19 @@ class PaymentController extends Controller
             $data['voucher_path'] = $request->file('voucher')->store('payments/vouchers', 'local');
         }
 
-        $payment->update($data + ['status' => PaymentStatus::PENDING, 'source' => $payment->source ?: 'web']);
-        AuditService::record('pago.comprobante_registrado', $payment, ['has_voucher' => $request->hasFile('voucher')]);
+        $payment->update($data + [
+            'status' => PaymentStatus::UNDER_REVIEW,
+            'source' => $payment->source ?: 'web',
+            'registered_by' => $payment->registered_by
+                ?: ($request->user()?->isInternal() ? $request->user()->id : null),
+            'submitted_at' => $payment->submitted_at ?: now(),
+        ]);
+        AuditService::record('payment_under_review', $payment, [
+            'has_voucher' => $request->hasFile('voucher'),
+            'registered_by' => $payment->registered_by,
+            'payment_method' => $payment->payment_method,
+            'reference_number' => $payment->reference_number,
+        ]);
 
         return back()->with('status', 'Comprobante registrado.');
     }

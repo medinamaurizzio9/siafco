@@ -15,7 +15,9 @@
                 <div><dt class="text-xs font-black uppercase text-slate-500">Monto</dt><dd>{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Estado</dt><dd><x-payment-status :status="$payment->status" size="sm" /></dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Metodo</dt><dd>{{ ucfirst((string) $payment->payment_method) }}</dd></div>
-                <div><dt class="text-xs font-black uppercase text-slate-500">Referencia</dt><dd>{{ $payment->reference_number ?: 'Sin referencia' }}</dd></div>
+                @if(\App\Support\PaymentMethodPresenter::showsTransactionNumber($payment->payment_method))
+                    <div><dt class="text-xs font-black uppercase text-slate-500">N.º de transacción</dt><dd>{{ $payment->reference_number ?: 'No registrado' }}</dd></div>
+                @endif
                 <div><dt class="text-xs font-black uppercase text-slate-500">Transaccion</dt><dd>{{ $payment->transaction_number ?: 'Sin transaccion' }}</dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Pago realizado</dt><dd>{{ $payment->paid_at?->format('d/m/Y H:i') ?? $payment->payment_date?->format('d/m/Y') ?? 'Sin fecha' }}</dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Registrado por</dt><dd>{{ $payment->registrar?->name ?? 'No registrado' }}</dd></div>

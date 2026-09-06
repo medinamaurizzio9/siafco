@@ -16,7 +16,19 @@
             <td>BOB {{ number_format($application->amount_due, 2) }}</td>
             <td>{{ $application->payment?->transaction_number ?: 'Sin pago' }}</td>
             <td><x-affiliation-status :status="$application->status" size="sm" /></td>
-            <td><a class="btn-secondary" href="{{ route('public-affiliation.admin.show', $application) }}">Revisar</a></td>
+            <td><div class="flex gap-2"><a class="btn-secondary" href="{{ route('public-affiliation.admin.show', $application) }}">Revisar</a>
+                @if($application->affiliate && auth()->user()->can('delete', $application->affiliate))
+                    <form method="post" action="{{ route('public-affiliation.admin.destroy', $application) }}"
+                        data-confirm-title="Eliminar registro"
+                        data-confirm-message="Este registro será eliminado definitivamente junto con sus datos relacionados permitidos. Esta acción no se puede deshacer."
+                        data-confirm-detail="Nombre: {{ $application->person->full_name }}&#10;CI: {{ $application->person->ci }}&#10;Estado actual: {{ \App\Support\AffiliationStatusPresenter::label($application->status) }}"
+                        data-confirm-accept="Eliminar definitivamente"
+                        data-confirm-variant="danger">
+                        @csrf @method('delete')
+                        <button class="btn-danger" type="submit">Eliminar</button>
+                    </form>
+                @endif
+            </div></td>
         </tr>@empty<tr><td colspan="7">No hay solicitudes con esos filtros.</td></tr>@endforelse</tbody></table>
     </div>
     <div class="mt-5">{{ $applications->links() }}</div>

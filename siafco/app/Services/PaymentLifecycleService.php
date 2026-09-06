@@ -56,15 +56,15 @@ class PaymentLifecycleService
                     'payment_date' => $data['paid_at']->toDateString(),
                     'paid_at' => $data['paid_at'],
                     'submitted_at' => now(),
-                    'status' => $data['status'] ?? PaymentStatus::PENDING,
+                    'status' => PaymentStatus::UNDER_REVIEW,
                     'source' => 'manual_admin',
                     'registered_by' => $actor->id,
                 ]);
 
-                if ($request && in_array($payment->status, [PaymentStatus::PENDING, PaymentStatus::UNDER_REVIEW], true)) {
+                if ($request) {
                     $request->update([
-                        'status' => $payment->status === PaymentStatus::UNDER_REVIEW ? 'payment_submitted' : 'pending_payment',
-                        'payment_submitted_at' => $payment->status === PaymentStatus::UNDER_REVIEW ? now() : $request->payment_submitted_at,
+                        'status' => 'payment_submitted',
+                        'payment_submitted_at' => now(),
                     ]);
                 }
 
@@ -72,6 +72,9 @@ class PaymentLifecycleService
                     'affiliate_id' => $affiliate->id,
                     'amount' => (string) $payment->amount,
                     'status' => $payment->status,
+                    'registered_by' => $actor->id,
+                    'payment_method' => $payment->payment_method,
+                    'reference_number' => $payment->reference_number,
                 ]);
 
                 return $payment;
@@ -83,6 +86,109 @@ class PaymentLifecycleService
 
             throw $exception;
         }
+    }
+
+    public function registerAssistedPayment(
+        PublicAffiliationRequest $application,
+        array $data,
+        ?UploadedFile $voucher,
+        User $actor
+    ): AffiliationPayment {
+        $voucherPath = $this->storeVoucher($voucher);
+        $oldVoucherPath = null;
+
+        try {
+            $payment = DB::transaction(function () use ($application, $data, $voucherPath, $actor, &$oldVoucherPath) {
+                $application = PublicAffiliationRequest::with('affiliate.plan')
+                    ->whereKey($application->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+                if (! $application->affiliate_id || $application->status !== 'pending_payment') {
+                    throw ValidationException::withMessages([
+                        'payment' => 'La solicitud no está disponible para registrar un pago.',
+                    ]);
+                }
+
+                $existing = AffiliationPayment::where('public_affiliation_request_id', $application->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($existing && ! PaymentStatus::isRejected($existing->status)) {
+                    throw ValidationException::withMessages([
+                        'payment' => 'La solicitud ya tiene un pago registrado.',
+                    ]);
+                }
+
+                $values = [
+                    'affiliate_id' => $application->affiliate_id,
+                    'public_affiliation_request_id' => $application->id,
+                    'affiliation_plan_id' => $application->affiliation_plan_id,
+                    'amount' => $application->amount_due,
+                    'expected_amount' => $application->amount_due,
+                    'paid_amount' => $application->amount_due,
+                    'currency' => 'BOB',
+                    'payment_method' => $data['payment_method'],
+                    'bank_name' => $data['bank_name'] ?? null,
+                    'reference_number' => $data['reference_number'] ?? null,
+                    'transaction_number' => $data['transaction_number'] ?? null,
+                    'observations' => $data['observations'] ?? null,
+                    'payment_date' => $data['paid_at']->toDateString(),
+                    'paid_at' => $data['paid_at'],
+                    'submitted_at' => now(),
+                    'status' => PaymentStatus::UNDER_REVIEW,
+                    'source' => 'manual_admin',
+                    'registered_by' => $actor->id,
+                    'confirmed_by' => null,
+                    'confirmed_at' => null,
+                    'receipt_number' => null,
+                    'rejected_by' => null,
+                    'rejected_at' => null,
+                    'rejection_reason' => null,
+                ];
+
+                if ($voucherPath) {
+                    $values['voucher_path'] = $voucherPath;
+                }
+
+                if ($existing) {
+                    $oldVoucherPath = $existing->voucher_path;
+                    $existing->update($values);
+                    $payment = $existing;
+                } else {
+                    $payment = AffiliationPayment::create($values);
+                }
+
+                $application->update([
+                    'status' => 'payment_submitted',
+                    'payment_submitted_at' => now(),
+                    'rejection_reason' => null,
+                ]);
+                $application->affiliate?->update(['status' => 'pago_en_revision']);
+
+                AuditService::record('payment_assisted_registered', $payment, [
+                    'affiliate_id' => $application->affiliate_id,
+                    'request_code' => $application->request_code,
+                    'registered_by' => $actor->id,
+                    'payment_method' => $payment->payment_method,
+                    'reference_number' => $payment->reference_number,
+                    'status' => PaymentStatus::UNDER_REVIEW,
+                ]);
+
+                return $payment->fresh();
+            });
+        } catch (\Throwable $exception) {
+            if ($voucherPath) {
+                Storage::disk('local')->delete($voucherPath);
+            }
+
+            throw $exception;
+        }
+
+        if ($voucherPath && $oldVoucherPath && $oldVoucherPath !== $voucherPath) {
+            Storage::disk('local')->delete($oldVoucherPath);
+        }
+
+        return $payment;
     }
 
     public function updatePending(AffiliationPayment $payment, array $data, ?UploadedFile $voucher, User $actor): AffiliationPayment
@@ -109,7 +215,7 @@ class PaymentLifecycleService
                     'observations' => $data['observations'] ?? null,
                     'payment_date' => $data['paid_at']->toDateString(),
                     'paid_at' => $data['paid_at'],
-                    'status' => $data['status'] ?? $payment->status,
+                    'status' => PaymentStatus::UNDER_REVIEW,
                 ];
 
                 if ($voucherPath) {

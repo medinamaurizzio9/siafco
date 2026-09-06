@@ -8,7 +8,7 @@ use App\Support\PaymentStatus;
 
 class PaymentActionAuthorization
 {
-    private const OFFICE_QR_REVIEW_ROLES = ['superadministrador', 'administrador', 'gerente'];
+    private const REVIEW_ROLES = ['superadministrador', 'administrador', 'gerente'];
 
     public function canConfirm(?User $user, AffiliationPayment $payment): bool
     {
@@ -19,7 +19,7 @@ class PaymentActionAuthorization
     public function canAuthorizeConfirmation(?User $user, AffiliationPayment $payment): bool
     {
         return (bool) ($user?->hasPermission('payments.confirm'))
-            && $this->canReviewOfficeQr($user, $payment);
+            && $this->canReviewPayments($user);
     }
 
     public function canReject(?User $user, AffiliationPayment $payment): bool
@@ -32,15 +32,11 @@ class PaymentActionAuthorization
     public function canAuthorizeRejection(?User $user, AffiliationPayment $payment): bool
     {
         return (bool) ($user?->hasPermission('payments.reject'))
-            && $this->canReviewOfficeQr($user, $payment);
+            && $this->canReviewPayments($user);
     }
 
-    private function canReviewOfficeQr(?User $user, AffiliationPayment $payment): bool
+    private function canReviewPayments(?User $user): bool
     {
-        if ($payment->source !== 'office_qr') {
-            return true;
-        }
-
-        return (bool) ($user?->isInternal() && $user->hasRole(self::OFFICE_QR_REVIEW_ROLES));
+        return (bool) ($user?->isInternal() && $user->hasRole(self::REVIEW_ROLES));
     }
 }

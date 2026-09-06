@@ -11,6 +11,7 @@ use App\Models\Sector;
 use App\Models\User;
 use App\Services\AuditService;
 use App\Services\AffiliateDuplicateDetector;
+use App\Services\AffiliateDeletionService;
 use App\Services\AffiliateTimelineService;
 use App\Services\AffiliatePasswordService;
 use App\Services\AffiliatePhotoProcessor;
@@ -26,12 +27,13 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class AffiliateController extends Controller
 {
     public function index(Request $request)
     {
-        $affiliates = Affiliate::with('sector', 'plan')
+        $affiliates = Affiliate::official()->with('sector', 'plan', 'latestPayment')
             ->when($request->search, fn ($query, $search) => $query->where(function ($q) use ($search) {
                 $q->where('full_name', 'like', "%{$search}%")
                     ->orWhere('ci', 'like', "%{$search}%")
@@ -70,10 +72,8 @@ class AffiliateController extends Controller
 
         try {
             $affiliate = DB::transaction(function () use ($data, $photoPath, $institutionalQrPath) {
-                $sector = Sector::lockForUpdate()->findOrFail($data['sector_id']);
+                $sector = Sector::findOrFail($data['sector_id']);
                 $plan = AffiliationPlan::findOrFail($data['affiliation_plan_id']);
-                $sector->increment('current_sequence');
-                $registration = sprintf('%s-%06d', strtoupper($sector->code), $sector->current_sequence);
                 $person = Person::updateOrCreate(
                     ['ci' => $data['ci']],
                     [
@@ -91,7 +91,7 @@ class AffiliateController extends Controller
                     'person_id' => $person->id,
                     'name' => $data['full_name'],
                     'email' => $data['email'],
-                    'username' => $this->uniqueAffiliateUsername($registration),
+                    'username' => $this->uniqueAffiliateUsername($data['ci']),
                     'role' => 'afiliado',
                     'user_type' => 'affiliate',
                     'is_active' => true,
@@ -105,7 +105,7 @@ class AffiliateController extends Controller
                     'regional' => ($data['regional'] ?? null) ?: $sector->regional,
                     'institution' => ($data['institution'] ?? null) ?: $sector->institution,
                     'photo_path' => $photoPath,
-                    'registration_number' => $registration,
+                    'registration_number' => null,
                     'status' => 'pendiente_pago',
                     'verification_token' => Str::uuid()->toString(),
                 ]);
@@ -117,7 +117,10 @@ class AffiliateController extends Controller
                     'status' => 'pendiente',
                 ]);
 
-                AuditService::record('afiliado.registrado', $affiliate);
+                AuditService::record('affiliate_application_registered', $affiliate, [
+                    'affiliate_id' => $affiliate->id,
+                    'status' => 'pending_payment',
+                ]);
 
                 return $affiliate;
             });
@@ -129,7 +132,7 @@ class AffiliateController extends Controller
         }
 
         return redirect()->route('affiliates.show', $affiliate)
-            ->with('status', 'Afiliado registrado con pago pendiente. El correo sera utilizado para iniciar sesion en el portal y en la aplicacion movil. La contrasena temporal corresponde al CI del afiliado y debera cambiarla al ingresar.');
+            ->with('status', 'Solicitud registrada con pago pendiente. El código oficial se asignará después de confirmar el pago.');
     }
 
     public function show(
@@ -192,52 +195,19 @@ class AffiliateController extends Controller
         return redirect()->route('affiliates.show', $affiliate)->with('status', 'Afiliado actualizado.');
     }
 
-    public function destroy(Request $request, Affiliate $affiliate): RedirectResponse
+    public function destroy(Request $request, Affiliate $affiliate, AffiliateDeletionService $deletion): RedirectResponse
     {
         Gate::authorize('delete', $affiliate);
 
-        $data = $request->validate([
-            'confirmation' => ['required', 'in:ELIMINAR'],
-            'deletion_reason' => ['required', 'string', 'min:5', 'max:500'],
-        ], [
-            'confirmation.in' => 'Escriba ELIMINAR exactamente para confirmar.',
-            'deletion_reason.required' => 'Debe indicar el motivo de eliminación.',
-        ]);
-
-        DB::transaction(function () use ($affiliate, $data) {
-            $affiliate->loadMissing('user');
-            $user = $affiliate->user;
-
-            $affiliate->forceFill([
-                'deleted_by' => auth()->id(),
-                'deletion_reason' => $data['deletion_reason'],
-            ])->save();
-            $affiliate->delete();
-            $user?->delete();
-
-            AuditService::record('affiliate_soft_deleted', $affiliate, [
-                'affiliate_id' => $affiliate->id,
-                'full_name' => $affiliate->full_name,
-                'affiliate_number' => $affiliate->registration_number,
-                'registration_number' => $affiliate->registration_number,
-                'ci' => $affiliate->ci,
-                'reason' => $data['deletion_reason'],
-                'linked_user_id' => $user?->id,
-            ]);
-            AuditService::record('afiliado.eliminado', $affiliate, [
-                'affiliate_id' => $affiliate->id,
-                'full_name' => $affiliate->full_name,
-                'affiliate_number' => $affiliate->registration_number,
-                'registration_number' => $affiliate->registration_number,
-                'ci' => $affiliate->ci,
-                'reason' => $data['deletion_reason'],
-                'linked_user_id' => $user?->id,
-            ]);
-        });
+        try {
+            $deletion->delete($affiliate, $request->user(), 'Eliminación administrativa confirmada por el usuario.');
+        } catch (ValidationException $exception) {
+            return back()->with('error', collect($exception->errors())->flatten()->first() ?: 'Este registro no puede eliminarse.');
+        }
 
         return redirect()
             ->route('affiliates.index')
-            ->with('status', 'El afiliado fue eliminado correctamente.');
+            ->with('status', 'Registro eliminado correctamente.');
     }
 
     private function validated(Request $request, ?Affiliate $affiliate = null): array

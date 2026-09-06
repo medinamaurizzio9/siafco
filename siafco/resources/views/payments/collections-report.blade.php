@@ -2,7 +2,7 @@
     <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <h2 class="text-2xl font-black text-[#0b1f3a]">Reporte de cobros</h2>
-            <p class="text-sm text-slate-600">Consulta de pagos confirmados por fecha, cajero y afiliado.</p>
+            <p class="text-sm text-slate-600">Consulta de pagos confirmados y en revisión por fecha, cobrador y afiliado.</p>
         </div>
         <a class="btn-secondary" href="{{ route('payments.index') }}">Pagos de afiliacion</a>
     </div>
@@ -17,9 +17,9 @@
             <input class="form-input" type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}">
         </div>
         <div>
-            <label class="form-label">Cajero</label>
+            <label class="form-label">Cobrador / registrador</label>
             <select class="form-input" name="cashier_id" @disabled(! $canFilterAnyCashier)>
-                <option value="">Todos los cajeros</option>
+                <option value="">Todos los cobradores</option>
                 @foreach($cashiers as $cashier)
                     <option value="{{ $cashier->id }}" @selected((string) ($filters['cashier_id'] ?? '') === (string) $cashier->id)>{{ $cashier->name }}</option>
                 @endforeach
@@ -75,9 +75,18 @@
         <div>
             <label class="form-label">Estado</label>
             <select class="form-input" name="status">
-                <option value="">Confirmados</option>
-                @foreach(\App\Support\PaymentStatus::confirmedValues() as $status)
+                <option value="">Todos los estados del reporte</option>
+                @foreach(\App\Support\PaymentStatus::allValues() as $status)
                     <option value="{{ $status }}" @selected(($filters['status'] ?? '') === $status)>{{ \App\Support\PaymentStatus::label($status) }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div>
+            <label class="form-label">Origen</label>
+            <select class="form-input" name="source">
+                <option value="">Todos</option>
+                @foreach(['web' => 'Web', 'mobile' => 'Móvil', 'manual_admin' => 'Manual administrativo', 'office_cash' => 'Efectivo en oficina', 'office_qr' => 'QR en oficina'] as $value => $label)
+                    <option value="{{ $value }}" @selected(($filters['source'] ?? '') === $value)>{{ $label }}</option>
                 @endforeach
             </select>
         </div>
@@ -87,19 +96,36 @@
         </div>
     </form>
 
-    <div class="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <article class="metric-card"><p>Cantidad de cobros confirmados</p><strong>{{ $collectionCount }}</strong></article>
         <article class="metric-card"><p>Total confirmado</p><strong>BOB {{ number_format($totalAmount, 2) }}</strong></article>
-        <article class="metric-card"><p>QR pendientes</p><strong>{{ $pendingQrCount }}</strong></article>
-        <article class="metric-card"><p>Monto pendiente</p><strong>BOB {{ number_format($pendingQrAmount, 2) }}</strong></article>
+        <article class="metric-card"><p>Pagos en revisión</p><strong>{{ $pendingQrCount }}</strong></article>
+        <article class="metric-card"><p>Monto en revisión</p><strong>BOB {{ number_format($pendingQrAmount, 2) }}</strong></article>
+        <article class="metric-card"><p>Pagos rechazados</p><strong>{{ $rejectedCount }}</strong></article>
         @foreach($totalsByMethod as $method => $amount)
             <article class="metric-card"><p>Total {{ ucfirst(str_replace('_', ' ', $method)) }}</p><strong>BOB {{ number_format((float) $amount, 2) }}</strong></article>
         @endforeach
     </div>
 
+    @if($collectorSummaries->isNotEmpty())
+        <section class="mb-5 rounded-lg border border-slate-200 bg-white p-4">
+            <h3 class="font-black text-siafco-primary-900">Resumen por cobrador</h3>
+            <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                @foreach($collectorSummaries as $collector)
+                    <article class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
+                        <h4 class="font-black text-siafco-primary-900">{{ $collector['name'] }}</h4>
+                        <p class="mt-2">Pagos registrados: <strong>{{ $collector['registered_count'] }}</strong></p>
+                        <p>Total confirmado: <strong>BOB {{ number_format($collector['confirmed_amount'], 2) }}</strong></p>
+                        <p>En revisión: <strong>BOB {{ number_format($collector['under_review_amount'], 2) }}</strong></p>
+                    </article>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     @if($pendingPayments->isNotEmpty())
         <section class="mb-5 overflow-hidden rounded-lg border border-amber-300 bg-white">
-            <div class="border-b border-amber-200 bg-amber-50 p-4"><h3 class="font-black text-amber-950">Pagos QR pendientes de verificación</h3></div>
+            <div class="border-b border-amber-200 bg-amber-50 p-4"><h3 class="font-black text-amber-950">Pagos pendientes de verificación</h3></div>
             <div class="overflow-x-auto"><table class="table"><thead><tr><th>Fecha</th><th>Afiliado</th><th>CI</th><th>Monto</th><th>Operación</th><th>Registrado por</th><th>Acción</th></tr></thead><tbody>
             @foreach($pendingPayments as $pending)
                 <tr><td>{{ $pending->paid_at?->format('d/m/Y H:i') }}</td><td>{{ $pending->affiliate?->full_name }}</td><td>{{ $pending->affiliate?->ci }}</td><td>{{ $pending->currency ?? 'BOB' }} {{ number_format((float) ($pending->paid_amount ?? $pending->amount), 2) }}</td><td>{{ $pending->reference_number }}</td><td>{{ $pending->registrar?->name ?? 'No registrado' }}</td><td><a class="btn-secondary" href="{{ route('payments.show', $pending) }}">Ver</a></td></tr>
@@ -123,7 +149,8 @@
                         <th>Monto</th>
                         <th>Metodo</th>
                         <th>Estado</th>
-                        <th>Cajero</th>
+                        <th>Cobrado por</th>
+                        <th>Confirmado por</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -140,7 +167,8 @@
                         <td>{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</td>
                         <td>{{ $payment->payment_method === 'efectivo' && $payment->source === 'office_cash' ? 'Efectivo / Oficina' : ucfirst((string) $payment->payment_method) }}</td>
                         <td><x-payment-status :status="$payment->status" size="sm" /></td>
-                        <td>{{ $payment->cashier?->name ?? 'No registrado' }}</td>
+                        <td>{{ $payment->registrar?->name ?? 'Sin registro' }}</td>
+                        <td>{{ $payment->cashier?->name ?? 'Sin registro' }}</td>
                         <td>
                             <div class="flex flex-wrap gap-2">
                                 <a class="btn-secondary px-3 py-2 text-xs" href="{{ route('admin.payments.receipt', $payment) }}" target="_blank">Ver recibo</a>
@@ -149,7 +177,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="12">Sin cobros confirmados para los filtros seleccionados.</td></tr>
+                    <tr><td colspan="13">Sin cobros confirmados para los filtros seleccionados.</td></tr>
                 @endforelse
                 </tbody>
             </table>

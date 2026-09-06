@@ -14,9 +14,9 @@
         </div>
     </div>
 
-    @if(auth()->user()->hasRole(['superadministrador','administrador','gerente']) && $officeQrPendingCount > 0)
-        <a class="mb-4 flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950" href="{{ route('payments.index', ['status' => \App\Support\PaymentStatus::UNDER_REVIEW, 'source' => 'office_qr']) }}">
-            <span><strong>Pagos QR pendientes de verificación</strong><span class="ml-2">{{ $officeQrPendingCount }}</span></span>
+    @if(auth()->user()->hasRole(['superadministrador','administrador','gerente']) && $underReviewCount > 0)
+        <a class="mb-4 flex items-center justify-between rounded-lg border border-sky-300 bg-sky-50 p-4 text-sky-950" href="{{ route('payments.index', ['status' => \App\Support\PaymentStatus::UNDER_REVIEW]) }}">
+            <span><strong>Pagos pendientes de verificación</strong><span class="ml-2">{{ $underReviewCount }}</span></span>
             <span class="font-bold">Revisar</span>
         </a>
     @endif
@@ -57,6 +57,7 @@
             <article class="mobile-list-card">
                 <h2 class="mobile-list-card__title">{{ $payment->affiliate?->full_name ?? 'Afiliado no disponible' }}</h2>
                 <p class="mobile-list-card__meta">{{ $payment->affiliate?->registration_number ?: $payment->affiliate?->ci }} · {{ $payment->source ?: 'web' }}</p>
+                <p class="mt-2 text-sm"><span class="text-slate-500">Cobrado por:</span> <strong>{{ $payment->registrar?->name ?? 'Sin registro' }}</strong></p>
                 <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
                     <div><span class="text-slate-500">Monto</span><strong class="block">{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</strong></div>
                     <div><span class="text-slate-500">Metodo</span><strong class="block">{{ ucfirst((string) $payment->payment_method) }}</strong></div>
@@ -72,7 +73,7 @@
     <div class="desktop-table overflow-hidden rounded-lg border border-slate-200 bg-white">
         <div class="overflow-x-auto">
             <table class="table">
-                <thead><tr><th>Afiliado</th><th>Monto</th><th>Metodo</th><th>Referencia</th><th>Origen</th><th>Estado</th><th>Acciones</th></tr></thead>
+                <thead><tr><th>Afiliado</th><th>Monto</th><th>Metodo</th><th>N.º de transacción</th><th>Origen</th><th>Cobrado por</th><th>Estado</th><th>Acciones</th></tr></thead>
                 <tbody>
                 @forelse($payments as $payment)
                     <tr>
@@ -82,8 +83,9 @@
                         </td>
                         <td>{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</td>
                         <td>{{ ucfirst((string) $payment->payment_method) }}</td>
-                        <td>{{ $payment->reference_number ?: ($payment->transaction_number ?: 'Sin referencia') }}</td>
+                        <td>{{ \App\Support\PaymentMethodPresenter::showsTransactionNumber($payment->payment_method) ? ($payment->reference_number ?: 'No registrado') : 'No aplica' }}</td>
                         <td>{{ $payment->source ?: 'web' }}</td>
+                        <td>{{ $payment->registrar?->name ?? 'Sin registro' }}</td>
                         <td><x-payment-status :status="$payment->status" size="sm" /></td>
                         <td class="min-w-64">
                             <div class="flex flex-wrap gap-2">
@@ -104,7 +106,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7">Sin pagos registrados.</td></tr>
+                    <tr><td colspan="8">Sin pagos registrados.</td></tr>
                 @endforelse
                 </tbody>
             </table>

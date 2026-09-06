@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Affiliate extends Model
@@ -45,6 +46,11 @@ class Affiliate extends Model
         ];
     }
 
+    public function scopeOfficial(Builder $query): Builder
+    {
+        return $query->whereNotNull('registration_number');
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -68,6 +74,11 @@ class Affiliate extends Model
     public function payments()
     {
         return $this->hasMany(AffiliationPayment::class);
+    }
+
+    public function latestPayment()
+    {
+        return $this->hasOne(AffiliationPayment::class)->latestOfMany();
     }
 
     public function credential()

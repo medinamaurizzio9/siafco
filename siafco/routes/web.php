@@ -10,6 +10,7 @@ use App\Http\Controllers\AffiliatePasswordController;
 use App\Http\Controllers\AffiliationPlanController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CashCollectionReportController;
+use App\Http\Controllers\CashDepositController;
 use App\Http\Controllers\CredentialController;
 use App\Http\Controllers\HomeRedirectController;
 use App\Http\Controllers\InstitutionalQrController;
@@ -65,14 +66,14 @@ Route::middleware('guest')->group(function () {
 
 Route::get('/verificar/{token}', [VerificationController::class, 'show'])->name('verify.show');
 
-Route::middleware('throttle:30,1')->prefix('afiliacion')->name('public-affiliation.')->group(function () {
-    Route::get('/', [PublicAffiliationController::class, 'index'])->name('index');
-    Route::get('/registro', [PublicAffiliationController::class, 'create'])->name('create');
-    Route::post('/registro', [PublicAffiliationController::class, 'store'])->middleware('throttle:5,1')->name('store');
-    Route::get('/{application}/pago', [PublicAffiliationController::class, 'payment'])->name('payment');
-    Route::post('/{application}/pago', [PublicAffiliationController::class, 'storePayment'])->middleware('throttle:5,1')->name('payment.store');
-    Route::get('/{application}/estado', [PublicAffiliationController::class, 'status'])->name('status');
-    Route::get('/{application}/completado', [PublicAffiliationController::class, 'completed'])->name('completed');
+Route::prefix('afiliacion')->name('public-affiliation.')->group(function () {
+    Route::get('/', [PublicAffiliationController::class, 'index'])->middleware('throttle:public-affiliation-read')->name('index');
+    Route::get('/registro', [PublicAffiliationController::class, 'create'])->middleware('throttle:public-affiliation-read')->name('create');
+    Route::post('/registro', [PublicAffiliationController::class, 'store'])->middleware('throttle:public-affiliation-register')->name('store');
+    Route::get('/{application}/pago', [PublicAffiliationController::class, 'payment'])->middleware('throttle:public-affiliation-read')->name('payment');
+    Route::post('/{application}/pago', [PublicAffiliationController::class, 'storePayment'])->middleware('throttle:public-affiliation-payment')->name('payment.store');
+    Route::get('/{application}/estado', [PublicAffiliationController::class, 'status'])->middleware('throttle:public-affiliation-read')->name('status');
+    Route::get('/{application}/completado', [PublicAffiliationController::class, 'completed'])->middleware('throttle:public-affiliation-read')->name('completed');
 });
 
 Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->group(function () {
@@ -180,7 +181,40 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
 
     Route::get('/dashboard', [HomeRedirectController::class, 'dashboard'])->name('admin.dashboard');
 
-    Route::middleware('role:administrador,superadministrador,gerente,administrador_sector,secretaria,cajero,consulta')->group(function () {
+    Route::middleware('role:caja,cajero')->prefix('admin/caja')->name('cash-deposits.')->group(function () {
+        Route::get('/', [CashDepositController::class, 'dashboard'])->middleware('permission:cash_deposits.view_own')->name('dashboard');
+        Route::post('/depositos', [CashDepositController::class, 'store'])->middleware('permission:cash_deposits.create')->name('store');
+        Route::get('/depositos/{deposit}/comprobante', [CashDepositController::class, 'voucher'])->middleware('permission:cash_deposits.view_own')->name('voucher.own');
+    });
+
+    Route::middleware('role:superadministrador,administrador,gerente')->prefix('admin/rendiciones-caja')->name('cash-deposits.admin.')->group(function () {
+        Route::get('/', [CashDepositController::class, 'index'])->middleware('permission:cash_deposits.view_all')->name('index');
+        Route::get('/{deposit}', [CashDepositController::class, 'show'])->middleware('permission:cash_deposits.view_all')->name('show');
+        Route::post('/{deposit}/confirmar', [CashDepositController::class, 'confirm'])->middleware('permission:cash_deposits.confirm')->name('confirm');
+        Route::post('/{deposit}/rechazar', [CashDepositController::class, 'reject'])->middleware('permission:cash_deposits.reject')->name('reject');
+        Route::get('/{deposit}/comprobante', [CashDepositController::class, 'voucher'])->middleware('permission:cash_deposits.view_all')->name('voucher');
+    });
+
+    Route::middleware('role:superadministrador,administrador,gerente,administrador_sector,secretaria,caja,cajero')->group(function () {
+        Route::get('/admin/pagos-secretaria', [PublicAffiliationAdminController::class, 'secretaryPayments'])
+            ->middleware('permission:payments.create')->name('public-affiliation.admin.secretary-payments');
+        Route::get('/afiliacion/solicitudes-publicas', [PublicAffiliationAdminController::class, 'index'])
+            ->middleware('permission:payments.view')->name('public-affiliation.admin.index');
+        Route::get('/afiliacion/solicitudes-publicas/{application}', [PublicAffiliationAdminController::class, 'show'])
+            ->middleware('permission:payments.view')->name('public-affiliation.admin.show');
+        Route::delete('/afiliacion/solicitudes-publicas/{application}', [PublicAffiliationAdminController::class, 'destroy'])
+            ->middleware('permission:affiliates.soft_delete,affiliates.delete')->name('public-affiliation.admin.destroy');
+        Route::post('/afiliacion/solicitudes-publicas/{application}/pago', [PublicAffiliationAdminController::class, 'storePayment'])
+            ->middleware('permission:payments.create')->name('public-affiliation.admin.payment.store');
+        Route::post('/afiliacion/pagos/{payment}/confirmar', [PublicAffiliationAdminController::class, 'approve'])
+            ->middleware('permission:payments.confirm')->name('public-affiliation.admin.approve');
+        Route::post('/afiliacion/pagos/{payment}/rechazar', [PublicAffiliationAdminController::class, 'reject'])
+            ->middleware('permission:payments.reject')->name('public-affiliation.admin.reject');
+        Route::get('/afiliacion/pagos/{payment}/comprobante', [PublicAffiliationAdminController::class, 'receipt'])
+            ->middleware('permission:payments.view_receipt')->name('public-affiliation.admin.receipt');
+    });
+
+    Route::middleware('role:administrador,superadministrador,gerente,administrador_sector,secretaria,caja,cajero,consulta')->group(function () {
         Route::get('/afiliados', [AffiliateController::class, 'index'])->name('affiliates.index');
         Route::get('/afiliados/{affiliate}', [AffiliateController::class, 'show'])->name('affiliates.show');
         Route::get('/pagos', [PaymentController::class, 'index'])->middleware('permission:payments.view')->name('payments.index');
@@ -189,15 +223,10 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
     });
 
     Route::middleware('role:administrador,administrador_sector,secretaria')->group(function () {
-        Route::get('/afiliacion/solicitudes-publicas', [PublicAffiliationAdminController::class, 'index'])->name('public-affiliation.admin.index');
         Route::get('/afiliacion/qr-publico', [PublicAffiliationQrController::class, 'show'])->name('public-affiliation.qr.show');
         Route::get('/afiliacion/qr-publico/png', [PublicAffiliationQrController::class, 'png'])->name('public-affiliation.qr.png');
         Route::get('/afiliacion/qr-publico/pdf', [PublicAffiliationQrController::class, 'pdf'])->name('public-affiliation.qr.pdf');
-        Route::get('/afiliacion/solicitudes-publicas/{application}', [PublicAffiliationAdminController::class, 'show'])->name('public-affiliation.admin.show');
         Route::post('/afiliacion/solicitudes-publicas/{application}/tomar', [PublicAffiliationAdminController::class, 'take'])->name('public-affiliation.admin.take');
-        Route::post('/afiliacion/pagos/{payment}/confirmar', [PublicAffiliationAdminController::class, 'approve'])->name('public-affiliation.admin.approve');
-        Route::post('/afiliacion/pagos/{payment}/rechazar', [PublicAffiliationAdminController::class, 'reject'])->name('public-affiliation.admin.reject');
-        Route::get('/afiliacion/pagos/{payment}/comprobante', [PublicAffiliationAdminController::class, 'receipt'])->name('public-affiliation.admin.receipt');
         Route::resource('sectores', SectorController::class)->except('show')->parameters(['sectores' => 'sector'])->names('sectors');
         Route::resource('planes', AffiliationPlanController::class)->except('show')->parameters(['planes' => 'plan'])->names('plans');
         Route::resource('beneficios-afiliado', AffiliateBenefitController::class)

@@ -17,6 +17,8 @@ class RolePermissionService
         'cajero' => [
             'roles.view', 'roles.update', 'audit.export', 'settings.update', 'users.delete',
             'users.assign-role', 'payments.void', 'affiliates.delete', 'affiliates.soft_delete',
+            'payments.confirm', 'payments.reject', 'cash_deposits.view_all',
+            'cash_deposits.confirm', 'cash_deposits.reject',
         ],
         'caja' => [
             'users.view', 'users.create', 'users.update', 'users.block', 'users.activate',
@@ -24,6 +26,8 @@ class RolePermissionService
             'roles.view', 'roles.update', 'audit.view', 'audit.export', 'settings.view',
             'settings.update', 'affiliates.delete', 'affiliates.soft_delete', 'affiliates.restore',
             'payments.void', 'store.view', 'store.manage-products', 'store.manage-settings',
+            'payments.confirm', 'payments.reject', 'cash_deposits.view_all',
+            'cash_deposits.confirm', 'cash_deposits.reject',
             'store.manage-shipping', 'store.manage-coupons', 'store.manage-orders',
             'store.verify-receipts',
         ],
@@ -41,7 +45,7 @@ class RolePermissionService
         $groups = [
             'Dashboard' => ['dashboard.'],
             'Afiliacion' => ['affiliates.', 'affiliate_access.', 'investors.'],
-            'Tesoreria' => ['payments.', 'credits.'],
+            'Tesoreria' => ['payments.', 'cash_deposits.', 'credits.'],
             'Credenciales' => ['credentials.'],
             'Mini Tienda' => ['store.'],
             'Usuarios Internos' => ['users.'],

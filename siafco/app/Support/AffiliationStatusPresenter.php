@@ -2,8 +2,30 @@
 
 namespace App\Support;
 
+use App\Models\Affiliate;
+
 final class AffiliationStatusPresenter
 {
+    public static function forAffiliate(Affiliate $affiliate): string
+    {
+        if (self::isApproved($affiliate->status)) {
+            return $affiliate->status;
+        }
+
+        $payment = $affiliate->relationLoaded('latestPayment')
+            ? $affiliate->latestPayment
+            : $affiliate->latestPayment()->first();
+
+        if ($payment && PaymentStatus::isRejected($payment->status)) {
+            return 'pago_rechazado';
+        }
+
+        if ($payment?->status === PaymentStatus::UNDER_REVIEW) {
+            return PaymentStatus::UNDER_REVIEW;
+        }
+
+        return $affiliate->status;
+    }
     public static function label(?string $status): string
     {
         return match (self::normalize($status)) {
@@ -12,6 +34,7 @@ final class AffiliationStatusPresenter
             'under_review', 'pago_en_revision' => 'Pago en revisión',
             'approved' => 'Afiliación aprobada',
             'active', 'activo', 'confirmed', 'confirmado' => 'Afiliado activo',
+            'pago_rechazado' => 'Pago rechazado',
             'rejected', 'rechazado', 'observado' => 'Solicitud observada',
             'voided', 'anulado' => 'Pago anulado',
             'cancelled' => 'Solicitud cancelada',
@@ -19,6 +42,13 @@ final class AffiliationStatusPresenter
             'inactive', 'inactivo' => 'Afiliación inactiva',
             default => self::fallbackLabel($status),
         };
+    }
+
+    public static function officeSummaryLabel(?string $status): string
+    {
+        return in_array(self::normalize($status), ['under_review', 'pago_en_revision'], true)
+            ? 'En revisión'
+            : self::label($status);
     }
 
     public static function description(?string $status): string
@@ -56,7 +86,7 @@ final class AffiliationStatusPresenter
             'under_review', 'pago_en_revision' => 'bg-blue-100 text-blue-900 border border-blue-200',
             'approved' => 'bg-emerald-100 text-emerald-900 border border-emerald-200',
             'active', 'activo', 'confirmed', 'confirmado' => 'bg-green-100 text-green-900 border border-green-200',
-            'rejected', 'rechazado', 'observado' => 'bg-red-100 text-red-900 border border-red-200',
+            'pago_rechazado', 'rejected', 'rechazado', 'observado' => 'bg-red-100 text-red-900 border border-red-200',
             'voided', 'anulado' => 'bg-slate-200 text-slate-900 border border-slate-300',
             'cancelled', 'inactive', 'inactivo' => 'bg-gray-100 text-gray-800 border border-gray-200',
             'suspended', 'suspendido' => 'bg-purple-100 text-purple-900 border border-purple-200',
@@ -72,7 +102,7 @@ final class AffiliationStatusPresenter
             'under_review', 'pago_en_revision' => 'search',
             'approved' => 'check-circle',
             'active', 'activo', 'confirmed', 'confirmado' => 'shield-check',
-            'rejected', 'rechazado', 'observado' => 'alert-circle',
+            'pago_rechazado', 'rejected', 'rechazado', 'observado' => 'alert-circle',
             'voided', 'anulado' => 'x-circle',
             'cancelled' => 'x-circle',
             default => 'information-circle',

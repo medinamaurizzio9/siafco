@@ -12,7 +12,6 @@ use App\Models\User;
 use App\Services\AffiliatePhotoProcessor;
 use App\Services\AffiliatePasswordService;
 use App\Services\AuditService;
-use App\Services\PaymentLifecycleService;
 use App\Support\PaymentStatus;
 use App\Support\PublicAffiliationCatalogs;
 use App\Support\TextNormalizer;
@@ -41,13 +40,14 @@ class OfficeAffiliationController extends Controller
         ]);
     }
 
-    public function store(Request $request, PaymentLifecycleService $payments)
+    public function store(Request $request)
     {
         $actor = $request->user();
         abort_unless($actor?->isInternal() && $actor->hasRole(self::AUTHORIZED_ROLES), 403);
 
         $data = $this->validated($request);
-        $isQr = $data['payment_method'] === 'qr';
+        $paymentMethod = $data['payment_method'];
+        $isElectronic = in_array($paymentMethod, ['qr', 'transferencia'], true);
         $plan = AffiliationPlan::where('is_active', true)->findOrFail($data['affiliation_plan_id']);
         $received = round((float) $data['received_amount'], 2);
         $required = round((float) $plan->total_amount, 2);
@@ -68,10 +68,8 @@ class OfficeAffiliationController extends Controller
         $institutionalQrPath = InstitutionalSetting::current()->payment_qr_path;
 
         try {
-            $payment = DB::transaction(function () use ($data, $plan, $received, $required, $actor, $payments, $isQr, $photoPath, $institutionalQrPath) {
-                $sector = Sector::whereKey($data['sector_id'])->lockForUpdate()->firstOrFail();
-                $sector->increment('current_sequence');
-                $registration = sprintf('%s-%06d', mb_strtoupper($sector->code), $sector->current_sequence);
+            $payment = DB::transaction(function () use ($data, $plan, $received, $required, $actor, $paymentMethod, $isElectronic, $photoPath, $institutionalQrPath) {
+                $sector = Sector::whereKey($data['sector_id'])->firstOrFail();
 
                 $person = Person::updateOrCreate(
                     ['ci' => $data['ci']],
@@ -90,7 +88,7 @@ class OfficeAffiliationController extends Controller
                 'person_id' => $person->id,
                 'name' => $data['full_name'],
                 'email' => $data['email'],
-                'username' => $this->uniqueAffiliateUsername($registration),
+                'username' => $this->uniqueAffiliateUsername($data['ci']),
                 'role' => 'afiliado',
                 'user_type' => 'affiliate',
                 'is_active' => true,
@@ -105,7 +103,7 @@ class OfficeAffiliationController extends Controller
                 'regional' => ($data['regional'] ?? null) ?: $sector->regional,
                 'institution' => ($data['institution'] ?? null) ?: $sector->institution,
                 'photo_path' => $photoPath,
-                'registration_number' => $registration,
+                'registration_number' => null,
                 'status' => 'pendiente_pago',
                 'verification_token' => Str::uuid()->toString(),
                 ]);
@@ -118,35 +116,34 @@ class OfficeAffiliationController extends Controller
                 'paid_amount' => $received,
                 'currency' => $plan->currency ?? 'BOB',
                 'institutional_qr_path' => $institutionalQrPath,
-                'payment_method' => $isQr ? 'qr' : 'efectivo',
+                'payment_method' => $paymentMethod,
                 'reference_number' => $data['reference_number'] ?? null,
                 'observations' => $data['observations'] ?? null,
                 'payment_date' => $data['paid_at']->toDateString(),
                 'paid_at' => $data['paid_at'],
                 'submitted_at' => now(),
-                'status' => $isQr ? PaymentStatus::UNDER_REVIEW : PaymentStatus::PENDING,
-                'source' => $isQr ? 'office_qr' : 'office_cash',
+                'status' => PaymentStatus::UNDER_REVIEW,
+                'source' => $isElectronic ? 'office_qr' : 'office_cash',
                 'registered_by' => $actor->id,
                 ]);
 
-                AuditService::record('office_affiliation_registered', $affiliate, [
+                AuditService::record('office_affiliation_application_registered', $affiliate, [
                 'affiliate_id' => $affiliate->id,
-                'registration_number' => $affiliate->registration_number,
                 'actor_id' => $actor->id,
                 'payment_id' => $payment->id,
                 'amount' => number_format($received, 2, '.', ''),
-                'payment_method' => $isQr ? 'qr' : 'efectivo',
+                'payment_method' => $paymentMethod,
                 ]);
 
-                AuditService::record($isQr ? 'office_qr_registered' : 'office_cash_payment_received', $payment, [
+                AuditService::record($isElectronic ? 'office_qr_registered' : 'office_cash_payment_registered', $payment, [
                 'affiliate_id' => $affiliate->id,
                 'actor_id' => $actor->id,
                 'amount' => number_format($received, 2, '.', ''),
-                'payment_method' => $isQr ? 'qr' : 'efectivo',
-                'reference_number' => $isQr ? $payment->reference_number : null,
+                'payment_method' => $paymentMethod,
+                'reference_number' => $isElectronic ? $payment->reference_number : null,
                 ]);
 
-                return $isQr ? $payment : $payments->confirm($payment, $actor);
+                return $payment;
             });
         } catch (\Throwable $exception) {
             if ($photoPath) {
@@ -160,9 +157,7 @@ class OfficeAffiliationController extends Controller
 
         return redirect()
             ->route('affiliates.office.show', $payment)
-            ->with('status', $isQr
-                ? 'Pago QR registrado correctamente. Queda pendiente de verificación por Gerencia.'
-                : 'Afiliacion registrada en oficina con pago confirmado.');
+            ->with('status', 'Pago registrado correctamente. Queda pendiente de verificación por Gerencia o Administración.');
     }
 
     public function show(Request $request, AffiliationPayment $payment)
@@ -203,8 +198,8 @@ class OfficeAffiliationController extends Controller
             'marital_status' => ['nullable', 'string', Rule::in(PublicAffiliationCatalogs::MARITAL_STATUSES)],
             'received_amount' => ['required', 'numeric', 'min:0.01'],
             'paid_at' => ['required', 'date'],
-            'payment_method' => ['required', Rule::in(['efectivo', 'qr'])],
-            'reference_number' => [Rule::requiredIf($request->input('payment_method') === 'qr'), 'nullable', 'string', 'max:120'],
+            'payment_method' => ['required', Rule::in(['efectivo', 'qr', 'transferencia'])],
+            'reference_number' => [Rule::requiredIf(in_array($request->input('payment_method'), ['qr', 'transferencia'], true)), 'nullable', 'string', 'max:120'],
             'observations' => ['nullable', 'string', 'max:1000'],
         ], [
             'email.unique' => 'El correo electrónico ya está registrado en el sistema.',

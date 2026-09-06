@@ -135,7 +135,9 @@ class AdministrationModulesTest extends TestCase
         $this->assertTrue($secretary->hasPermission('store.manage-coupons'));
         $this->assertFalse($secretary->hasPermission('roles.update'));
 
-        $this->assertTrue($cashier->hasPermission('payments.confirm'));
+        $this->assertFalse($cashier->hasPermission('payments.confirm'));
+        $this->assertFalse($cashier->hasPermission('payments.reject'));
+        $this->assertTrue($cashier->hasPermission('cash_deposits.create'));
         $this->assertFalse($cashier->hasPermission('payments.void'));
         $this->assertFalse($cashier->hasPermission('users.delete'));
     }
@@ -150,11 +152,11 @@ class AdministrationModulesTest extends TestCase
         $this->assertSame('Caja', config('internal_roles.labels.caja'));
         $this->assertNotEmpty($roles->permissionsForRole('caja'));
 
-        foreach (['dashboard.view', 'affiliates.view', 'payments.view', 'payments.create', 'payments.confirm', 'payments.view_receipt', 'credits.view', 'investors.view'] as $permission) {
+        foreach (['dashboard.view', 'affiliates.view', 'payments.view', 'payments.create', 'payments.view_receipt', 'cash_deposits.view_own', 'cash_deposits.create', 'credits.view', 'investors.view'] as $permission) {
             $this->assertTrue($cashDesk->hasPermission($permission), $permission);
         }
 
-        foreach (['users.view', 'users.delete', 'users.assign-role', 'roles.view', 'audit.view', 'audit.export', 'settings.update', 'affiliates.delete', 'payments.void', 'store.view'] as $permission) {
+        foreach (['users.view', 'users.delete', 'users.assign-role', 'roles.view', 'audit.view', 'audit.export', 'settings.update', 'affiliates.delete', 'payments.confirm', 'payments.reject', 'payments.void', 'cash_deposits.view_all', 'cash_deposits.confirm', 'cash_deposits.reject', 'store.view'] as $permission) {
             $this->assertFalse($cashDesk->hasPermission($permission), $permission);
         }
     }
@@ -163,13 +165,12 @@ class AdministrationModulesTest extends TestCase
     {
         $cashDesk = $this->internalUser('caja');
 
-        $this->actingAs($cashDesk)->get(route('admin.dashboard'))
+        $this->followingRedirects()->actingAs($cashDesk)->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertSee('Afiliacion en oficina')
-            ->assertSee('Pagos de afiliacion')
-            ->assertSee('Reporte de cobros')
-            ->assertSee('Accionistas e inversiones')
-            ->assertSee('Creditos')
+            ->assertSee('Panel Caja')
+            ->assertSee('Nueva afiliación en oficina')
+            ->assertSee('Cobrar afiliación pendiente')
+            ->assertSee('Registrar depósito de caja')
             ->assertDontSee('Usuarios internos')
             ->assertDontSee('Roles y permisos')
             ->assertDontSee('Auditoria')
@@ -267,9 +268,12 @@ class AdministrationModulesTest extends TestCase
     {
         $cashier = $this->internalUser('cajero');
 
-        $this->actingAs($cashier)->get(route('admin.dashboard'))
+        $this->followingRedirects()->actingAs($cashier)->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertSee('Afiliacion en oficina')
+            ->assertSee('Panel Caja')
+            ->assertSee('Nueva afiliación en oficina')
+            ->assertSee('Cobrar afiliación pendiente')
+            ->assertSee('Registrar depósito de caja')
             ->assertSee('Reporte de cobros')
             ->assertSee('Pagos de afiliacion')
             ->assertSee('Creditos')
