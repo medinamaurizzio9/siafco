@@ -6,7 +6,7 @@
     "isDynamicEntry": true
   },
   "resources/css/app.css": {
-    "file": "assets/app-CHY8jVwc.css",
+    "file": "assets/app-Qkk8kPt6.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -15,8 +15,13 @@
     "src": "resources/css/credential.css",
     "isEntry": true
   },
+  "resources/css/crm.css": {
+    "file": "assets/crm-BEoUC19o.css",
+    "src": "resources/css/crm.css",
+    "isEntry": true
+  },
   "resources/js/app.js": {
-    "file": "assets/app-B8yKVBUn.js",
+    "file": "assets/app-yGnICPTm.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -34,7 +39,7 @@
     "isEntry": true
   },
   "resources/js/dashboard.js": {
-    "file": "assets/dashboard-DjFK9-3R.js",
+    "file": "assets/dashboard-CkQr-mTs.js",
     "name": "dashboard",
     "src": "resources/js/dashboard.js",
     "isDynamicEntry": true,

@@ -18,6 +18,9 @@ use App\Listeners\RefreshAffiliateCapabilitiesListener;
 use App\Listeners\UpdateDashboardStatisticsListener;
 use App\Models\InstitutionalSetting;
 use App\Models\User;
+use App\Models\InvestmentProspect;
+use App\Services\InvestmentCrmSettingsService;
+use App\Policies\InvestmentProspectPolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Database\QueryException;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -45,6 +48,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(User::class, UserPolicy::class);
+        Gate::policy(InvestmentProspect::class, InvestmentProspectPolicy::class);
         $this->registerPublicAffiliationRateLimiters();
         $this->registerDomainListeners();
         foreach (['store.view', 'store.manage-products', 'store.manage-settings', 'store.manage-shipping', 'store.manage-coupons', 'store.manage-orders', 'store.verify-receipts'] as $permission) {
@@ -56,6 +60,13 @@ class AppServiceProvider extends ServiceProvider
             : InstitutionalSetting::fallback();
 
         View::share('institution', $institution);
+        View::composer([
+            'investments.advisors.public',
+            'investment-crm.advisor.*',
+            'components.investment-crm.advisor.layout',
+        ], function ($view) {
+            $view->with('settings', app(InvestmentCrmSettingsService::class)->all());
+        });
     }
 
     private function registerPublicAffiliationRateLimiters(): void

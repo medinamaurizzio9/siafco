@@ -23,6 +23,10 @@ $permissions = [
     'roles.view', 'roles.update', 'audit.view', 'audit.export',
     'credits.view', 'credits.create', 'credits.update', 'credits.approve',
     'investors.view', 'investors.create', 'investors.update',
+    'investment_advisors.view', 'investment_advisors.create', 'investment_advisors.update',
+    'investment_prospects.view', 'investment_prospects.create', 'investment_prospects.update',
+    'investment_prospects.reassign', 'investment_prospect_interactions.view', 'investment_prospect_interactions.create',
+    'investment_crm_settings.view', 'investment_crm_settings.update',
     'store.view', 'store.manage-products', 'store.manage-settings', 'store.manage-shipping',
     'store.manage-coupons', 'store.manage-orders', 'store.verify-receipts',
 ];
@@ -38,8 +42,9 @@ return [
         'administrador' => 'Administrador (legado)',
         'administrador_sector' => 'Administrador de sector',
         'consulta' => 'Consulta',
+        'asesor_inversiones' => 'Asesor de Inversiones',
     ],
-    'assignable' => ['superadministrador', 'gerente', 'secretaria', 'cajero', 'caja'],
+    'assignable' => ['superadministrador', 'gerente', 'secretaria', 'cajero', 'caja', 'asesor_inversiones'],
     'descriptions' => [
         'caja' => 'Gestión operativa de cobros, pagos y consulta financiera autorizada.',
     ],
@@ -56,6 +61,11 @@ return [
             'cash_deposits.view_all', 'cash_deposits.confirm', 'cash_deposits.reject',
             'affiliate_access.view',
             'credits.view', 'investors.view', 'store.view',
+            'investment_advisors.view',
+            'investment_prospects.view',
+            'investment_prospects.update', 'investment_prospects.reassign',
+            'investment_prospect_interactions.view', 'investment_prospect_interactions.create',
+            'investment_crm_settings.view',
         ],
         'secretaria' => [
             'dashboard.view', 'users.view', 'affiliates.view', 'affiliates.create', 'affiliates.update',
@@ -90,5 +100,6 @@ return [
             'credentials.print', 'reports.view',
         ],
         'consulta' => ['dashboard.view', 'affiliates.view', 'payments.view', 'reports.view', 'credits.view', 'store.view'],
+        'asesor_inversiones' => ['investment_prospects.view', 'investment_prospects.update', 'investment_prospect_interactions.view', 'investment_prospect_interactions.create'],
     ],
 ];

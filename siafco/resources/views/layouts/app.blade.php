@@ -3,8 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'SIAFCO' }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @if(request()->routeIs('investments.crm.*', 'investments.prospects.*', 'investments.advisors.*')) @vite('resources/css/crm.css') @endif
     @if(!empty($credentialAssets))
         @vite('resources/css/credential.css')
     @endif
@@ -20,8 +22,11 @@
             $canViewCollectionReport = $user->isInternal() && $user->hasRole(['superadministrador', 'administrador', 'gerente', 'caja', 'cajero']);
             $canManagePaymentQr = $user->hasRole(['administrador', 'superadministrador', 'secretaria']);
             $canViewAffiliation = $canRegisterOfficeAffiliation || $canViewCollectionReport || $user->hasPermission('affiliates.view') || $user->hasPermission('payments.view') || $user->hasPermission('credentials.view') || $user->hasPermission('reports.view');
-            $canManageInvestments = $user->hasPermission('investors.view')
-                && $user->hasRole(['superadministrador', 'administrador', 'gerente', 'caja', 'cajero']);
+            $canViewInvestmentAdvisors = $user->hasPermission('investment_advisors.view');
+            $canViewInvestmentProspects = $user->hasPermission('investment_prospects.view');
+            $canViewInvestmentCrm = $canViewInvestmentAdvisors || $canViewInvestmentProspects;
+            $canManageInvestments = ($user->hasPermission('investors.view') || $canViewInvestmentAdvisors || $canViewInvestmentProspects)
+                && $user->hasRole(['superadministrador', 'administrador', 'gerente', 'caja', 'cajero', 'asesor_inversiones']);
             $canCreateInvestments = $user->hasPermission('investors.create');
             $canUpdateInvestments = $user->hasPermission('investors.update');
             $canViewCredits = $user->hasPermission('credits.view')
@@ -50,7 +55,8 @@
                 request()->routeIs('cash-deposits.dashboard', 'cash-deposits.store') => 'cash',
                 request()->routeIs('admin.dashboard') => 'home',
                 request()->routeIs('affiliates.*', 'affiliate-benefits.*', 'sectors.*', 'plans.*', 'payments.*', 'admin.collections.*', 'admin.payments.*', 'cash-deposits.*', 'credentials.*', 'credenciales.*', 'institutional-qr.*', 'reports.*', 'affiliation.*', 'public-affiliation.admin.*') => 'affiliation',
-                request()->routeIs('investments.*') && ! request()->routeIs('investments.panel') => 'investments',
+                request()->routeIs('investments.crm.*', 'investments.prospects.*', 'investments.advisors.*') => 'investment-crm',
+                request()->routeIs('investments.*') && ! request()->routeIs('investments.panel') => 'formal-investments',
                 request()->routeIs('credits.*') => 'credits',
                 request()->routeIs('admin.store.*') => 'store',
                 request()->routeIs('administration.*', 'admin.users.*') => 'administration',
@@ -68,6 +74,10 @@
                 'credentials.index' => 'credit-card', 'public-affiliation.qr.show' => 'qr-code', 'institutional-qr.show' => 'qr-code',
                 'reports.index' => 'chart', 'affiliation.settings.edit' => 'settings', 'investments.dashboard' => 'chart',
                 'investments.investors.index' => 'users', 'investments.investor-types.index' => 'users',
+                'investments.advisors.index' => 'users',
+                'investments.prospects.index' => 'file-text',
+                'investments.crm.dashboard' => 'chart', 'investments.crm.kanban' => 'package',
+                'investments.crm.settings.edit' => 'settings',
                 'investments.reservations.index' => 'file-text', 'investments.lots.create' => 'credit-card',
                 'investments.lots.index' => 'package', 'investments.returns.index' => 'chart',
                 'investments.receipts.index' => 'receipt', 'investments.approvals.index' => 'check',
@@ -87,9 +97,9 @@
                 'investments.panel' => 'chart',
             ];
 
-            $navLink = function (string $route, string $label, array $params = [], array|string $active = []) use ($routeIcons) {
+            $navLink = function (string $route, string $label, array $params = [], array|string $active = [], ?bool $forcedActive = null) use ($routeIcons) {
                 $activePatterns = $active ?: [$route];
-                $isActive = request()->routeIs(...(array) $activePatterns);
+                $isActive = $forcedActive ?? request()->routeIs(...(array) $activePatterns);
                 $icon = view('components.ui.icon', [
                     'name' => $routeIcons[$route] ?? 'circle',
                     'attributes' => new \Illuminate\View\ComponentAttributeBag(['class' => 'h-4 w-4']),
@@ -193,28 +203,50 @@
                         </section>
                     @endif
 
-                    @if($canManageInvestments)
-                        <section class="nav-module" data-accordion-module="investments">
-                            <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'investments' ? 'true' : 'false' }}">
-                                <span class="flex items-center gap-3"><x-ui.icon name="chart" class="h-4 w-4" />Accionistas e inversiones</span><span class="nav-chevron">⌄</span>
+                    @if($canViewInvestmentCrm)
+                        <section class="nav-module" data-accordion-module="investment-crm">
+                            <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'investment-crm' ? 'true' : 'false' }}">
+                                <span class="flex items-center gap-3"><x-ui.icon name="users" class="h-4 w-4" />CRM de inversiones</span><span class="nav-chevron">⌄</span>
                             </button>
-                            <div class="nav-module-panel {{ $openModule === 'investments' ? '' : 'hidden' }}">
-                                {!! $navLink('investments.dashboard', 'Dashboard de inversiones', [], ['investments.dashboard']) !!}
-                                {!! $navLink('investments.investors.index', 'Accionistas', [], ['investments.investors.*']) !!}
-                                {!! $navLink('investments.investor-types.index', 'Tipos de inversionista', [], ['investments.investor-types.*']) !!}
-                                {!! $navLink('investments.reservations.index', 'Reservas', [], ['investments.reservations.*']) !!}
-                                @if($canCreateInvestments)
-                                    {!! $navLink('investments.lots.create', 'Venta de acciones', [], ['investments.lots.create']) !!}
+                            <div class="nav-module-panel {{ $openModule === 'investment-crm' ? '' : 'hidden' }}">
+                                @if($canViewInvestmentProspects)
+                                    {!! $navLink('investments.crm.dashboard', 'Panel CRM', [], ['investments.crm.dashboard']) !!}
+                                    {!! $navLink('investments.crm.kanban', 'Kanban', [], ['investments.crm.kanban']) !!}
+                                    {!! $navLink('investments.prospects.index', 'Prospectos', [], ['investments.prospects.*'], request()->routeIs('investments.prospects.*') && ! request()->filled('follow_up')) !!}
+                                    {!! $navLink('investments.prospects.index', 'Seguimientos', ['follow_up' => 'pending'], ['investments.prospects.*'], request()->routeIs('investments.prospects.*') && request()->filled('follow_up')) !!}
                                 @endif
-                                {!! $navLink('investments.lots.index', 'Lotes de inversion', [], ['investments.lots.index', 'investments.lots.show']) !!}
-                                {!! $navLink('investments.returns.index', 'Rendimientos mensuales', [], ['investments.returns.*']) !!}
-                                {!! $navLink('investments.returns.index', 'Bonos de produccion minera', ['bonus' => 1], ['investments.returns.*']) !!}
-                                {!! $navLink('investments.receipts.index', 'Recibos', [], ['investments.receipts.*']) !!}
-                                {!! $navLink('investments.approvals.index', 'Aprobaciones', [], ['investments.approvals.*']) !!}
-                                {!! $navLink('investments.reports.index', 'Reportes de inversiones', [], ['investments.reports.*']) !!}
-                                @if($canUpdateInvestments)
-                                    {!! $navLink('investments.settings.edit', 'Configuracion de inversiones', [], ['investments.settings.*']) !!}
+                                @if($canViewInvestmentAdvisors)
+                                    {!! $navLink('investments.advisors.index', 'Asesores', [], ['investments.advisors.*']) !!}
                                 @endif
+                                @if($user->hasPermission('investment_crm_settings.view'))
+                                    {!! $navLink('investments.crm.settings.edit', 'Configuración', [], ['investments.crm.settings.*']) !!}
+                                @endif
+                            </div>
+                        </section>
+                    @endif
+
+                    @if($user->hasPermission('investors.view'))
+                        <section class="nav-module" data-accordion-module="formal-investments">
+                            <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'formal-investments' ? 'true' : 'false' }}">
+                                <span class="flex items-center gap-3"><x-ui.icon name="chart" class="h-4 w-4" />Inversiones formales</span><span class="nav-chevron">⌄</span>
+                            </button>
+                            <div class="nav-module-panel {{ $openModule === 'formal-investments' ? '' : 'hidden' }}">
+                                    {!! $navLink('investments.dashboard', 'Dashboard de inversiones', [], ['investments.dashboard']) !!}
+                                    {!! $navLink('investments.investors.index', 'Accionistas', [], ['investments.investors.*']) !!}
+                                    {!! $navLink('investments.investor-types.index', 'Tipos de inversionista', [], ['investments.investor-types.*']) !!}
+                                    {!! $navLink('investments.reservations.index', 'Reservas', [], ['investments.reservations.*']) !!}
+                                    @if($canCreateInvestments)
+                                        {!! $navLink('investments.lots.create', 'Venta de acciones', [], ['investments.lots.create']) !!}
+                                    @endif
+                                    {!! $navLink('investments.lots.index', 'Lotes de inversion', [], ['investments.lots.index', 'investments.lots.show']) !!}
+                                    {!! $navLink('investments.returns.index', 'Rendimientos mensuales', [], ['investments.returns.*']) !!}
+                                    {!! $navLink('investments.returns.index', 'Bonos de produccion minera', ['bonus' => 1], ['investments.returns.*']) !!}
+                                    {!! $navLink('investments.receipts.index', 'Recibos', [], ['investments.receipts.*']) !!}
+                                    {!! $navLink('investments.approvals.index', 'Aprobaciones', [], ['investments.approvals.*']) !!}
+                                    {!! $navLink('investments.reports.index', 'Reportes de inversiones', [], ['investments.reports.*']) !!}
+                                    @if($canUpdateInvestments)
+                                        {!! $navLink('investments.settings.edit', 'Configuracion de inversiones', [], ['investments.settings.*']) !!}
+                                    @endif
                             </div>
                         </section>
                     @endif

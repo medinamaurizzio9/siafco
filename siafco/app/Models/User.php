@@ -79,6 +79,11 @@ class User extends Authenticatable
         return $this->hasOne(Investor::class, 'person_id', 'person_id');
     }
 
+    public function investmentAdvisor()
+    {
+        return $this->hasOne(InvestmentAdvisor::class);
+    }
+
     public function uploadedStoreReceipts()
     {
         return $this->hasMany(StoreOrderReceipt::class, 'uploaded_by_user_id');

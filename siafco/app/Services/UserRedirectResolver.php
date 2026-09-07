@@ -102,6 +102,7 @@ class UserRedirectResolver
     {
         foreach ([
             'dashboard.view' => 'admin.dashboard',
+            'investment_prospects.view' => 'investments.crm.dashboard',
             'affiliates.view' => 'affiliates.index',
             'payments.view' => 'payments.index',
             'credentials.view' => 'credentials.index',
@@ -125,6 +126,7 @@ class UserRedirectResolver
         }
 
         return match (true) {
+            str_starts_with($path, 'inversiones/crm'), str_starts_with($path, 'inversiones/prospectos') => $user->hasPermission('investment_prospects.view'),
             $path === 'dashboard' => $user->hasPermission('dashboard.view'),
             str_starts_with($path, 'afiliados') => $user->hasPermission('affiliates.view'),
             str_starts_with($path, 'pagos') => $user->hasPermission('payments.view'),

@@ -1,0 +1,14 @@
+<?php
+namespace App\Http\Controllers\InvestmentCrm;
+use App\Http\Controllers\Controller; use App\Services\InvestmentAdvisorAuthService; use App\Services\InvestmentAdvisorService; use App\Support\InvestmentCrmDate; use Illuminate\Http\Request; use Illuminate\Support\Facades\Storage;
+class AdvisorPortalController extends Controller
+{
+ private function advisor(Request $r){ return app(InvestmentAdvisorAuthService::class)->advisor($r); }
+ public function dashboard(Request $r){ $a=$this->advisor($r); $q=$a->currentProspects(); [$s,$e]=InvestmentCrmDate::dayBounds(); return view('investment-crm.advisor.dashboard',['advisor'=>$a,'counts'=>['total'=>(clone $q)->count(),'captured'=>(clone $q)->where('status','captured')->count(),'transition'=>(clone $q)->where('status','in_transition')->count(),'closed'=>(clone $q)->where('status','closed')->count(),'today'=>(clone $q)->whereBetween('next_follow_up_at',[$s,$e])->count(),'overdue'=>(clone $q)->where('next_follow_up_at','<',now())->count()]]); }
+ public function kanban(Request $r){ $a=$this->advisor($r); return view('investment-crm.advisor.kanban',['advisor'=>$a,'groups'=>$a->currentProspects()->with('currentAdvisor')->latest('captured_at')->get()->groupBy('status')]); }
+ public function prospects(Request $r){ $a=$this->advisor($r); return view('investment-crm.advisor.prospects',['advisor'=>$a,'prospects'=>$a->currentProspects()->latest('captured_at')->paginate(15)]); }
+ public function followUps(Request $r){ $a=$this->advisor($r); [$s,$e]=InvestmentCrmDate::dayBounds(); $all=$a->currentProspects()->whereNotNull('next_follow_up_at')->orderBy('next_follow_up_at')->get(); return view('investment-crm.advisor.follow-ups',['advisor'=>$a,'today'=>$all->whereBetween('next_follow_up_at',[$s,$e]),'overdue'=>$all->where('next_follow_up_at','<',now()),'upcoming'=>$all->where('next_follow_up_at','>',$e)]); }
+ public function profile(Request $r, InvestmentAdvisorService $service){ $a=$this->advisor($r); $qrAvailable=$this->ensureQr($a,$service); return view('investment-crm.advisor.profile',['advisor'=>$a,'access'=>app(InvestmentAdvisorAuthService::class)->access($r),'publicUrl'=>route('investments.advisors.public',$a->public_token),'qrUrl'=>$qrAvailable?Storage::disk('public')->url($a->qrPath()):null]); }
+ public function downloadQr(Request $r, InvestmentAdvisorService $service){ $a=$this->advisor($r); abort_unless($this->ensureQr($a,$service),404,'QR no disponible. Contacta al administrador.'); return Storage::disk('public')->download($a->qrPath(),"QR-{$a->advisor_number}.png"); }
+ private function ensureQr($advisor, InvestmentAdvisorService $service): bool { if(Storage::disk('public')->exists($advisor->qrPath())) return true; try { $service->generateQr($advisor); } catch (\Throwable) { return false; } return Storage::disk('public')->exists($advisor->qrPath()); }
+}

@@ -1,5 +1,7 @@
 import './bootstrap';
 import './public-affiliation-form';
+import './investment-crm-kanban';
+import './investment-crm-profile';
 import { initPhotoCroppers } from './components/photo-cropper';
 
 document.addEventListener('DOMContentLoaded', () => {

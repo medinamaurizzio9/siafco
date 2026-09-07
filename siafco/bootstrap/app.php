@@ -46,6 +46,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'mobile.affiliate.active' => \App\Http\Middleware\EnsureActiveMobileStoreAffiliate::class,
             'password.changed' => \App\Http\Middleware\EnsurePasswordIsChanged::class,
             'mobile.affiliate' => \App\Http\Middleware\EnsureMobileAffiliateAccess::class,
+            'investment.crm.advisor' => \App\Http\Middleware\EnsureInvestmentAdvisorAuthenticated::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

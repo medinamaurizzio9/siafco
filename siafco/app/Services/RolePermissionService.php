@@ -44,6 +44,7 @@ class RolePermissionService
     {
         $groups = [
             'Dashboard' => ['dashboard.'],
+            'CRM de Inversiones' => ['investment_advisors.', 'investment_prospects.', 'investment_prospect_interactions.'],
             'Afiliacion' => ['affiliates.', 'affiliate_access.', 'investors.'],
             'Tesoreria' => ['payments.', 'cash_deposits.', 'credits.'],
             'Credenciales' => ['credentials.'],

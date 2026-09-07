@@ -47,6 +47,16 @@ use App\Http\Controllers\Admin\Store\SalesController as StoreSalesController;
 use App\Http\Controllers\Admin\Store\ShippingRateController as StoreShippingRateController;
 use App\Http\Controllers\Investments\DashboardController as InvestmentDashboardController;
 use App\Http\Controllers\Investments\InvestmentLotController;
+use App\Http\Controllers\Investments\InvestmentAdvisorController;
+use App\Http\Controllers\Investments\InvestmentAdvisorPublicController;
+use App\Http\Controllers\Investments\InvestmentProspectController;
+use App\Http\Controllers\Investments\InvestmentCrmController;
+use App\Http\Controllers\Investments\InvestmentProspectActionController;
+use App\Http\Controllers\Investments\InvestmentCrmSettingsController;
+use App\Http\Controllers\InvestmentCrm\AdvisorAuthController;
+use App\Http\Controllers\InvestmentCrm\AdvisorPortalController;
+use App\Http\Controllers\InvestmentCrm\AdvisorProspectController;
+use App\Http\Controllers\InvestmentCrm\AdvisorManualProspectController;
 use App\Http\Controllers\Investments\InvestorController;
 use App\Http\Controllers\Investments\InvestorPanelController;
 use App\Http\Controllers\Investments\InvestorTypeController;
@@ -65,6 +75,33 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::get('/verificar/{token}', [VerificationController::class, 'show'])->name('verify.show');
+Route::get('/inversiones/r/{token}', [InvestmentAdvisorPublicController::class, 'showByToken'])
+    ->name('investments.advisors.public');
+Route::post('/inversiones/r/{token}', [InvestmentAdvisorPublicController::class, 'store'])
+    ->middleware('throttle:10,1')->name('investments.advisors.public.store');
+
+Route::prefix('crm/inversiones')->name('investment-crm.advisor.')->group(function () {
+    Route::get('/acceso', [AdvisorAuthController::class, 'create'])->name('login');
+    Route::post('/acceso', [AdvisorAuthController::class, 'store'])->middleware('throttle:5,1')->name('login.store');
+    Route::middleware('investment.crm.advisor:true')->group(function () {
+        Route::get('/cambiar-pin', [AdvisorAuthController::class, 'editPin'])->name('pin.edit');
+        Route::post('/cambiar-pin', [AdvisorAuthController::class, 'updatePin'])->name('pin.update');
+        Route::post('/salir', [AdvisorAuthController::class, 'logout'])->name('logout');
+    });
+    Route::middleware('investment.crm.advisor')->group(function () {
+        Route::get('/', [AdvisorPortalController::class, 'dashboard'])->name('dashboard');
+        Route::get('/kanban', [AdvisorPortalController::class, 'kanban'])->name('kanban');
+        Route::get('/prospectos', [AdvisorPortalController::class, 'prospects'])->name('prospects');
+        Route::get('/prospectos/nuevo', [AdvisorManualProspectController::class, 'create'])->name('prospects.create');
+        Route::post('/prospectos', [AdvisorManualProspectController::class, 'store'])->middleware('throttle:10,1')->name('prospects.store');
+        Route::get('/prospectos/{prospect}', [AdvisorProspectController::class, 'show'])->name('prospects.show');
+        Route::post('/prospectos/{prospect}/interacciones', [AdvisorProspectController::class, 'interaction'])->name('prospects.interactions.store');
+        Route::patch('/prospectos/{prospect}/estado', [AdvisorProspectController::class, 'status'])->name('prospects.status');
+        Route::get('/seguimientos', [AdvisorPortalController::class, 'followUps'])->name('follow-ups');
+        Route::get('/perfil', [AdvisorPortalController::class, 'profile'])->name('profile');
+        Route::get('/mi-qr/descargar', [AdvisorPortalController::class, 'downloadQr'])->name('qr.download');
+    });
+});
 
 Route::prefix('afiliacion')->name('public-affiliation.')->group(function () {
     Route::get('/', [PublicAffiliationController::class, 'index'])->middleware('throttle:public-affiliation-read')->name('index');
@@ -281,6 +318,49 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
     Route::get('/panel-accionista', [InvestorPanelController::class, 'index'])
         ->middleware('role:accionista,afiliado,administrador,caja,cajero')
         ->name('investments.panel');
+
+    Route::prefix('inversiones/asesores')->name('investments.advisors.')
+        ->middleware(['role:administrador,superadministrador,gerente', 'permission:investment_advisors.view'])
+        ->group(function () {
+            Route::get('/', [InvestmentAdvisorController::class, 'index'])->name('index');
+            Route::get('/crear', [InvestmentAdvisorController::class, 'create'])
+                ->middleware('permission:investment_advisors.create')->name('create');
+            Route::post('/', [InvestmentAdvisorController::class, 'store'])
+                ->middleware('permission:investment_advisors.create')->name('store');
+            Route::get('/{advisor}', [InvestmentAdvisorController::class, 'show'])->name('show');
+            Route::get('/{advisor}/editar', [InvestmentAdvisorController::class, 'edit'])
+                ->middleware('permission:investment_advisors.update')->name('edit');
+            Route::put('/{advisor}', [InvestmentAdvisorController::class, 'update'])
+                ->middleware('permission:investment_advisors.update')->name('update');
+            Route::get('/{advisor}/qr/descargar', [InvestmentAdvisorController::class, 'downloadQr'])
+                ->name('qr.download');
+            Route::post('/{advisor}/acceso/generar', [InvestmentAdvisorController::class, 'generateAccess'])->middleware('permission:investment_advisors.update')->name('access.generate');
+            Route::post('/{advisor}/acceso/restablecer-pin', [InvestmentAdvisorController::class, 'resetPin'])->middleware('permission:investment_advisors.update')->name('access.reset');
+            Route::post('/{advisor}/acceso/activar', [InvestmentAdvisorController::class, 'enableAccess'])->middleware('permission:investment_advisors.update')->name('access.enable');
+            Route::post('/{advisor}/acceso/desactivar', [InvestmentAdvisorController::class, 'disableAccess'])->middleware('permission:investment_advisors.update')->name('access.disable');
+            Route::post('/{advisor}/acceso/desbloquear', [InvestmentAdvisorController::class, 'unlockAccess'])->middleware('permission:investment_advisors.update')->name('access.unlock');
+        });
+
+    Route::prefix('inversiones/prospectos')->name('investments.prospects.')
+        ->middleware(['role:administrador,superadministrador,gerente,asesor_inversiones', 'permission:investment_prospects.view'])
+        ->group(function () {
+            Route::get('/', [InvestmentProspectController::class, 'index'])->name('index');
+            Route::get('/crear', [InvestmentProspectController::class, 'create'])
+                ->middleware('permission:investment_prospects.create')->name('create');
+            Route::post('/', [InvestmentProspectController::class, 'store'])
+                ->middleware(['permission:investment_prospects.create', 'throttle:10,1'])->name('store');
+            Route::get('/{prospect}', [InvestmentProspectController::class, 'show'])->name('show');
+            Route::patch('/{prospect}/estado', [InvestmentProspectActionController::class, 'status'])->middleware('permission:investment_prospects.update')->name('status');
+            Route::post('/{prospect}/interacciones', [InvestmentProspectActionController::class, 'interaction'])->middleware('permission:investment_prospect_interactions.create')->name('interactions.store');
+            Route::patch('/{prospect}/reasignar', [InvestmentProspectActionController::class, 'reassign'])->middleware('permission:investment_prospects.reassign')->name('reassign');
+        });
+    Route::prefix('inversiones/crm')->name('investments.crm.')->middleware(['role:administrador,superadministrador,gerente'])->group(function(){
+        Route::get('/',[InvestmentCrmController::class,'dashboard'])->middleware('permission:investment_prospects.view')->name('dashboard');
+        Route::get('/kanban',[InvestmentCrmController::class,'kanban'])->middleware('permission:investment_prospects.view')->name('kanban');
+        Route::get('/configuracion',[InvestmentCrmSettingsController::class,'edit'])->middleware('permission:investment_crm_settings.view')->name('settings.edit');
+        Route::put('/configuracion',[InvestmentCrmSettingsController::class,'update'])->middleware('permission:investment_crm_settings.update')->name('settings.update');
+        Route::post('/configuracion/restaurar',[InvestmentCrmSettingsController::class,'restore'])->middleware('permission:investment_crm_settings.update')->name('settings.restore');
+    });
 
     Route::prefix('inversiones')->name('investments.')
         ->middleware(['role:administrador,gerente,caja,cajero', 'permission:investors.view'])
