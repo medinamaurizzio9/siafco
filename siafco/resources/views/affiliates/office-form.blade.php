@@ -1,8 +1,8 @@
-<x-layouts.app title="Afiliacion en oficina">
+<x-layouts.app title="Afiliación en Oficina">
     <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-            <h2 class="text-2xl font-black text-[#0b1f3a]">Nueva afiliacion presencial</h2>
-            <p class="text-sm text-slate-600">Registro interno con pago en efectivo, QR o transferencia recibido en oficina.</p>
+            <h2 class="text-2xl font-black text-[#0b1f3a]">Afiliación en Oficina</h2>
+            <p class="text-sm text-slate-600">Registro presencial de nuevos afiliados y recepción de su pago.</p>
         </div>
         <a class="btn-secondary" href="{{ route('affiliates.index') }}">Volver</a>
     </div>

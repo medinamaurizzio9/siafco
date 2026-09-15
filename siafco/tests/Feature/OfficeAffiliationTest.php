@@ -6,12 +6,14 @@ use App\Models\Affiliate;
 use App\Models\AffiliationPayment;
 use App\Models\AffiliationPlan;
 use App\Models\AuditLog;
+use App\Models\InstitutionalSetting;
 use App\Models\Person;
 use App\Models\Sector;
 use App\Models\User;
 use App\Services\CredentialService;
 use App\Support\PaymentStatus;
 use App\Support\PublicAffiliationCatalogs;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
@@ -172,7 +174,7 @@ class OfficeAffiliationTest extends TestCase
         $this->assertNull($payment->confirmed_by);
         $this->assertSame(150.0, (float) $payment->paid_amount);
         $this->assertNull($payment->confirmed_at);
-        $this->assertNull($payment->receipt_number);
+        $this->assertMatchesRegularExpression('/^REC-\d{4}-\d{6}$/', $payment->receipt_number);
         $this->assertNull($affiliate->registration_number);
         $this->assertNull($affiliate->credential);
 
@@ -287,7 +289,7 @@ class OfficeAffiliationTest extends TestCase
         $this->assertDatabaseCount('affiliates', 1);
         $this->assertDatabaseCount('affiliation_payments', 1);
         $this->assertSame(PaymentStatus::UNDER_REVIEW, $payment->fresh()->status);
-        $this->assertNull($payment->fresh()->receipt_number);
+        $this->assertMatchesRegularExpression('/^REC-\d{4}-\d{6}$/', $payment->fresh()->receipt_number);
         $this->assertSame('pendiente_pago', $payment->affiliate->fresh()->status);
     }
 
@@ -367,7 +369,7 @@ class OfficeAffiliationTest extends TestCase
         $this->assertSame('TRX-OFFICE-001', $payment->reference_number);
         $this->assertNull($payment->confirmed_by);
         $this->assertNull($payment->confirmed_at);
-        $this->assertNull($payment->receipt_number);
+        $this->assertMatchesRegularExpression('/^REC-\d{4}-\d{6}$/', $payment->receipt_number);
         $this->assertSame('pendiente_pago', $affiliate->status);
         $this->assertNull($affiliate->credential);
         $this->assertDatabaseHas('audit_logs', ['action' => 'office_qr_registered', 'auditable_id' => $payment->id]);
@@ -537,7 +539,7 @@ class OfficeAffiliationTest extends TestCase
         $payment->refresh();
         $this->assertSame(PaymentStatus::REJECTED, $payment->status);
         $this->assertSame($reviewer->id, $payment->rejected_by);
-        $this->assertNull($payment->receipt_number);
+        $this->assertMatchesRegularExpression('/^REC-\d{4}-\d{6}$/', $payment->receipt_number);
         $this->assertNotSame('activo', $payment->affiliate->status);
         $this->assertNull($payment->affiliate->credential);
         $this->assertDatabaseHas('audit_logs', ['action' => 'office_qr_rejected', 'auditable_id' => $payment->id]);
@@ -593,7 +595,7 @@ class OfficeAffiliationTest extends TestCase
             ->assertSee('Pendiente de verificación de pago')
             ->assertSee('En revision')
             ->assertSee('Pendiente de aprobación')
-            ->assertDontSee('Ver/Imprimir recibo')
+            ->assertSee('Ver/Imprimir recibo')
             ->assertSee('Ver pago')
             ->assertDontSee('Ver afiliado');
     }
@@ -708,11 +710,11 @@ class OfficeAffiliationTest extends TestCase
         Storage::disk('public')->put('institutional/logo/logo.png', base64_decode(
             'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII='
         ));
-        \App\Models\InstitutionalSetting::current()->update([
+        InstitutionalSetting::current()->update([
             'logo_path' => 'institutional/logo/logo.png',
             'institution_name' => 'COOPERATIVA TIERRA BENDITA',
         ]);
-        \App\Models\InstitutionalSetting::clearCurrentCache();
+        InstitutionalSetting::clearCurrentCache();
         [$sector, $plan] = $this->catalog();
         $admin = $this->internalUser('superadministrador');
 
@@ -732,14 +734,14 @@ class OfficeAffiliationTest extends TestCase
 
         $html = view('payments.receipt', [
             'payment' => $payment,
-            'institution' => \App\Models\InstitutionalSetting::current(),
+            'institution' => InstitutionalSetting::current(),
             'statusLabel' => PaymentStatus::label($payment->status),
             'logoSrc' => 'data:image/png;base64,'.base64_encode(Storage::disk('public')->get('institutional/logo/logo.png')),
         ])->render();
 
         $this->assertStringContainsString('Logo institucional', $html);
         $this->assertStringContainsString('SIAFCO', $html);
-        $this->assertStringContainsString('<h1 class="receipt-title">RECIBO</h1>', $html);
+        $this->assertStringContainsString('<h1 class="receipt-title">RECIBO DE PAGO</h1>', $html);
         $this->assertStringContainsString('COOPERATIVA TIERRA BENDITA', mb_strtoupper($html));
         $this->assertStringContainsString('Total pagado', $html);
         $this->assertStringContainsString($receiptNumber, $html);
@@ -755,9 +757,9 @@ class OfficeAffiliationTest extends TestCase
             ->assertOk()
             ->assertHeader('Content-Type', 'application/pdf');
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payments.receipt', [
+        $pdf = Pdf::loadView('payments.receipt', [
             'payment' => $payment,
-            'institution' => \App\Models\InstitutionalSetting::current(),
+            'institution' => InstitutionalSetting::current(),
             'statusLabel' => PaymentStatus::label($payment->status),
             'logoSrc' => 'data:image/png;base64,'.base64_encode(Storage::disk('public')->get('institutional/logo/logo.png')),
         ])->setPaper('a4');

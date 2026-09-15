@@ -7,7 +7,6 @@ use App\Models\Affiliate;
 use App\Models\AffiliationPayment;
 use App\Models\AffiliationPlan;
 use App\Models\AuditLog;
-use App\Models\DigitalCredential;
 use App\Models\Person;
 use App\Models\PublicAffiliationRequest;
 use App\Models\Sector;
@@ -370,7 +369,7 @@ class ManualTreasuryPaymentTest extends TestCase
             $this->assertSame(PaymentStatus::UNDER_REVIEW, $payment->status);
             $this->assertSame($secretary->id, $payment->registered_by);
             $this->assertNull($payment->confirmed_by);
-            $this->assertNull($payment->receipt_number);
+            $this->assertMatchesRegularExpression('/^REC-\d{4}-\d{6}$/', $payment->receipt_number);
         }
 
         $this->assertSame(PaymentStatus::CONFIRMED, $historical->fresh()->status);

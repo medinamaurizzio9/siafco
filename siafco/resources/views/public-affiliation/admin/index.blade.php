@@ -1,6 +1,6 @@
-<x-layouts.app title="Solicitudes públicas">
+<x-layouts.app title="Solicitudes Web">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div><h2 class="text-2xl font-black text-[#0b1f3a]">Solicitudes públicas</h2><p class="text-sm text-slate-600">Registro, pago y revisión de autoafiliaciones.</p></div>
+        <div><h2 class="text-2xl font-black text-[#0b1f3a]">Solicitudes Web</h2><p class="text-sm text-slate-600">Solicitudes iniciadas desde el canal público/web con trazabilidad de SOL, pago y revisión.</p></div>
         <form class="flex flex-wrap gap-2">
             <input class="form-input w-64" name="search" value="{{ request('search') }}" placeholder="Código, nombre, CI o transacción">
             <select class="form-input w-48" name="status"><option value="">Todos los estados</option>@foreach(['pending_payment','payment_submitted','under_review','approved','rejected'] as $status)<option value="{{ $status }}" @selected(request('status')===$status)>{{ \App\Support\AffiliationStatusPresenter::label($status) }}</option>@endforeach</select>
@@ -8,10 +8,10 @@
         </form>
     </div>
     <div class="mt-5 overflow-x-auto bg-white shadow-sm">
-        <table class="table"><thead><tr><th>Código</th><th>Solicitante</th><th>Sector / plan</th><th>Monto</th><th>Transacción</th><th>Estado</th><th></th></tr></thead>
+        <table class="table"><thead><tr><th>SOL</th><th>Solicitante</th><th>Sector / plan</th><th>Monto</th><th>Transacción</th><th>Estado</th><th></th></tr></thead>
         <tbody>@forelse($applications as $application)<tr>
             <td class="font-bold">{{ $application->request_code }}</td>
-            <td>{{ $application->person->full_name }}<br><span class="text-xs text-slate-500">CI {{ $application->person->ci }}</span></td>
+            <td>{{ $application->person->full_name }}<br><span class="text-xs text-slate-500">CI {{ $application->person->ci }}</span>@if($application->affiliate?->registration_number)<br><span class="text-xs font-bold text-slate-500">Registro definitivo: {{ $application->affiliate->registration_number }}</span>@endif</td>
             <td>{{ $application->sector->name }}<br><span class="text-xs text-slate-500">{{ $application->plan->name }}</span></td>
             <td>BOB {{ number_format($application->amount_due, 2) }}</td>
             <td>{{ $application->payment?->transaction_number ?: 'Sin pago' }}</td>

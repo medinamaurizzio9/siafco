@@ -238,7 +238,7 @@ class InternalUserManagementTest extends TestCase
             ->assertOk()
             ->assertSee('Centro de operaciones')
             ->assertSee('Afiliados')
-            ->assertSee('Pagos de afiliacion')
+            ->assertSee('Todos los Pagos')
             ->assertSee('Credenciales')
             ->assertSee('Reportes de afiliacion')
             ->assertDontSee('NUEVO USUARIO INTERNO')

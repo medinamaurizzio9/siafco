@@ -104,7 +104,9 @@ class MiniStoreWebNavigationTest extends TestCase
             ->assertSee('id="mobile-sidebar"', false)
             ->assertSee('aria-controls="mobile-sidebar"', false)
             ->assertSee('mobile-bottom-nav', false)
-            ->assertSee('Navegacion rapida del afiliado', false);
+            ->assertSee('Navegacion rapida del afiliado', false)
+            ->assertSee(route('store.catalog.index'), false)
+            ->assertSee('Tienda');
 
         $this->actingAs($admin)->get(route('admin.dashboard'))
             ->assertOk()

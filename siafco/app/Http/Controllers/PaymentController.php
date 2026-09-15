@@ -11,12 +11,11 @@ use App\Models\AffiliationPayment;
 use App\Models\InstitutionalSetting;
 use App\Models\User;
 use App\Services\AuditService;
-use App\Services\PaymentBalanceService;
 use App\Services\PaymentActionAuthorization;
+use App\Services\PaymentBalanceService;
 use App\Services\PaymentLifecycleService;
 use App\Services\PaymentReceiptService;
 use App\Support\PaymentStatus;
-use App\Support\TextNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Storage;
@@ -28,7 +27,7 @@ class PaymentController extends Controller
         abort_unless($request->user()->hasPermission('payments.view'), 403);
 
         $user = $request->user();
-        $payments = AffiliationPayment::with('affiliate.sector', 'registrar', 'cashier')
+        $payments = AffiliationPayment::with('affiliate.sector', 'publicRequest', 'registrar', 'cashier')
             ->when($user->hasRole(['caja', 'cajero']), function ($query) use ($user) {
                 $query->where('registered_by', $user->id);
             })
@@ -43,6 +42,10 @@ class PaymentController extends Controller
                 $query->where(function ($q) use ($search) {
                     $q->where('reference_number', 'like', "%{$search}%")
                         ->orWhere('transaction_number', 'like', "%{$search}%")
+                        ->orWhere('receipt_number', 'like', "%{$search}%")
+                        ->orWhereHas('publicRequest', function ($application) use ($search) {
+                            $application->where('request_code', 'like', "%{$search}%");
+                        })
                         ->orWhereHas('affiliate', function ($affiliate) use ($search) {
                             $affiliate->where('full_name', 'like', "%{$search}%")
                                 ->orWhere('ci', 'like', "%{$search}%")
@@ -156,8 +159,7 @@ class PaymentController extends Controller
         AffiliationPayment $payment,
         PaymentLifecycleService $payments,
         PaymentActionAuthorization $authorization
-    )
-    {
+    ) {
         abort_unless($authorization->canAuthorizeConfirmation($request->user(), $payment), 403);
         $isOfficeQr = $payment->source === 'office_qr';
         $payments->confirm($payment, $request->user());
@@ -182,8 +184,7 @@ class PaymentController extends Controller
         AffiliationPayment $payment,
         PaymentLifecycleService $payments,
         PaymentActionAuthorization $authorization
-    )
-    {
+    ) {
         abort_unless($authorization->canAuthorizeRejection($request->user(), $payment), 403);
         $isOfficeQr = $payment->source === 'office_qr';
         $payments->reject($payment, $request->user(), $request->validated('rejection_reason'));
@@ -219,7 +220,7 @@ class PaymentController extends Controller
     public function receipt(Request $request, AffiliationPayment $payment, PaymentReceiptService $receipts)
     {
         abort_unless($this->canViewReceipt($request), 403);
-        abort_unless(PaymentStatus::isConfirmed($payment->status) && filled($payment->receipt_number), 404);
+        abort_unless($payment->canRenderReceipt(), 404);
 
         return Response::make($receipts->output($payment), 200, [
             'Content-Type' => 'application/pdf',
@@ -230,7 +231,7 @@ class PaymentController extends Controller
     public function downloadReceipt(Request $request, AffiliationPayment $payment, PaymentReceiptService $receipts)
     {
         abort_unless($request->user()->hasPermission('payments.download_receipt'), 403);
-        abort_unless(PaymentStatus::isConfirmed($payment->status) && filled($payment->receipt_number), 404);
+        abort_unless($payment->canRenderReceipt(), 404);
         AuditService::record('payment_receipt_downloaded', $payment, ['receipt_number' => $payment->receipt_number]);
 
         return Response::make($receipts->output($payment), 200, [
@@ -245,5 +246,4 @@ class PaymentController extends Controller
 
         return (bool) ($user?->hasPermission('payments.view_receipt') || ($user?->isInternal() && $user->hasRole('caja')));
     }
-
 }

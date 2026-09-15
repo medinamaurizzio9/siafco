@@ -2,12 +2,12 @@
 
 namespace App\Services;
 
-use App\Events\PaymentConfirmed;
-use App\Events\PaymentRejected;
-use App\Events\PaymentVoided;
 use App\Events\AffiliateActivated;
 use App\Events\CredentialActivated;
 use App\Events\CredentialCreated;
+use App\Events\PaymentConfirmed;
+use App\Events\PaymentRejected;
+use App\Events\PaymentVoided;
 use App\Models\Affiliate;
 use App\Models\AffiliationPayment;
 use App\Models\PublicAffiliationRequest;
@@ -25,9 +25,9 @@ class PaymentLifecycleService
 {
     public function __construct(
         private CredentialService $credentials,
-        private PaymentBalanceService $balances
-    ) {
-    }
+        private PaymentBalanceService $balances,
+        private PaymentReceiptNumberService $receiptNumbers
+    ) {}
 
     public function createManual(Affiliate $affiliate, array $data, ?UploadedFile $voucher, User $actor): AffiliationPayment
     {
@@ -60,6 +60,7 @@ class PaymentLifecycleService
                     'source' => 'manual_admin',
                     'registered_by' => $actor->id,
                 ]);
+                $this->receiptNumbers->assignIfMissing($payment);
 
                 if ($request) {
                     $request->update([
@@ -140,7 +141,7 @@ class PaymentLifecycleService
                     'registered_by' => $actor->id,
                     'confirmed_by' => null,
                     'confirmed_at' => null,
-                    'receipt_number' => null,
+                    'receipt_number' => $existing?->receipt_number,
                     'rejected_by' => null,
                     'rejected_at' => null,
                     'rejection_reason' => null,
@@ -157,6 +158,7 @@ class PaymentLifecycleService
                 } else {
                     $payment = AffiliationPayment::create($values);
                 }
+                $this->receiptNumbers->assignIfMissing($payment);
 
                 $application->update([
                     'status' => 'payment_submitted',
@@ -280,7 +282,7 @@ class PaymentLifecycleService
                 'rejected_by' => null,
                 'rejected_at' => null,
                 'rejection_reason' => null,
-                'receipt_number' => $payment->receipt_number ?: $this->nextReceiptNumber(),
+                'receipt_number' => $payment->receipt_number ?: $this->receiptNumbers->nextReceiptNumber(),
             ]);
 
             if (! $affiliate->registration_number && $affiliate->sector_id) {
@@ -443,27 +445,6 @@ class PaymentLifecycleService
         unset($values['voucher_path']);
 
         return $values;
-    }
-
-    private function nextReceiptNumber(): string
-    {
-        $year = now()->format('Y');
-        $prefix = "REC-{$year}-";
-        $latest = AffiliationPayment::query()
-            ->where('receipt_number', 'like', $prefix.'%')
-            ->lockForUpdate()
-            ->orderByDesc('receipt_number')
-            ->value('receipt_number');
-
-        $next = $latest && preg_match('/^REC-\d{4}-(\d{6})$/', $latest, $matches)
-            ? ((int) $matches[1]) + 1
-            : 1;
-
-        do {
-            $number = $prefix.str_pad((string) $next++, 6, '0', STR_PAD_LEFT);
-        } while (AffiliationPayment::where('receipt_number', $number)->exists());
-
-        return $number;
     }
 
     private function clearCaches(): void

@@ -1,9 +1,9 @@
-<x-layouts.app title="Pago en secretaría">
+<x-layouts.app title="Pagos en Oficina">
     <section class="section-card">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-                <h1 class="text-2xl font-black text-siafco-primary-900">Pago en secretaría</h1>
-                <p class="mt-1 text-sm text-slate-600">Busca a una persona previamente registrada para cargar su pago de afiliación.</p>
+                <h1 class="text-2xl font-black text-siafco-primary-900">Pagos en Oficina</h1>
+                <p class="mt-1 text-sm text-slate-600">Operaciones recibidas presencialmente para solicitudes o afiliados ya registrados.</p>
             </div>
             @if(auth()->user()->hasRole(['superadministrador', 'administrador', 'gerente', 'caja', 'cajero']))
                 <a class="btn-secondary" href="{{ route('affiliates.office.create') }}">Nueva afiliación en oficina</a>
@@ -31,7 +31,7 @@
             @else
                 <div class="overflow-x-auto">
                     <table class="table">
-                        <thead><tr><th>Nombre</th><th>CI</th><th>Sector</th><th>Plan</th><th>Estado</th><th>Pago</th><th>Acción</th></tr></thead>
+                        <thead><tr><th>Nombre</th><th>CI</th><th>Sector</th><th>Plan</th><th>Estado</th><th>Pago</th><th>Recibo</th><th>Cajero</th><th>Acción</th></tr></thead>
                         <tbody>
                         @foreach($applications as $application)
                             @php
@@ -46,6 +46,8 @@
                                 <td>
                                     @if($payment)<x-payment-status :status="$payment->status" size="sm" />@else<span class="font-bold text-amber-700">Sin pago</span>@endif
                                 </td>
+                                <td class="font-bold">{{ $payment?->receipt_number ?: 'Sin recibo' }}</td>
+                                <td>{{ $payment?->registrar?->name ?? 'Sin registro' }}</td>
                                 <td>
                                     @if($application->can_load_payment)
                                         <a class="btn-primary" href="{{ route('public-affiliation.admin.show', ['application' => $application, 'cargar_pago' => 1]) }}">Cargar pago</a>

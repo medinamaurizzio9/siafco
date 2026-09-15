@@ -4,14 +4,15 @@ namespace App\Services;
 
 use App\Models\AffiliationPayment;
 use App\Models\InstitutionalSetting;
-use App\Support\PaymentStatus;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class PaymentReceiptService
 {
+    public function __construct(private AffiliationPaymentReceiptPresenter $presenter) {}
+
     public function output(AffiliationPayment $payment): string
     {
-        $payment->loadMissing('affiliate.sector', 'affiliate.plan', 'registrar', 'cashier');
+        $receipt = $this->presenter->present($payment);
 
         AuditService::record('receipt_printed', $payment, [
             'payment_id' => $payment->id,
@@ -24,9 +25,9 @@ class PaymentReceiptService
         $institution = InstitutionalSetting::current();
 
         return Pdf::loadView('payments.receipt', [
-            'payment' => $payment,
+            'payment' => $receipt['payment'],
+            'receipt' => $receipt,
             'institution' => $institution,
-            'statusLabel' => PaymentStatus::label($payment->status),
             'logoSrc' => $this->dataUri($institution->logoAbsolutePath()),
         ])->setPaper('a4')->output();
     }

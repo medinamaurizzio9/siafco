@@ -248,18 +248,28 @@
     </section>
 
     <section class="mt-6 overflow-hidden rounded-lg border border-slate-200 bg-white" id="payments">
-        <div class="border-b border-slate-200 px-4 py-3"><h3 class="font-black text-[#0b1f3a]">Pagos</h3></div>
+        <div class="border-b border-slate-200 px-4 py-3">
+            <p class="text-xs font-black uppercase text-[#b8942f]">Pagos y recibos</p>
+            <h3 class="font-black text-[#0b1f3a]">Historial asociado al afiliado</h3>
+        </div>
         <div class="mobile-card-list p-4">
             @forelse($affiliate->payments as $payment)
                 <article class="mobile-list-card">
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <h4 class="mobile-list-card__title">{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</h4>
-                            <p class="mobile-list-card__meta">{{ $payment->transaction_number ?: 'Pendiente' }}</p>
+                            <p class="mobile-list-card__meta">{{ $payment->receipt_number ?: 'Sin recibo' }} · {{ $payment->publicRequest?->request_code ?: 'Sin SOL' }}</p>
+                            <span class="badge mt-2 {{ \App\Support\PaymentSourcePresenter::badgeClasses($payment->source) }}">{{ \App\Support\PaymentSourcePresenter::channel($payment->source) }}</span>
                         </div>
                         <x-payment-status :status="$payment->status" size="sm" />
                     </div>
-                    <a class="btn-secondary mt-4 min-h-12 w-full" href="{{ route('payments.show', $payment) }}">Ver</a>
+                    <p class="mt-3 text-sm text-slate-600">{{ $payment->paid_at?->format('d/m/Y H:i') ?? $payment->payment_date?->format('d/m/Y') ?? 'Sin fecha' }} · {{ \App\Support\PaymentMethodPresenter::label($payment->payment_method) }}</p>
+                    <div class="mt-4 grid gap-2">
+                        <a class="btn-secondary min-h-12 w-full" href="{{ route('payments.show', $payment) }}">Ver pago</a>
+                        @if((auth()->user()->hasPermission('payments.view_receipt') || auth()->user()->hasRole('caja')) && $payment->canRenderReceipt())
+                            <a class="btn-secondary min-h-12 w-full" href="{{ route('admin.payments.receipt', $payment) }}" target="_blank">Reimprimir recibo</a>
+                        @endif
+                    </div>
                 </article>
             @empty
                 <p class="text-sm text-slate-600">Sin pagos registrados.</p>
@@ -267,15 +277,22 @@
         </div>
         <div class="desktop-table overflow-x-auto">
             <table class="table">
-                <thead><tr><th>Monto</th><th>Transaccion</th><th>Estado</th><th>Acciones</th></tr></thead>
+                <thead><tr><th>Fecha</th><th>N.º recibo</th><th>Monto</th><th>Metodo</th><th>Origen</th><th>Estado</th><th>SOL</th><th>Acciones</th></tr></thead>
                 <tbody>
                 @foreach($affiliate->payments as $payment)
                     <tr>
+                        <td>{{ $payment->paid_at?->format('d/m/Y H:i') ?? $payment->payment_date?->format('d/m/Y') ?? 'Sin fecha' }}</td>
+                        <td class="font-black">{{ $payment->receipt_number ?: 'Sin recibo' }}</td>
                         <td>{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</td>
-                        <td>{{ $payment->transaction_number ?: 'Pendiente' }}</td>
+                        <td>{{ \App\Support\PaymentMethodPresenter::label($payment->payment_method) }}</td>
+                        <td><span class="badge {{ \App\Support\PaymentSourcePresenter::badgeClasses($payment->source) }}">{{ \App\Support\PaymentSourcePresenter::channel($payment->source) }}</span></td>
                         <td><x-payment-status :status="$payment->status" size="sm" /></td>
-                        <td>
+                        <td>{{ $payment->publicRequest?->request_code ?: 'No aplica' }}</td>
+                        <td class="min-w-56">
                             <a class="btn-secondary" href="{{ route('payments.show', $payment) }}">Ver</a>
+                            @if((auth()->user()->hasPermission('payments.view_receipt') || auth()->user()->hasRole('caja')) && $payment->canRenderReceipt())
+                                <a class="btn-secondary" href="{{ route('admin.payments.receipt', $payment) }}" target="_blank">Reimprimir</a>
+                            @endif
                             @if(app(\App\Services\PaymentActionAuthorization::class)->canConfirm(auth()->user(), $payment))
                                 <form class="inline" method="post" action="{{ route('payments.confirm', $payment) }}">@csrf<button class="btn-primary">Confirmar</button></form>
                             @endif

@@ -5,22 +5,23 @@ namespace App\Http\Controllers;
 use App\Models\Affiliate;
 use App\Models\AffiliationPayment;
 use App\Models\AffiliationPlan;
+use App\Models\AuditLog;
 use App\Models\InstitutionalSetting;
 use App\Models\Person;
 use App\Models\Sector;
 use App\Models\User;
-use App\Services\AuditService;
-use App\Services\AffiliateDuplicateDetector;
+use App\Rules\ActivePlanForSector;
 use App\Services\AffiliateDeletionService;
-use App\Services\AffiliateTimelineService;
+use App\Services\AffiliateDuplicateDetector;
 use App\Services\AffiliatePasswordService;
 use App\Services\AffiliatePhotoProcessor;
+use App\Services\AffiliateTimelineService;
+use App\Services\AuditService;
 use App\Services\PaymentBalanceService;
 use App\Support\PublicAffiliationCatalogs;
 use App\Support\TextNormalizer;
-use App\Rules\ActivePlanForSector;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
@@ -50,7 +51,7 @@ class AffiliateController extends Controller
     public function create()
     {
         return view('affiliates.form', [
-            'affiliate' => new Affiliate(),
+            'affiliate' => new Affiliate,
             'sectors' => Sector::where('is_active', true)->orderBy('name')->get(),
             'plans' => AffiliationPlan::available()->orderBy('name')->get(),
             'regionals' => PublicAffiliationCatalogs::regionalOptions(),
@@ -140,9 +141,19 @@ class AffiliateController extends Controller
         PaymentBalanceService $balances,
         AffiliateTimelineService $timeline,
         AffiliateDuplicateDetector $duplicates
-    )
-    {
-        $affiliate->load('sector', 'plan', 'payments.cashier', 'credential', 'user', 'person');
+    ) {
+        $affiliate->load([
+            'sector',
+            'plan',
+            'payments' => fn ($query) => $query
+                ->with('publicRequest', 'plan', 'registrar', 'cashier')
+                ->latest('paid_at')
+                ->latest('created_at')
+                ->limit(25),
+            'credential',
+            'user',
+            'person',
+        ]);
 
         return view('affiliates.show', [
             'affiliate' => $affiliate,
@@ -150,7 +161,7 @@ class AffiliateController extends Controller
             'timeline' => auth()->user()->hasPermission('affiliates.view_timeline') ? $timeline->forAffiliate($affiliate, 20) : collect(),
             'duplicates' => $duplicates->forAffiliate($affiliate),
             'auditLogs' => auth()->user()->hasPermission('affiliates.view_audit')
-                ? \App\Models\AuditLog::where('auditable_type', Affiliate::class)->where('auditable_id', $affiliate->id)->latest()->limit(20)->get()
+                ? AuditLog::where('auditable_type', Affiliate::class)->where('auditable_id', $affiliate->id)->latest()->limit(20)->get()
                 : collect(),
             'sectors' => Sector::where('is_active', true)->orderBy('name')->get(),
             'plans' => AffiliationPlan::available()->orderBy('name')->get(),

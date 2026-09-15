@@ -8,10 +8,12 @@ use App\Models\AffiliationPayment;
 use App\Models\Person;
 use App\Services\AffiliatePhotoProcessor;
 use App\Services\AuditService;
+use App\Services\PaymentReceiptService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Response as ResponseFactory;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -21,7 +23,7 @@ class AffiliateProfileController extends Controller
     {
         $affiliate = $this->affiliate($request);
         $payments = $affiliate->payments()
-            ->with('plan')
+            ->with('plan', 'publicRequest')
             ->latest('payment_date')
             ->latest('created_at')
             ->paginate(10)
@@ -115,6 +117,21 @@ class AffiliateProfileController extends Controller
             basename($payment->voucher_path),
             ['Content-Disposition' => 'inline; filename="'.basename($payment->voucher_path).'"']
         );
+    }
+
+    public function showGeneratedReceipt(
+        Request $request,
+        AffiliationPayment $payment,
+        PaymentReceiptService $receipts
+    ): Response {
+        $affiliate = $this->affiliate($request);
+        abort_unless($payment->affiliate_id === $affiliate->id, 403);
+        abort_unless($payment->canRenderReceipt(), 404);
+
+        return ResponseFactory::make($receipts->output($payment), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="recibo-'.($payment->receipt_number ?: $payment->id).'.pdf"',
+        ]);
     }
 
     private function affiliate(Request $request): Affiliate

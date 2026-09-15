@@ -49,6 +49,36 @@ class MiniStoreWebCatalogCartTest extends TestCase
         $this->actingAs($user)->get(route('store.catalog.show', $visible->slug))->assertOk()->assertSee($visible->name);
     }
 
+    public function test_catalog_uses_mobile_store_shell_with_real_categories_and_cart_flow(): void
+    {
+        $user = $this->affiliate()->user;
+        $category = StoreCategory::create(['name' => 'Uniformes', 'slug' => 'uniformes', 'active' => true]);
+        $product = $this->product([
+            'store_category_id' => $category->id,
+            'name' => 'Camisa institucional SIAFCO',
+            'short_description' => 'Prenda oficial para actividades cooperativas.',
+            'affiliate_price' => 77,
+        ]);
+
+        $this->actingAs($user)->get(route('store.catalog.index'))
+            ->assertOk()
+            ->assertSee('store-pwa-shell', false)
+            ->assertSee('Tienda')
+            ->assertSee('Uniformes')
+            ->assertSee('Beneficios')
+            ->assertSee(route('affiliate.benefits'), false)
+            ->assertSee(route('store.orders.index'), false)
+            ->assertSee('Camisa institucional SIAFCO')
+            ->assertSee('Bs 77.00')
+            ->assertSee('product_public_code', false)
+            ->assertSee('Agregar');
+
+        $this->actingAs($user)->post(route('store.cart.store'), [
+            'product_public_code' => $product->public_code,
+            'quantity' => 1,
+        ])->assertRedirect(route('store.cart.show'));
+    }
+
     public function test_cart_adds_consolidates_updates_removes_and_clears_without_storing_prices(): void
     {
         $user = $this->affiliate()->user;

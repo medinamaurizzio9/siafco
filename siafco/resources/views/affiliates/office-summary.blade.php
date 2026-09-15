@@ -47,7 +47,7 @@
                     @if(auth()->user()->hasPermission('credentials.print') && $affiliate->credential)
                         <a class="btn-secondary" href="{{ route('credentials.print', $affiliate) }}" target="_blank">Imprimir credencial</a>
                     @endif
-                    @if((auth()->user()->hasPermission('payments.view_receipt') || auth()->user()->hasRole('caja')) && \App\Support\PaymentStatus::isConfirmed($payment->status) && $payment->receipt_number)
+                    @if((auth()->user()->hasPermission('payments.view_receipt') || auth()->user()->hasRole('caja')) && $payment->canRenderReceipt())
                         <a class="btn-primary" href="{{ route('admin.payments.receipt', $payment) }}" target="_blank">Ver/Imprimir recibo</a>
                     @endif
                 </div>

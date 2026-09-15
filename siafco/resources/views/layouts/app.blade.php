@@ -2,8 +2,15 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="theme-color" content="#0b1f3a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SIAFCO">
+    <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+    <link rel="icon" href="{{ asset('pwa/icon-192.svg') }}" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="{{ asset('pwa/icon-192.svg') }}">
     <title>{{ $title ?? 'SIAFCO' }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @if(request()->routeIs('investments.crm.*', 'investments.prospects.*', 'investments.advisors.*')) @vite('resources/css/crm.css') @endif
@@ -12,7 +19,7 @@
     @endif
     @stack('styles')
 </head>
-<body class="text-siafco-text">
+<body class="text-siafco-text {{ auth()->check() && (auth()->user()->user_type === 'affiliate' || auth()->user()->hasRole('afiliado')) ? 'affiliate-app-shell' : '' }}">
 <div class="ds-shell" data-sidebar-shell>
     @auth
         @php
@@ -47,7 +54,8 @@
             $canManageStoreOrders = $user->isInternal() && $user->hasPermission('store.manage-orders');
             $isPersonalOnly = $user->hasRole(['afiliado', 'accionista']) && ! $canViewAffiliation && ! $canManageInvestments;
             $isAffiliateExperience = $user->user_type === 'affiliate' || $user->hasRole('afiliado');
-            $activeAffiliateStore = $user->user_type === 'affiliate' && $user->is_active && $user->affiliate?->status === 'activo';
+            $layoutAffiliate = $isAffiliateExperience ? $user->affiliate()->first() : null;
+            $activeAffiliateStore = $isAffiliateExperience && $layoutAffiliate?->status === 'activo';
             $canViewPersonalPanel = $user->hasRole(['afiliado', 'accionista']);
             $homeRoute = app(\App\Services\UserRedirectResolver::class)->homeRoute($user);
 
@@ -93,19 +101,20 @@
                 'administration.roles.index' => 'key', 'administration.audit.index' => 'file-text',
                 'institutional-settings.edit' => 'building', 'settings.security' => 'key', 'settings.system' => 'settings',
                 'affiliate.panel' => 'home', 'affiliate.profile.show' => 'user', 'affiliate.credential.preview' => 'credit-card',
+                'affiliate.benefits' => 'gift',
                 'store.catalog.index' => 'package', 'store.cart.show' => 'package', 'store.orders.index' => 'receipt',
                 'investments.panel' => 'chart',
             ];
 
             $navLink = function (string $route, string $label, array $params = [], array|string $active = [], ?bool $forcedActive = null) use ($routeIcons) {
                 $activePatterns = $active ?: [$route];
-                $isActive = $forcedActive ?? request()->routeIs(...(array) $activePatterns);
+                $isNavActive = $forcedActive ?? request()->routeIs(...(array) $activePatterns);
                 $icon = view('components.ui.icon', [
                     'name' => $routeIcons[$route] ?? 'circle',
                     'attributes' => new \Illuminate\View\ComponentAttributeBag(['class' => 'h-4 w-4']),
                 ])->render();
 
-                return '<a class="'.($isActive ? 'nav-link nav-link-active gap-3' : 'nav-link gap-3').'" href="'.route($route, $params).'" data-sidebar-link>'.$icon.'<span>'.e($label).'</span></a>';
+                return '<a class="'.($isNavActive ? 'nav-link nav-link-active gap-3' : 'nav-link gap-3').'" href="'.route($route, $params).'" data-sidebar-link>'.$icon.'<span>'.e($label).'</span></a>';
             };
 
             $soon = fn (string $route, string $label) => $navLink($route, $label);
@@ -156,19 +165,19 @@
                                     {!! $navLink('admin.dashboard', 'Dashboard', [], ['admin.dashboard']) !!}
                                 @endif
                                 @if($user->hasPermission('affiliates.view'))
-                                    {!! $navLink('affiliates.index', 'Afiliados', [], ['affiliates.*']) !!}
-                                @endif
-                                @if($user->hasPermission('payments.create'))
-                                    {!! $navLink('public-affiliation.admin.secretary-payments', 'Pago en secretaria', [], ['public-affiliation.admin.secretary-payments']) !!}
+                                    {!! $navLink('affiliates.index', 'Afiliados', [], ['affiliates.index', 'affiliates.show', 'affiliates.edit']) !!}
                                 @endif
                                 @if($user->hasPermission('payments.view'))
-                                    {!! $navLink('public-affiliation.admin.index', 'Solicitudes publicas', [], ['public-affiliation.admin.index', 'public-affiliation.admin.show']) !!}
-                                @endif
-                                @if($user->hasPermission('payments.view'))
-                                    {!! $navLink('payments.index', 'Pagos de afiliacion', [], ['payments.*']) !!}
+                                    {!! $navLink('public-affiliation.admin.index', 'Solicitudes Web', [], ['public-affiliation.admin.index', 'public-affiliation.admin.show']) !!}
                                 @endif
                                 @if($canRegisterOfficeAffiliation)
-                                    {!! $navLink('affiliates.office.create', '+ Afiliacion en oficina', [], ['affiliates.office.*']) !!}
+                                    {!! $navLink('affiliates.office.create', 'Afiliacion en Oficina', [], ['affiliates.office.*']) !!}
+                                @endif
+                                @if($user->hasPermission('payments.create'))
+                                    {!! $navLink('public-affiliation.admin.secretary-payments', 'Pagos en Oficina', [], ['public-affiliation.admin.secretary-payments']) !!}
+                                @endif
+                                @if($user->hasPermission('payments.view'))
+                                    {!! $navLink('payments.index', 'Todos los Pagos', [], ['payments.*']) !!}
                                 @endif
                                 @if($canManageAffiliation)
                                     {!! $navLink('sectors.index', 'Sectores', [], ['sectors.*']) !!}
@@ -339,12 +348,13 @@
                             {!! $navLink('affiliate.panel', 'Panel principal', [], ['affiliate.panel']) !!}
                             {!! $navLink('affiliate.profile.show', 'Mi perfil', [], ['affiliate.profile.*']) !!}
                             {!! $navLink('affiliate.credential.preview', 'Mi credencial', [], ['affiliate.credential.*']) !!}
+                            <a class="nav-link gap-3" href="{{ route('affiliate.profile.show') }}#payments" data-sidebar-link><x-ui.icon name="credit-card" class="h-4 w-4" /><span>Mis pagos</span></a>
+                            {!! $navLink('affiliate.benefits', 'Beneficios', [], ['affiliate.benefits']) !!}
                             @if($activeAffiliateStore)
                                 {!! $navLink('store.catalog.index', 'Mini tienda', [], ['store.catalog.*']) !!}
                                 {!! $navLink('store.cart.show', 'Mi carrito ('.collect(session('store_cart.lines', []))->sum('quantity').')', [], ['store.cart.*']) !!}
                                 {!! $navLink('store.orders.index', 'Mis pedidos', [], ['store.orders.*', 'store.checkout.*']) !!}
                             @endif
-                            <a class="nav-link gap-3" href="{{ route('affiliate.profile.show') }}#payments" data-sidebar-link><x-ui.icon name="credit-card" class="h-4 w-4" /><span>Mis pagos</span></a>
                         @endif
                         @if($user->hasRole('accionista'))
                             {!! $navLink('investments.panel', 'Panel del accionista', [], ['investments.panel']) !!}
@@ -386,9 +396,11 @@
                             <span class="block truncate text-xs font-bold text-siafco-muted">{{ $institution->institution_name }}</span>
                             <span class="block truncate text-sm font-black text-siafco-primary-900">{{ auth()->user()->name }}</span>
                         </span>
-                        <button class="btn-icon" type="button" aria-label="Notificaciones preparadas">
-                            <x-ui.icon name="bell" class="h-5 w-5" />
-                        </button>
+                        @unless($isAffiliateExperience)
+                            <button class="btn-icon" type="button" aria-label="Notificaciones preparadas">
+                                <x-ui.icon name="bell" class="h-5 w-5" />
+                            </button>
+                        @endunless
                         <span class="grid h-10 w-10 place-items-center rounded-full bg-siafco-primary-900 text-sm font-black text-white" aria-hidden="true">
                             {{ mb_substr(auth()->user()->name, 0, 1) }}
                         </span>
@@ -423,7 +435,7 @@
                 </div>
             @endif
             </div>
-            {{ $slot }}
+            {!! $content ?? $slot !!}
         </section>
         @auth
             <footer class="ds-footer">
@@ -440,21 +452,23 @@
                         <x-ui.icon name="credit-card" class="h-5 w-5" />
                         <span>Credencial</span>
                     </a>
-                    <a href="{{ route('affiliate.profile.show') }}#payments" class="mobile-bottom-nav__item">
+                    <a href="{{ route('affiliate.profile.show') }}#payments" class="mobile-bottom-nav__item {{ request()->routeIs('affiliate.profile.*') && request()->fullUrlIs('*#payments') ? 'mobile-bottom-nav__item-active' : '' }}">
                         <x-ui.icon name="chart" class="h-5 w-5" />
                         <span>Pagos</span>
                     </a>
-                    @if($activeAffiliateStore)
-                        <a href="{{ route('store.catalog.index') }}" class="mobile-bottom-nav__item {{ request()->routeIs('store.*') ? 'mobile-bottom-nav__item-active' : '' }}" @if(request()->routeIs('store.*')) aria-current="page" @endif>
-                            <x-ui.icon name="briefcase" class="h-5 w-5" />
-                            <span>Tienda</span>
-                        </a>
-                    @endif
+                    <a href="{{ route('store.catalog.index') }}" class="mobile-bottom-nav__item {{ request()->routeIs('store.*') ? 'mobile-bottom-nav__item-active' : '' }}" @if(request()->routeIs('store.*')) aria-current="page" @endif>
+                        <x-ui.icon name="package" class="h-5 w-5" />
+                        <span>Tienda</span>
+                    </a>
                     <a href="{{ route('affiliate.profile.show') }}" class="mobile-bottom-nav__item {{ request()->routeIs('affiliate.profile.*') ? 'mobile-bottom-nav__item-active' : '' }}" @if(request()->routeIs('affiliate.profile.*')) aria-current="page" @endif>
                         <x-ui.icon name="user" class="h-5 w-5" />
                         <span>Perfil</span>
                     </a>
                 </nav>
+                <button class="affiliate-install-cta" type="button" data-pwa-install hidden>
+                    <x-ui.icon name="download" class="h-5 w-5" />
+                    <span>Instalar SIAFCO</span>
+                </button>
             @endif
         @endauth
     </main>

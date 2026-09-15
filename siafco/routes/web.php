@@ -126,11 +126,16 @@ Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->grou
             ->middleware('throttle:5,1')->name('affiliate.profile.password.update');
         Route::get('/mi-perfil/pagos/{payment}/comprobante', [AffiliateProfileController::class, 'showPaymentReceipt'])
             ->name('affiliate.profile.payments.receipt');
+        Route::get('/mi-perfil/pagos/{payment}/recibo', [AffiliateProfileController::class, 'showGeneratedReceipt'])
+            ->name('affiliate.profile.payments.generated-receipt');
     });
 
     Route::get('/panel-afiliado', [AffiliatePanelController::class, 'index'])
         ->middleware('role:afiliado')
         ->name('affiliate.panel');
+    Route::get('/beneficios', [AffiliatePanelController::class, 'benefits'])
+        ->middleware('role:afiliado')
+        ->name('affiliate.benefits');
 
     Route::prefix('tienda')->name('store.')->middleware(['role:afiliado', 'affiliate.store.active'])->group(function () {
         Route::get('/', [StoreCatalogController::class, 'index'])->name('catalog.index');

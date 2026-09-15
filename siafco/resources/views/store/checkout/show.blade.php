@@ -1,10 +1,12 @@
 <x-layouts.app title="Checkout">
-    <div class="mb-4">
-        <a class="btn-secondary" href="{{ route('store.cart.show') }}">Volver al carrito</a>
-    </div>
+    <div class="store-pwa-shell">
+    <a class="store-pwa-back" href="{{ route('store.cart.show') }}">
+        <x-ui.icon name="arrow-left" class="h-5 w-5" />
+        <span>Carrito</span>
+    </a>
 
-    <div class="grid gap-5 lg:grid-cols-3">
-        <section class="section-card lg:col-span-2">
+    <div class="store-pwa-checkout">
+        <section class="store-pwa-card lg:col-span-2">
             <h2 class="mb-4 text-xl font-black text-[#0b1f3a]">Entrega y cupón</h2>
             <form class="grid gap-4" method="post" action="{{ route('store.orders.store') }}">
                 @csrf
@@ -23,7 +25,7 @@
                 <button class="btn-primary">Crear pedido seguro</button>
             </form>
         </section>
-        <aside class="section-card">
+        <aside class="store-pwa-card">
             <h2 class="mb-4 text-xl font-black text-[#0b1f3a]">Resumen</h2>
             <div class="grid gap-3">
                 @foreach($quote['lines'] as $line)
@@ -36,5 +38,6 @@
                 <p class="text-lg">Total: <strong>Bs {{ $quote['total'] }}</strong></p>
             </div>
         </aside>
+    </div>
     </div>
 </x-layouts.app>

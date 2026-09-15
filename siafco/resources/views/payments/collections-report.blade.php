@@ -4,7 +4,7 @@
             <h2 class="text-2xl font-black text-[#0b1f3a]">Reporte de cobros</h2>
             <p class="text-sm text-slate-600">Consulta de pagos confirmados y en revisión por fecha, cobrador y afiliado.</p>
         </div>
-        <a class="btn-secondary" href="{{ route('payments.index') }}">Pagos de afiliacion</a>
+        <a class="btn-secondary" href="{{ route('payments.index') }}">Todos los Pagos</a>
     </div>
 
     <form class="mb-5 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-3 xl:grid-cols-4" method="get">

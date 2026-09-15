@@ -1,22 +1,28 @@
 <x-layouts.app title="Mi perfil">
-    <div class="mx-auto max-w-6xl space-y-6">
-        <header class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div class="grid gap-4 sm:grid-cols-[72px_1fr_auto] sm:items-center">
-                <div class="mx-auto h-16 w-16 overflow-hidden rounded-full border-2 border-[#d4af37] bg-slate-100">
+    <div class="affiliate-screen">
+        <header class="affiliate-profile-hero">
+            <div class="affiliate-profile-hero__photo">
                     @if($affiliate->photo_path)<img class="h-full w-full object-cover" src="{{ Storage::disk('public')->url($affiliate->photo_path) }}" alt="Fotografía de {{ $affiliate->full_name }}">@else<div class="grid h-full place-items-center font-black text-slate-400">{{ mb_substr($affiliate->full_name, 0, 1) }}</div>@endif
-                </div>
-                <div class="min-w-0 text-center sm:text-left">
-                    <h2 class="break-words text-2xl font-black text-[#0b1f3a]">{{ $affiliate->full_name }}</h2>
-                    <p class="mt-1 font-bold text-[#b8942f]">{{ $affiliate->registration_number }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Gestiona tu información personal y consulta tus datos institucionales.</p>
-                </div>
-                <div class="text-center sm:text-right">
+            </div>
+            <div>
+                <h2>{{ $affiliate->full_name }}</h2>
+                <p>{{ $affiliate->registration_number }}</p>
+                <div class="mt-3">
                     <x-affiliation-status :status="$affiliate->status" size="sm" />
-                    <p class="mt-2 text-xs text-slate-500">Actualizado {{ $affiliate->updated_at->format('d/m/Y') }}</p>
-                    <a class="btn-secondary mt-3 w-full sm:w-auto" href="{{ route('affiliate.panel') }}">VOLVER AL PANEL</a>
                 </div>
             </div>
         </header>
+
+        <section class="affiliate-settings-list">
+            <a href="#personal-data"><x-ui.icon name="user" class="h-5 w-5" /><span><strong>Datos personales</strong><small>Nombre, CI, contacto</small></span><x-ui.icon name="arrow-right" class="h-4 w-4" /></a>
+            <a href="#institutional-data"><x-ui.icon name="users" class="h-5 w-5" /><span><strong>Información de afiliación</strong><small>Sector, regional, fecha</small></span><x-ui.icon name="arrow-right" class="h-4 w-4" /></a>
+            <a href="#security"><x-ui.icon name="key" class="h-5 w-5" /><span><strong>Seguridad</strong><small>Contraseña y acceso</small></span><x-ui.icon name="arrow-right" class="h-4 w-4" /></a>
+            <a href="#payments"><x-ui.icon name="receipt" class="h-5 w-5" /><span><strong>Mis pagos</strong><small>Historial y recibos</small></span><x-ui.icon name="arrow-right" class="h-4 w-4" /></a>
+            <form method="post" action="{{ route('logout') }}" data-confirm-title="Cerrar sesión" data-confirm-message="¿Deseas cerrar tu sesión actual?" data-confirm-accept="Cerrar sesión" data-confirm-variant="warning">
+                @csrf
+                <button type="submit"><x-ui.icon name="log-out" class="h-5 w-5" /><span><strong>Cerrar sesión</strong></span><x-ui.icon name="arrow-right" class="h-4 w-4" /></button>
+            </form>
+        </section>
 
         @if($affiliate->status !== 'activo')
             <div class="rounded border border-amber-300 bg-amber-50 px-4 py-3 font-semibold text-amber-950">
@@ -28,7 +34,7 @@
             @csrf
             @method('PATCH')
 
-            <section class="section-card">
+            <section class="section-card" id="institutional-data">
                 <x-forms.photo-cropper
                     :required="false"
                     :initial-src="$affiliate->photo_path ? Storage::disk('public')->url($affiliate->photo_path) : null"
@@ -39,7 +45,7 @@
                 />
             </section>
 
-            <section class="section-card">
+            <section class="section-card" id="personal-data">
                 <div class="border-b border-slate-200 pb-4">
                     <h3 class="text-lg font-black text-[#0b1f3a]">DATOS INSTITUCIONALES</h3>
                     <p class="mt-1 text-sm text-slate-600">Estos datos forman parte de tu registro institucional. Para solicitar una corrección, comunícate con Secretaría.</p>
@@ -124,7 +130,7 @@
             </section>
         </form>
 
-        <section class="section-card">
+        <section class="section-card" id="security">
             <div class="border-b border-slate-200 pb-4">
                 <p class="text-xs font-black uppercase text-[#b8942f]">Cuenta de acceso</p>
                 <h3 class="mt-1 text-lg font-black text-[#0b1f3a]">SEGURIDAD DE LA CUENTA</h3>
@@ -156,11 +162,14 @@
                 <h3 class="text-lg font-black text-[#0b1f3a]">MIS PAGOS</h3>
                 <p class="mt-1 text-sm text-slate-600">Consulta los pagos registrados en tu cuenta.</p>
             </div>
-            <div class="mt-4 grid gap-3 sm:grid-cols-3">
+            <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <div class="rounded bg-slate-50 p-3"><p class="text-xs font-bold uppercase text-slate-500">Total de pagos</p><p class="mt-1 text-xl font-black text-[#0b1f3a]">{{ $paymentSummary['count'] }}</p></div>
-                <div class="rounded bg-slate-50 p-3"><p class="text-xs font-bold uppercase text-slate-500">Total acumulado</p><p class="mt-1 text-xl font-black text-[#0b1f3a]">BOB {{ number_format($paymentSummary['total'], 2, ',', '.') }}</p></div>
+                <div class="rounded bg-slate-50 p-3"><p class="text-xs font-bold uppercase text-slate-500">Total pagado</p><p class="mt-1 text-xl font-black text-[#0b1f3a]">Bs {{ number_format($paymentSummary['total'], 2, ',', '.') }}</p></div>
                 <div class="rounded bg-slate-50 p-3"><p class="text-xs font-bold uppercase text-slate-500">Último pago</p><p class="mt-1 font-black text-[#0b1f3a]">{{ $paymentSummary['latest'] ? ($paymentSummary['latest']->payment_date ?: $paymentSummary['latest']->created_at)->format('d/m/Y') : 'Sin pagos' }}</p></div>
             </div>
+            <nav class="affiliate-tabs mt-4" aria-label="Origen de pagos">
+                <span class="is-active">Todos</span><span>Oficina</span><span>Web</span><span>App</span>
+            </nav>
             @if($payments->isEmpty())
                 <p class="py-8 text-center font-semibold text-slate-500">No tienes pagos registrados.</p>
             @else
@@ -169,12 +178,12 @@
                         <thead>
                             <tr class="border-b-2 border-[#d4af37] text-xs uppercase text-slate-500">
                                 <th class="p-3">Fecha</th>
-                                <th class="p-3">Comprobante</th>
+                                <th class="p-3">Recibo</th>
                                 <th class="p-3">Concepto</th>
                                 <th class="p-3">Método</th>
+                                <th class="p-3">Origen</th>
                                 <th class="p-3 text-right">Monto</th>
                                 <th class="p-3">Estado</th>
-                                <th class="p-3">Observación</th>
                                 <th class="p-3 text-right">Acción</th>
                             </tr>
                         </thead>
@@ -183,18 +192,17 @@
                                 @php($currency = $payment->plan?->currency ?: 'BOB')
                                 <tr class="border-b border-slate-200 align-top">
                                     <td class="p-3">{{ ($payment->payment_date ?: $payment->submitted_at ?: $payment->created_at)?->format('d/m/Y') }}</td>
-                                    <td class="p-3 font-bold">{{ $payment->transaction_number ?: 'Sin número' }}</td>
+                                    <td class="p-3 font-bold">{{ $payment->receipt_number ?: 'Sin recibo' }}<br><span class="text-xs text-slate-500">{{ $payment->publicRequest?->request_code ?: 'Sin SOL' }}</span><br><span class="text-xs text-slate-500">{{ $payment->transaction_number ?: $payment->reference_number ?: 'Sin transacción' }}</span></td>
                                     <td class="p-3">{{ $payment->plan?->name ?: 'Afiliación' }}</td>
-                                    <td class="p-3">{{ ucfirst(str_replace('_', ' ', $payment->payment_method ?: 'No registrado')) }}</td>
+                                    <td class="p-3">{{ \App\Support\PaymentMethodPresenter::label($payment->payment_method) }}</td>
+                                    <td class="p-3"><span class="badge {{ \App\Support\PaymentSourcePresenter::badgeClasses($payment->source) }}">{{ \App\Support\PaymentSourcePresenter::channel($payment->source) }}</span></td>
                                     <td class="p-3 text-right font-black">{{ $currency }} {{ number_format($payment->paid_amount ?? $payment->amount, 2, ',', '.') }}</td>
-                                    <td class="p-3"><x-affiliation-status :status="$payment->status" size="sm" /></td>
-                                    <td class="max-w-52 p-3">{{ $payment->observations ?: $payment->rejection_reason ?: 'Sin observaciones' }}</td>
+                                    <td class="p-3"><x-payment-status :status="$payment->status" size="sm" /></td>
                                     <td class="p-3 text-right">
-                                        @if($payment->voucher_path)
-                                            <a class="font-black text-[#0b1f3a] underline" href="{{ route('affiliate.profile.payments.receipt', $payment) }}" target="_blank" rel="noopener">VER COMPROBANTE</a>
-                                        @else
-                                            <span class="text-slate-400">No disponible</span>
-                                        @endif
+                                        <div class="flex flex-wrap justify-end gap-2">
+                                            @if($payment->canRenderReceipt())<a class="btn-secondary min-h-11" href="{{ route('affiliate.profile.payments.generated-receipt', $payment) }}" target="_blank" rel="noopener">Ver recibo</a>@endif
+                                            @if($payment->voucher_path)<a class="btn-secondary min-h-11" href="{{ route('affiliate.profile.payments.receipt', $payment) }}" target="_blank" rel="noopener">Comprobante</a>@endif
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach
@@ -210,10 +218,15 @@
                                 <x-affiliation-status :status="$payment->status" size="sm" />
                             </div>
                             <dl class="mt-3 grid gap-2 text-sm">
-                                <div class="flex justify-between gap-3"><dt class="text-slate-500">Comprobante</dt><dd class="text-right font-semibold">{{ $payment->transaction_number ?: 'Sin número' }}</dd></div>
+                                <div class="flex justify-between gap-3"><dt class="text-slate-500">Recibo</dt><dd class="text-right font-semibold">{{ $payment->receipt_number ?: 'Sin recibo' }}</dd></div>
+                                <div class="flex justify-between gap-3"><dt class="text-slate-500">Transacción</dt><dd class="text-right font-semibold">{{ $payment->transaction_number ?: $payment->reference_number ?: 'Sin transacción' }}</dd></div>
+                                <div class="flex justify-between gap-3"><dt class="text-slate-500">Origen</dt><dd><span class="badge {{ \App\Support\PaymentSourcePresenter::badgeClasses($payment->source) }}">{{ \App\Support\PaymentSourcePresenter::channel($payment->source) }}</span></dd></div>
                                 <div class="flex justify-between gap-3"><dt class="text-slate-500">Monto</dt><dd class="font-black">{{ $currency }} {{ number_format($payment->paid_amount ?? $payment->amount, 2, ',', '.') }}</dd></div>
                             </dl>
-                            @if($payment->voucher_path)<a class="mt-3 block text-center text-sm font-black text-[#0b1f3a] underline" href="{{ route('affiliate.profile.payments.receipt', $payment) }}" target="_blank" rel="noopener">VER COMPROBANTE</a>@endif
+                            <div class="mt-3 grid gap-2">
+                                @if($payment->canRenderReceipt())<a class="btn-secondary min-h-12 w-full" href="{{ route('affiliate.profile.payments.generated-receipt', $payment) }}" target="_blank" rel="noopener">Ver recibo</a>@endif
+                                @if($payment->voucher_path)<a class="btn-secondary min-h-12 w-full" href="{{ route('affiliate.profile.payments.receipt', $payment) }}" target="_blank" rel="noopener">Comprobante</a>@endif
+                            </div>
                         </article>
                     @endforeach
                 </div>

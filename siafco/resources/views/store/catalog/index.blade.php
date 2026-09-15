@@ -1,53 +1,79 @@
-<x-layouts.app title="Mini tienda">
-    <div class="mb-4">
-        <a class="btn-secondary" href="{{ route('affiliate.panel') }}">Volver al panel</a>
-    </div>
+<x-layouts.app title="Tienda">
+    @php
+        $selectedCategory = $filters['category'] ?? '';
+        $cartCount = collect(session('store_cart.lines', []))->sum('quantity');
+    @endphp
 
-    <section class="mb-6 rounded bg-[#0b1f3a] p-5 text-white shadow">
-        <p class="text-sm font-bold uppercase text-[#d4af37]">SIAFCO</p>
-        <h2 class="text-2xl font-black">Mini tienda para afiliados</h2>
-        <p class="mt-1 text-sm text-slate-200">Productos institucionales con precios recalculados de forma segura al comprar.</p>
-    </section>
+    <div class="store-pwa-shell">
+        <section class="store-pwa-hero">
+            <div>
+                <p>SIAFCO</p>
+                <h2>Mini tienda</h2>
+                <span>Productos y beneficios para afiliados activos.</span>
+            </div>
+            <a href="{{ route('store.cart.show') }}" aria-label="Abrir carrito">
+                <x-ui.icon name="package" class="h-5 w-5" />
+                @if($cartCount > 0)
+                    <strong>{{ $cartCount }}</strong>
+                @endif
+            </a>
+        </section>
 
-    <form class="mb-5 grid gap-3 rounded bg-white p-4 shadow md:grid-cols-3" method="get">
-        <input class="form-input" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Buscar producto">
-        <select class="form-input" name="category">
-            <option value="">Todas las categorías</option>
+        <form class="store-pwa-search" method="get">
+            <label class="store-pwa-search__box">
+                <x-ui.icon name="search" class="h-5 w-5" />
+                <input name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Buscar producto">
+            </label>
+            @if($selectedCategory)
+                <input type="hidden" name="category" value="{{ $selectedCategory }}">
+            @endif
+            <button class="btn-secondary" aria-label="Buscar productos">
+                <x-ui.icon name="search" class="h-5 w-5" />
+            </button>
+        </form>
+
+        <nav class="store-pwa-tabs" aria-label="Categorías de tienda">
+            <a class="{{ $selectedCategory === '' ? 'is-active' : '' }}" href="{{ route('store.catalog.index', array_filter(['search' => $filters['search'] ?? null])) }}">Todos</a>
             @foreach($categories as $category)
-                <option value="{{ $category->slug }}" @selected(($filters['category'] ?? '') === $category->slug)>{{ $category->name }}</option>
+                <a class="{{ $selectedCategory === $category->slug ? 'is-active' : '' }}" href="{{ route('store.catalog.index', array_filter(['search' => $filters['search'] ?? null, 'category' => $category->slug])) }}">{{ $category->name }}</a>
             @endforeach
-        </select>
-        <button class="btn-secondary">Filtrar</button>
-    </form>
+            <a href="{{ route('affiliate.benefits') }}">Beneficios</a>
+            <a href="{{ route('store.orders.index') }}">Mis pedidos</a>
+        </nav>
 
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        @forelse($products as $product)
-            @php($image = $product->images->first())
-            <article class="rounded bg-white shadow">
-                <a href="{{ route('store.catalog.show', $product->slug) }}" class="block">
-                    <div class="aspect-[4/3] overflow-hidden rounded-t bg-slate-100">
+        <div class="store-pwa-grid">
+            @forelse($products as $product)
+                @php
+                    $image = $product->images->first();
+                    $isAvailable = $product->availability_status === \App\Support\StoreAvailabilityStatus::AVAILABLE;
+                @endphp
+                <article class="store-pwa-product">
+                    <a href="{{ route('store.catalog.show', $product->slug) }}" class="store-pwa-product__media">
                         @if($image)
-                            <img class="h-full w-full object-cover" src="{{ Storage::disk('public')->url($image->path) }}" alt="{{ $image->alt ?: $product->name }}">
+                            <img loading="lazy" src="{{ Storage::disk('public')->url($image->path) }}" alt="{{ $image->alt ?: $product->name }}">
                         @else
-                            <div class="grid h-full place-items-center text-sm text-slate-500">Sin imagen</div>
+                            <span>Sin imagen</span>
                         @endif
+                        <small class="{{ $isAvailable ? 'is-available' : 'is-muted' }}">{{ $product->availability_status }}</small>
+                    </a>
+                    <div class="store-pwa-product__body">
+                        <a href="{{ route('store.catalog.show', $product->slug) }}">
+                            <h3>{{ $product->name }}</h3>
+                        </a>
+                        <p>{{ $product->short_description ?: $product->description }}</p>
+                        <strong>Bs {{ number_format((float) $product->affiliate_price, 2) }}</strong>
+                        <form method="post" action="{{ route('store.cart.store') }}">
+                            @csrf
+                            <input type="hidden" name="product_public_code" value="{{ $product->public_code }}">
+                            <input type="hidden" name="quantity" value="1">
+                            <button class="btn-primary" @disabled(! $isAvailable)>Agregar</button>
+                        </form>
                     </div>
-                    <div class="grid gap-2 p-4">
-                        <div class="flex items-center justify-between gap-2">
-                            <h3 class="font-black text-[#0b1f3a]">{{ $product->name }}</h3>
-                            <span class="rounded bg-[#fff8df] px-2 py-1 text-xs font-bold text-[#6d5312]">{{ $product->availability_status }}</span>
-                        </div>
-                        <p class="line-clamp-2 text-sm text-slate-600">{{ $product->short_description ?: $product->description }}</p>
-                        <p class="text-sm text-slate-500">Regular Bs {{ number_format((float) $product->regular_price, 2) }}</p>
-                        <p class="text-lg font-black text-[#0b1f3a]">Afiliado Bs {{ number_format((float) $product->affiliate_price, 2) }}</p>
-                        <p class="text-xs text-slate-500">{{ implode(' / ', $product->delivery_modes ?? []) }}</p>
-                        <span class="btn-primary text-center">Ver producto</span>
-                    </div>
-                </a>
-            </article>
-        @empty
-            <p class="rounded bg-white p-5 text-slate-600 shadow">No hay productos disponibles con estos filtros.</p>
-        @endforelse
+                </article>
+            @empty
+                <p class="store-pwa-empty">No hay productos disponibles con estos filtros.</p>
+            @endforelse
+        </div>
+        <div class="store-pwa-pagination">{{ $products->links() }}</div>
     </div>
-    <div class="mt-5">{{ $products->links() }}</div>
 </x-layouts.app>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="44" fill="#0b1f3a"/>
+  <circle cx="96" cy="96" r="64" fill="#d4af37"/>
+  <circle cx="96" cy="96" r="52" fill="#06172b"/>
+  <path d="M96 42 132 132H60L96 42Z" fill="#d4af37"/>
+  <path d="M96 68 114 120H78L96 68Z" fill="#0b1f3a"/>
+  <text x="96" y="164" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="800" fill="#ffffff">SIAFCO</text>
+</svg>

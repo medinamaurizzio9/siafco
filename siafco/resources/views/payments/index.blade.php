@@ -1,8 +1,8 @@
-<x-layouts.app title="Pagos de afiliacion">
+<x-layouts.app title="Todos los Pagos">
     <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-            <h2 class="text-2xl font-black text-[#0b1f3a]">Pagos de afiliacion</h2>
-            <p class="text-sm text-slate-600">Registro, revision y trazabilidad de pagos administrativos y moviles.</p>
+            <h2 class="text-2xl font-black text-[#0b1f3a]">Todos los Pagos</h2>
+            <p class="text-sm text-slate-600">Consulta y trazabilidad de pagos de afiliación por todos los canales.</p>
         </div>
         <div class="flex flex-wrap gap-2">
             @if(auth()->user()->isInternal() && auth()->user()->hasRole(['superadministrador','administrador','gerente','caja','cajero']))
@@ -22,7 +22,7 @@
     @endif
 
     <form class="mb-4 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-4">
-        <input class="form-input" name="search" value="{{ request('search') }}" placeholder="Nombre, CI, codigo o referencia">
+        <input class="form-input" name="search" value="{{ request('search') }}" placeholder="Nombre, CI, SOL, registro, recibo o transacción">
         <select class="form-input" name="status">
             <option value="">Todos los estados</option>
             @foreach($statuses as $status)
@@ -37,7 +37,7 @@
         </select>
         <select class="form-input" name="source">
             <option value="">Todos los origenes</option>
-            @foreach(['web' => 'Web', 'mobile' => 'Movil', 'manual_admin' => 'Manual administrativo', 'office_cash' => 'Efectivo en oficina', 'office_qr' => 'QR en oficina'] as $value => $label)
+            @foreach(['web' => 'Web', 'mobile' => 'App', 'manual_admin' => 'Oficina', 'office_cash' => 'Efectivo en oficina', 'office_qr' => 'QR en oficina'] as $value => $label)
                 <option value="{{ $value }}" @selected(request('source') === $value)>{{ $label }}</option>
             @endforeach
         </select>
@@ -56,14 +56,21 @@
         @forelse($payments as $payment)
             <article class="mobile-list-card">
                 <h2 class="mobile-list-card__title">{{ $payment->affiliate?->full_name ?? 'Afiliado no disponible' }}</h2>
-                <p class="mobile-list-card__meta">{{ $payment->affiliate?->registration_number ?: $payment->affiliate?->ci }} · {{ $payment->source ?: 'web' }}</p>
+                <p class="mobile-list-card__meta">{{ $payment->affiliate?->registration_number ?: $payment->affiliate?->ci }} · {{ $payment->publicRequest?->request_code ?: 'Sin SOL' }}</p>
+                <span class="badge mt-2 {{ \App\Support\PaymentSourcePresenter::badgeClasses($payment->source) }}">{{ \App\Support\PaymentSourcePresenter::channel($payment->source) }}</span>
                 <p class="mt-2 text-sm"><span class="text-slate-500">Cobrado por:</span> <strong>{{ $payment->registrar?->name ?? 'Sin registro' }}</strong></p>
                 <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
                     <div><span class="text-slate-500">Monto</span><strong class="block">{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</strong></div>
-                    <div><span class="text-slate-500">Metodo</span><strong class="block">{{ ucfirst((string) $payment->payment_method) }}</strong></div>
+                    <div><span class="text-slate-500">Metodo</span><strong class="block">{{ \App\Support\PaymentMethodPresenter::label($payment->payment_method) }}</strong></div>
+                    <div><span class="text-slate-500">Recibo</span><strong class="block">{{ $payment->receipt_number ?: 'Sin recibo' }}</strong></div>
                     <div class="col-span-2"><x-payment-status :status="$payment->status" size="sm" /></div>
                 </div>
-                <a class="btn-secondary mt-4 min-h-12 w-full" href="{{ route('payments.show', $payment) }}">Ver</a>
+                <div class="mt-4 grid gap-2">
+                    <a class="btn-secondary min-h-12 w-full" href="{{ route('payments.show', $payment) }}">Ver</a>
+                    @if((auth()->user()->hasPermission('payments.view_receipt') || auth()->user()->hasRole('caja')) && $payment->canRenderReceipt())
+                        <a class="btn-secondary min-h-12 w-full" href="{{ route('admin.payments.receipt', $payment) }}" target="_blank">Imprimir recibo</a>
+                    @endif
+                </div>
             </article>
         @empty
             <p class="mobile-list-card text-slate-600">Sin pagos registrados.</p>
@@ -73,7 +80,7 @@
     <div class="desktop-table overflow-hidden rounded-lg border border-slate-200 bg-white">
         <div class="overflow-x-auto">
             <table class="table">
-                <thead><tr><th>Afiliado</th><th>Monto</th><th>Metodo</th><th>N.º de transacción</th><th>Origen</th><th>Cobrado por</th><th>Estado</th><th>Acciones</th></tr></thead>
+                <thead><tr><th>Afiliado</th><th>SOL / recibo</th><th>Monto</th><th>Metodo</th><th>N.º de transacción</th><th>Origen</th><th>Cajero / registrador</th><th>Estado</th><th>Acciones</th></tr></thead>
                 <tbody>
                 @forelse($payments as $payment)
                     <tr>
@@ -81,10 +88,14 @@
                             <div class="font-bold">{{ $payment->affiliate?->full_name ?? 'Afiliado no disponible' }}</div>
                             <div class="text-xs text-slate-500">{{ $payment->affiliate?->registration_number ?: $payment->affiliate?->ci }}</div>
                         </td>
+                        <td>
+                            <div class="font-bold">{{ $payment->publicRequest?->request_code ?: 'Sin SOL' }}</div>
+                            <div class="text-xs text-slate-500">{{ $payment->receipt_number ?: 'Sin recibo' }}</div>
+                        </td>
                         <td>{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</td>
-                        <td>{{ ucfirst((string) $payment->payment_method) }}</td>
+                        <td>{{ \App\Support\PaymentMethodPresenter::label($payment->payment_method) }}</td>
                         <td>{{ \App\Support\PaymentMethodPresenter::showsTransactionNumber($payment->payment_method) ? ($payment->reference_number ?: 'No registrado') : 'No aplica' }}</td>
-                        <td>{{ $payment->source ?: 'web' }}</td>
+                        <td><span class="badge {{ \App\Support\PaymentSourcePresenter::badgeClasses($payment->source) }}">{{ \App\Support\PaymentSourcePresenter::channel($payment->source) }}</span><div class="mt-1 text-xs text-slate-500">{{ \App\Support\PaymentSourcePresenter::label($payment->source) }}</div></td>
                         <td>{{ $payment->registrar?->name ?? 'Sin registro' }}</td>
                         <td><x-payment-status :status="$payment->status" size="sm" /></td>
                         <td class="min-w-64">
@@ -99,14 +110,14 @@
                                 @if(auth()->user()->hasPermission('payments.view_receipt') && $payment->voucher_path)
                                     <a class="btn-secondary" href="{{ route('payments.voucher', $payment) }}" target="_blank">Comprobante</a>
                                 @endif
-                                @if((auth()->user()->hasPermission('payments.view_receipt') || auth()->user()->hasRole('caja')) && \App\Support\PaymentStatus::isConfirmed($payment->status) && $payment->receipt_number)
+                                @if((auth()->user()->hasPermission('payments.view_receipt') || auth()->user()->hasRole('caja')) && $payment->canRenderReceipt())
                                     <a class="btn-secondary" href="{{ route('admin.payments.receipt', $payment) }}" target="_blank">Imprimir recibo</a>
                                 @endif
                             </div>
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="8">Sin pagos registrados.</td></tr>
+                    <tr><td colspan="9">Sin pagos registrados.</td></tr>
                 @endforelse
                 </tbody>
             </table>

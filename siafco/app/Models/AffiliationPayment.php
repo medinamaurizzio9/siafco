@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\PaymentStatus;
 use Illuminate\Database\Eloquent\Model;
 
 class AffiliationPayment extends Model
@@ -76,6 +77,31 @@ class AffiliationPayment extends Model
         return $this->belongsTo(User::class, 'voided_by');
     }
 
-    public function publicRequest() { return $this->belongsTo(PublicAffiliationRequest::class, 'public_affiliation_request_id'); }
-    public function plan() { return $this->belongsTo(AffiliationPlan::class, 'affiliation_plan_id'); }
+    public function publicRequest()
+    {
+        return $this->belongsTo(PublicAffiliationRequest::class, 'public_affiliation_request_id');
+    }
+
+    public function plan()
+    {
+        return $this->belongsTo(AffiliationPlan::class, 'affiliation_plan_id');
+    }
+
+    public function isOfficePayment(): bool
+    {
+        return in_array($this->source, ['manual_admin', 'office_cash', 'office_qr'], true);
+    }
+
+    public function hasValidReceiptStatus(): bool
+    {
+        return ! PaymentStatus::isRejected($this->status)
+            && ! PaymentStatus::isVoided($this->status);
+    }
+
+    public function canRenderReceipt(): bool
+    {
+        return filled($this->receipt_number)
+            && $this->hasValidReceiptStatus()
+            && ($this->isOfficePayment() || PaymentStatus::isConfirmed($this->status));
+    }
 }

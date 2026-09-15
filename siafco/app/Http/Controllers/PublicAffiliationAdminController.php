@@ -25,7 +25,7 @@ class PublicAffiliationAdminController extends Controller
         $applications = collect();
 
         if ($search !== '') {
-            $applications = PublicAffiliationRequest::with(['person', 'sector', 'plan', 'payment', 'affiliate'])
+            $applications = PublicAffiliationRequest::with(['person', 'sector', 'plan', 'payment.registrar', 'affiliate'])
                 ->where(function ($query) use ($search) {
                     $query->where('request_code', 'like', "%{$search}%")
                         ->orWhereHas('person', function ($person) use ($search) {
@@ -57,7 +57,7 @@ class PublicAffiliationAdminController extends Controller
 
     public function index(Request $request)
     {
-        $applications = PublicAffiliationRequest::with(['person', 'sector', 'plan', 'payment'])
+        $applications = PublicAffiliationRequest::with(['person', 'sector', 'plan', 'payment', 'affiliate'])
             ->when($request->status, fn ($q, $v) => $q->where('status', $v))
             ->when($request->search, fn ($q, $v) => $q->where(function ($q) use ($v) {
                 $q->where('request_code', 'like', "%{$v}%")

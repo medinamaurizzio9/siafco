@@ -7,6 +7,52 @@ import { initPhotoCroppers } from './components/photo-cropper';
 document.addEventListener('DOMContentLoaded', () => {
     initPhotoCroppers();
 
+    const canUseServiceWorker = window.location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    if ('serviceWorker' in navigator && canUseServiceWorker) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+
+    let pendingInstallPrompt = null;
+    const installButton = document.querySelector('[data-pwa-install]');
+    window.addEventListener('beforeinstallprompt', (event) => {
+        if (!installButton) return;
+        event.preventDefault();
+        pendingInstallPrompt = event;
+        installButton.hidden = false;
+    });
+    installButton?.addEventListener('click', async () => {
+        if (!pendingInstallPrompt) return;
+        installButton.hidden = true;
+        pendingInstallPrompt.prompt();
+        await pendingInstallPrompt.userChoice.catch(() => null);
+        pendingInstallPrompt = null;
+    });
+    window.addEventListener('appinstalled', () => {
+        if (installButton) installButton.hidden = true;
+        pendingInstallPrompt = null;
+    });
+
+    document.querySelector('[data-share-credential]')?.addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        const payload = {
+            title: button.dataset.shareTitle || document.title,
+            text: button.dataset.shareText || '',
+            url: button.dataset.shareUrl || window.location.href,
+        };
+
+        if (navigator.share) {
+            await navigator.share(payload).catch(() => null);
+            return;
+        }
+
+        await navigator.clipboard?.writeText(payload.url).catch(() => null);
+        button.querySelector('span')?.replaceChildren(document.createTextNode('Enlace copiado'));
+    });
+
+    document.querySelector('[data-credential-large]')?.addEventListener('click', () => {
+        document.getElementById('credential-canvas')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
     document.querySelectorAll('[data-notification-close]').forEach((button) => {
         button.addEventListener('click', () => button.closest('[data-notification]')?.remove());
     });

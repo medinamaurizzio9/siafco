@@ -255,8 +255,8 @@ class AffiliateAdministrationTest extends TestCase
             ->assertSee('Mozilla/5.0 admin-test');
 
         $html = $response->getContent();
-        $this->assertMatchesRegularExpression('/<td>TX-CONFIRMADO<\/td>\s*<td>.*?Confirmado.*?<\/td>/s', $html);
-        $this->assertDoesNotMatchRegularExpression('/<td>TX-CONFIRMADO<\/td>\s*<td>.*?Afiliado activo.*?<\/td>/s', $html);
+        $this->assertMatchesRegularExpression('/<td>BOB 100\.00<\/td>\s*<td>Transferencia<\/td>\s*<td>.*?Confirmado.*?<\/td>/s', $html);
+        $this->assertDoesNotMatchRegularExpression('/<td>BOB 100\.00<\/td>\s*<td>Transferencia<\/td>\s*<td>.*?Afiliado activo.*?<\/td>/s', $html);
         $this->assertSame('affiliate_activated', $audit->fresh()->action);
         $this->assertSame($payment->id, $audit->fresh()->metadata['payment_id']);
         $this->assertSame('Mozilla/5.0 admin-test', $audit->fresh()->metadata['user_agent']);

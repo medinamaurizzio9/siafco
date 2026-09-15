@@ -28,8 +28,52 @@
                     <dt class="font-bold">Fecha</dt><dd>{{ $application->payment->payment_date?->format('d/m/Y') }}</dd>
                     <dt class="font-bold">Registrado por</dt><dd>{{ $application->payment->registrar?->name ?? 'No disponible' }}</dd>
                     <dt class="font-bold">Estado</dt><dd><x-payment-status :status="$application->payment->status" size="sm" /></dd>
-                    <dt class="font-bold">Comprobante</dt><dd>@if($application->payment->voucher_path)<a class="font-bold text-blue-700 underline" href="{{ route('public-affiliation.admin.receipt',$application->payment) }}">Descargar</a>@else No adjunto @endif</dd>
                 </dl>
+                <div class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <h3 class="font-black text-[#0b1f3a]">Documentos del pago</h3>
+                    <div class="mt-4 grid gap-3 md:grid-cols-2">
+                        <div class="rounded-lg border border-slate-200 bg-white p-4">
+                            <div class="flex items-start gap-3">
+                                <x-ui.icon name="file-text" class="mt-1 h-5 w-5 text-siafco-primary-900" />
+                                <div class="min-w-0">
+                                    <h4 class="font-black text-slate-900">Comprobante presentado</h4>
+                                    <p class="text-sm text-slate-600">Archivo presentado para validar el pago</p>
+                                </div>
+                            </div>
+                            @if($application->payment->voucher_path)
+                                <a class="btn-secondary mt-4 min-h-12 w-full" href="{{ route('public-affiliation.admin.receipt',$application->payment) }}">
+                                    <x-ui.icon name="file-text" class="h-4 w-4" /> Descargar comprobante
+                                </a>
+                            @else
+                                <p class="mt-4 text-sm font-bold text-slate-600">No adjunto</p>
+                            @endif
+                        </div>
+                        <div class="rounded-lg border border-slate-200 bg-white p-4">
+                            <div class="flex items-start gap-3">
+                                <x-ui.icon name="receipt" class="mt-1 h-5 w-5 text-siafco-primary-900" />
+                                <div class="min-w-0">
+                                    <h4 class="font-black text-slate-900">Recibo de pago</h4>
+                                    <p class="break-all text-sm font-bold text-slate-700">{{ $application->payment->receipt_number ?: 'Sin número de recibo' }}</p>
+                                </div>
+                            </div>
+                            <dl class="mt-4 grid gap-2 text-sm">
+                                @if($application->affiliate?->registration_number)
+                                    <div><dt class="font-bold text-slate-500">Registro definitivo</dt><dd class="font-black">{{ $application->affiliate->registration_number }}</dd></div>
+                                @else
+                                    <div><dt class="font-bold text-slate-500">Registro</dt><dd class="font-black">PENDIENTE DE APROBACIÓN</dd></div>
+                                @endif
+                            </dl>
+                            @if($application->payment->canRenderReceipt())
+                                <div class="mt-4 grid gap-2 sm:grid-cols-2">
+                                    <a class="btn-secondary min-h-12 w-full" href="{{ route('admin.payments.receipt',$application->payment) }}" target="_blank"><x-ui.icon name="eye" class="h-4 w-4" /> Ver recibo</a>
+                                    <a class="btn-primary min-h-12 w-full" href="{{ route('admin.payments.receipt',$application->payment) }}" target="_blank"><x-ui.icon name="receipt" class="h-4 w-4" /> Imprimir</a>
+                                </div>
+                            @else
+                                <p class="mt-4 text-sm font-bold text-slate-600">No disponible</p>
+                            @endif
+                        </div>
+                    </div>
+                </div>
                 @if($duplicates->isNotEmpty())<div class="mt-4 border border-amber-300 bg-amber-50 p-3 text-amber-900"><strong>Posible duplicado:</strong> esta transacción aparece en {{ $duplicates->count() }} pago(s) adicional(es). Revise manualmente.</div>@endif
                 @if($canConfirmPayment)
                     <div class="mt-6 flex flex-wrap gap-3">

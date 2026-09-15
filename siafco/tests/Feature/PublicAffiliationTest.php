@@ -15,9 +15,11 @@ use App\Services\CredentialService;
 use App\Services\PublicAffiliationApprovalService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class PublicAffiliationTest extends TestCase
@@ -33,6 +35,7 @@ class PublicAffiliationTest extends TestCase
             'affiliation_fee' => 100, 'credential_fee' => 20,
             'currency' => 'BOB', 'is_active' => true,
         ]);
+
         return [$sector, $plan];
     }
 
@@ -291,14 +294,14 @@ class PublicAffiliationTest extends TestCase
         $reviewer = User::create(['name' => 'Secretaría', 'email' => 'sec@test.local', 'role' => 'secretaria', 'password' => Hash::make('secret123')]);
 
         $credential = $this->mock(CredentialService::class);
-        $credential->shouldReceive('generate')->once()->andReturn(new DigitalCredential());
+        $credential->shouldReceive('generate')->once()->andReturn(new DigitalCredential);
         $service = new PublicAffiliationApprovalService($credential);
         $service->approve($payment, $reviewer->id);
 
         $this->assertSame('SAL-000001', $affiliate->fresh()->registration_number);
         $this->assertSame('activo', $affiliate->fresh()->status);
         $this->assertSame('approved', $application->fresh()->status);
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->expectException(ValidationException::class);
         $service->approve($payment->fresh(), $reviewer->id);
     }
 
@@ -363,7 +366,9 @@ class PublicAffiliationTest extends TestCase
             'email' => 'active@test.local', 'status' => 'activo',
             'registration_number' => 'SAL-000001', 'verification_token' => fake()->uuid(),
         ]);
-        foreach (['credentials/card.pdf', 'credentials/card.png', 'credentials/qr.png'] as $path) Storage::disk('public')->put($path, 'file');
+        foreach (['credentials/card.pdf', 'credentials/card.png', 'credentials/qr.png'] as $path) {
+            Storage::disk('public')->put($path, 'file');
+        }
         DigitalCredential::create([
             'affiliate_id' => $affiliate->id, 'pdf_path' => 'credentials/card.pdf',
             'png_path' => 'credentials/card.png', 'qr_path' => 'credentials/qr.png',
@@ -454,7 +459,7 @@ class PublicAffiliationTest extends TestCase
             ->assertSee('max-h-[calc(100dvh-2rem)]', false)
             ->assertSee('backdrop:bg-black/60', false)
             ->assertSee('id="assisted-payment-reference-group" hidden', false)
-            ->assertSee("referenceGroup.hidden = !requiresReference", false)
+            ->assertSee('referenceGroup.hidden = !requiresReference', false)
             ->assertSee("if (!requiresReference) reference.value = ''", false);
 
         $this->actingAs($cashier)->post(route('public-affiliation.admin.payment.store', $application), [
@@ -469,7 +474,7 @@ class PublicAffiliationTest extends TestCase
         $this->assertSame($cashier->id, $payment->registered_by);
         $this->assertEquals(120.00, $payment->paid_amount);
         $this->assertNull($payment->confirmed_at);
-        $this->assertNull($payment->receipt_number);
+        $this->assertMatchesRegularExpression('/^REC-\d{4}-\d{6}$/', $payment->receipt_number);
         $this->assertSame('payment_submitted', $application->fresh()->status);
         $this->assertSame('pago_en_revision', $application->affiliate->fresh()->status);
         $this->assertNull($application->affiliate->fresh()->registration_number);
@@ -506,9 +511,9 @@ class PublicAffiliationTest extends TestCase
 
         $page = $this->actingAs($cashier)->get(route('public-affiliation.admin.secretary-payments'));
         $page->assertOk()
-            ->assertSee('Pago en secretaría')
+            ->assertSee('Pagos en Oficina')
             ->assertSee('Buscar por CI, nombre, teléfono o código de solicitud')
-            ->assertSeeInOrder(['Afiliados', 'Pago en secretaria', 'Solicitudes publicas', 'Pagos de afiliacion']);
+            ->assertSeeInOrder(['Afiliados', 'Solicitudes Web', 'Afiliacion en Oficina', 'Pagos en Oficina', 'Todos los Pagos']);
 
         foreach ([$application->person->ci, 'SOLICITANTE', '76543210', $application->person->email, $application->request_code] as $search) {
             $this->actingAs($cashier)
@@ -774,7 +779,7 @@ class PublicAffiliationTest extends TestCase
 
     public function test_invalid_photo_formats_and_oversized_files_are_rejected_in_spanish(): void
     {
-        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
+        $this->withoutMiddleware(ThrottleRequests::class);
         Storage::fake('public');
         [$sector, $plan] = $this->catalog();
 
