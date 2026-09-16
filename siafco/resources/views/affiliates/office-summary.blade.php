@@ -33,6 +33,16 @@
         </section>
 
         <aside class="grid gap-4 content-start">
+            <section class="rounded-lg border border-siafco-gold-200 bg-amber-50 p-5 text-siafco-primary-900">
+                <h3 class="font-black">Cuenta de acceso creada</h3>
+                <dl class="mt-4 grid gap-3 text-sm">
+                    <div><dt class="text-xs font-black uppercase text-slate-500">Usuario</dt><dd class="font-bold">{{ $affiliate->user?->email }}</dd></div>
+                    <div><dt class="text-xs font-black uppercase text-slate-500">Contraseña provisional</dt><dd class="font-bold">{{ $temporaryPassword }}</dd></div>
+                </dl>
+                <p class="mt-3 text-sm text-slate-700">El afiliado deberá cambiar su contraseña al ingresar por primera vez.</p>
+                <a class="btn-secondary mt-4 w-full" href="{{ route('login') }}">Ingresar a la plataforma</a>
+            </section>
+
             <section class="rounded-lg border border-slate-200 bg-white p-5">
                 <h3 class="font-black text-[#0b1f3a]">Acciones</h3>
                 <div class="mt-4 grid gap-2">

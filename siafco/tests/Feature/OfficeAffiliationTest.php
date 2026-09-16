@@ -10,6 +10,7 @@ use App\Models\InstitutionalSetting;
 use App\Models\Person;
 use App\Models\Sector;
 use App\Models\User;
+use App\Services\AffiliateAccountService;
 use App\Services\CredentialService;
 use App\Support\PaymentStatus;
 use App\Support\PublicAffiliationCatalogs;
@@ -34,7 +35,7 @@ class OfficeAffiliationTest extends TestCase
             $actor = $this->internalUser($role);
 
             $response = $this->actingAs($actor)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
-                'ci' => 'OFI-ROLE-'.$index,
+                'ci' => 'OFIROLE'.$index,
                 'email' => "oficina-role-{$index}@siafco.test",
                 'reference_number' => "REC-ROLE-{$index}",
             ]));
@@ -88,7 +89,7 @@ class OfficeAffiliationTest extends TestCase
     {
         [$sector, $plan] = $this->catalog();
         $cashier = $this->internalUser('cajero');
-        Person::create(['full_name' => 'PERSONA EXISTENTE', 'ci' => 'OFI-001']);
+        Person::create(['full_name' => 'PERSONA EXISTENTE', 'ci' => 'OFI001']);
         $peopleBefore = Person::count();
         $usersBefore = User::count();
 
@@ -119,7 +120,89 @@ class OfficeAffiliationTest extends TestCase
 
         $this->assertDatabaseCount('affiliates', 1);
         $this->assertDatabaseCount('affiliation_payments', 1);
-        $this->assertSame(1, User::where('email', $payload['email'])->count());
+        $this->assertSame(1, User::where('email', 'OFI001@siafco.com')->count());
+    }
+
+    public function test_office_affiliation_creates_ci_based_access_account(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $cashier = $this->internalUser('cajero');
+
+        $this->actingAs($cashier)
+            ->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
+                'ci' => '4995153055',
+                'email' => 'contacto-oficina@siafco.test',
+            ]))
+            ->assertRedirect();
+
+        $affiliate = Affiliate::where('ci', '4995153055')->firstOrFail();
+        $user = User::where('email', '4995153055@siafco.com')->firstOrFail();
+
+        $this->assertSame($user->id, $affiliate->user_id);
+        $this->assertSame($affiliate->person_id, $user->person_id);
+        $this->assertSame('afiliado', $user->role);
+        $this->assertSame('affiliate', $user->user_type);
+        $this->assertTrue($user->must_change_password);
+        $this->assertTrue(Hash::check('4995153055', $user->password));
+    }
+
+    public function test_office_affiliation_allows_same_phone_for_different_ci_accounts(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $cashier = $this->internalUser('cajero');
+
+        $this->actingAs($cashier)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
+            'ci' => '4995153055',
+            'phone' => '75865765',
+            'email' => 'oficina-a@siafco.test',
+            'reference_number' => 'REC-PHONE-A',
+        ]))->assertRedirect();
+
+        $this->actingAs($cashier)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
+            'full_name' => 'AFILIADA OFICINA B',
+            'ci' => '567864966',
+            'phone' => '75865765',
+            'email' => 'oficina-b@siafco.test',
+            'reference_number' => 'REC-PHONE-B',
+        ]))->assertRedirect();
+
+        $this->assertSame(2, Affiliate::count());
+        $this->assertSame(1, User::where('email', '4995153055@siafco.com')->count());
+        $this->assertSame(1, User::where('email', '567864966@siafco.com')->count());
+    }
+
+    public function test_affiliate_account_service_reuses_existing_link_without_resetting_password(): void
+    {
+        [$sector, $plan] = $this->catalog();
+        $person = Person::create(['full_name' => 'AFILIADA EXISTENTE', 'ci' => '4995153055']);
+        $user = User::create([
+            'person_id' => $person->id,
+            'name' => 'AFILIADA EXISTENTE',
+            'email' => '4995153055@siafco.com',
+            'role' => 'afiliado',
+            'user_type' => 'affiliate',
+            'password' => Hash::make('ClaveYaCambiada123'),
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+        $affiliate = Affiliate::create([
+            'user_id' => $user->id,
+            'person_id' => $person->id,
+            'sector_id' => $sector->id,
+            'affiliation_plan_id' => $plan->id,
+            'full_name' => 'AFILIADA EXISTENTE',
+            'ci' => '4995153055',
+            'email' => 'afiliada-existente@siafco.test',
+            'status' => 'activo',
+        ]);
+
+        $resolved = app(AffiliateAccountService::class)->ensureForAffiliate($affiliate, $person);
+
+        $this->assertSame($user->id, $resolved->id);
+        $this->assertSame(1, User::where('email', '4995153055@siafco.com')->count());
+        $this->assertFalse($resolved->fresh()->must_change_password);
+        $this->assertTrue(Hash::check('ClaveYaCambiada123', $resolved->fresh()->password));
+        $this->assertFalse(Hash::check('4995153055', $resolved->fresh()->password));
     }
 
     public function test_office_form_and_global_layout_render_confirmation_and_notifications(): void
@@ -219,14 +302,14 @@ class OfficeAffiliationTest extends TestCase
         $cashier = $this->internalUser('cajero');
 
         $this->actingAs($cashier)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
-            'ci' => 'OFI-UNIQ-1',
+            'ci' => 'OFIUNIQ1',
             'email' => 'office-unique-1@siafco.test',
             'reference_number' => 'MANUAL-001',
             'receipt_number' => 'REC-1900-999999',
         ]))->assertSessionHasNoErrors();
 
         $this->actingAs($cashier)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
-            'ci' => 'OFI-UNIQ-2',
+            'ci' => 'OFIUNIQ2',
             'email' => 'office-unique-2@siafco.test',
             'reference_number' => 'MANUAL-002',
             'receipt_number' => 'REC-1900-999999',
@@ -270,7 +353,7 @@ class OfficeAffiliationTest extends TestCase
 
         $this->actingAs($cashier)
             ->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
-                'ci' => 'OFI-FAIL',
+                'ci' => 'OFIFAIL',
                 'email' => 'office-fail@siafco.test',
                 'reference_number' => 'REC-FAIL',
             ]))->assertSessionHasNoErrors();
@@ -431,7 +514,7 @@ class OfficeAffiliationTest extends TestCase
             [$sector, $plan] = $this->catalog();
             $reviewer = $this->internalUser($role);
             $this->actingAs($reviewer)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
-                'ci' => 'QR-OWN-'.$index,
+                'ci' => 'QROWN'.$index,
                 'email' => "qr-own-{$index}@siafco.test",
                 'payment_method' => 'qr',
                 'reference_number' => 'TRX-OWN-'.$index,
@@ -502,7 +585,7 @@ class OfficeAffiliationTest extends TestCase
             [$sector, $plan] = $this->catalog();
             $registrar = $this->internalUser('cajero');
             $this->actingAs($registrar)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
-                'ci' => 'QR-APPROVE-'.$index,
+                'ci' => 'QRAPPROVE'.$index,
                 'email' => "qr-approve-{$index}@siafco.test",
                 'payment_method' => 'qr',
                 'reference_number' => 'TRX-APPROVE-'.$index,
@@ -578,7 +661,7 @@ class OfficeAffiliationTest extends TestCase
         $this->actingAs($admin)
             ->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
                 'full_name' => 'AFILIADA OFICINA RESUMEN',
-                'ci' => 'OFI-SUM',
+                'ci' => 'OFISUM',
                 'email' => 'oficina-resumen@siafco.test',
                 'reference_number' => 'REC-SUMMARY',
             ]))
@@ -590,7 +673,7 @@ class OfficeAffiliationTest extends TestCase
             ->get(route('affiliates.office.show', $payment))
             ->assertOk()
             ->assertSee('AFILIADA OFICINA RESUMEN')
-            ->assertSee('OFI-SUM')
+            ->assertSee('OFISUM')
             ->assertSee('Efectivo')
             ->assertSee('Pendiente de verificación de pago')
             ->assertSee('En revision')
@@ -643,7 +726,7 @@ class OfficeAffiliationTest extends TestCase
         $this->actingAs($admin)
             ->post(route('affiliates.store'), [
                 'full_name' => 'AFILIADO ADMIN INVALIDO',
-                'ci' => 'ADMIN-INVALID',
+                'ci' => 'ADMININVALID',
                 'email' => 'admin-invalid@siafco.test',
                 'sector_id' => $sector->id,
                 'affiliation_plan_id' => $plan->id,
@@ -684,7 +767,7 @@ class OfficeAffiliationTest extends TestCase
         $this->actingAs($admin)
             ->post(route('affiliates.store'), [
                 'full_name' => 'AFILIADO ADMIN FOTO',
-                'ci' => 'ADMIN-PHOTO',
+                'ci' => 'ADMINPHOTO',
                 'phone' => '70000002',
                 'email' => 'admin-photo@siafco.test',
                 'address' => 'CALLE ADMIN',
@@ -720,7 +803,7 @@ class OfficeAffiliationTest extends TestCase
 
         $this->actingAs($admin)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
             'full_name' => 'AFILIADA RECIBO',
-            'ci' => 'OFI-REC',
+            'ci' => 'OFIREC',
             'email' => 'office-receipt@siafco.test',
             'received_amount' => '120.00',
             'reference_number' => 'REC-HTML-001',
@@ -746,7 +829,7 @@ class OfficeAffiliationTest extends TestCase
         $this->assertStringContainsString('Total pagado', $html);
         $this->assertStringContainsString($receiptNumber, $html);
         $this->assertStringContainsString('AFILIADA RECIBO', $html);
-        $this->assertStringContainsString('OFI-REC', $html);
+        $this->assertStringContainsString('OFIREC', $html);
         $this->assertStringContainsString('BOB 120.00', $html);
         $this->assertStringContainsString(e($admin->name), $html);
         $this->assertStringContainsString('Efectivo / Pago en oficina', $html);
@@ -829,7 +912,7 @@ class OfficeAffiliationTest extends TestCase
 
         $this->actingAs($cashierA)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
             'full_name' => 'COBRO CAJERO UNO',
-            'ci' => 'COBRO-1',
+            'ci' => 'COBRO1',
             'email' => 'cobro-uno@siafco.test',
             'received_amount' => '120.00',
             'reference_number' => 'COBRO-REF-1',
@@ -839,7 +922,7 @@ class OfficeAffiliationTest extends TestCase
 
         $this->actingAs($cashierB)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
             'full_name' => 'COBRO CAJERO DOS',
-            'ci' => 'COBRO-2',
+            'ci' => 'COBRO2',
             'email' => 'cobro-dos@siafco.test',
             'received_amount' => '240.00',
             'reference_number' => 'COBRO-REF-2',
@@ -869,10 +952,10 @@ class OfficeAffiliationTest extends TestCase
             ->assertSee('BOB 240.00');
 
         $this->actingAs($manager)
-            ->get(route('admin.collections.index', ['ci' => 'COBRO-1']))
+            ->get(route('admin.collections.index', ['ci' => 'COBRO1']))
             ->assertOk()
-            ->assertSee('COBRO-1')
-            ->assertDontSee('COBRO-2');
+            ->assertSee('COBRO1')
+            ->assertDontSee('COBRO2');
 
         $this->actingAs($manager)
             ->get(route('admin.collections.index', [
@@ -898,14 +981,14 @@ class OfficeAffiliationTest extends TestCase
 
         $this->actingAs($cashierA)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
             'full_name' => 'COBRO FILTRABLE UNO',
-            'ci' => 'FILTER-1',
+            'ci' => 'FILTER1',
             'email' => 'filter-one@siafco.test',
             'reference_number' => 'FILTER-REF-1',
         ]))->assertSessionHasNoErrors();
 
         $this->actingAs($cashierB)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
             'full_name' => 'COBRO FILTRABLE DOS',
-            'ci' => 'FILTER-2',
+            'ci' => 'FILTER2',
             'email' => 'filter-two@siafco.test',
             'reference_number' => 'FILTER-REF-2',
         ]))->assertSessionHasNoErrors();
@@ -1034,7 +1117,7 @@ class OfficeAffiliationTest extends TestCase
     {
         return array_merge([
             'full_name' => 'AFILIADA OFICINA',
-            'ci' => 'OFI-001',
+            'ci' => 'OFI001',
             'phone' => '70000001',
             'email' => 'afiliada-oficina@siafco.test',
             'address' => 'AVENIDA OFICINA 123',
@@ -1064,7 +1147,7 @@ class OfficeAffiliationTest extends TestCase
 
     private function existingAffiliate(Sector $sector, AffiliationPlan $plan): Affiliate
     {
-        $person = Person::create(['full_name' => 'AFILIADO QR', 'ci' => 'QR-001']);
+        $person = Person::create(['full_name' => 'AFILIADO QR', 'ci' => 'QR001']);
         $user = User::factory()->create([
             'person_id' => $person->id,
             'name' => 'AFILIADO QR',
@@ -1080,9 +1163,9 @@ class OfficeAffiliationTest extends TestCase
             'sector_id' => $sector->id,
             'affiliation_plan_id' => $plan->id,
             'full_name' => 'AFILIADO QR',
-            'ci' => 'QR-001',
+            'ci' => 'QR001',
             'email' => $user->email,
-            'registration_number' => 'QR-000001',
+            'registration_number' => 'QR000001',
             'verification_token' => 'qr-test-token',
             'status' => 'pendiente_pago',
         ]);

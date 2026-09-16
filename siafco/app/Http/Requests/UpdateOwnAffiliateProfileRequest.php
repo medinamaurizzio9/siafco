@@ -55,17 +55,24 @@ class UpdateOwnAffiliateProfileRequest extends FormRequest
     {
         $affiliate = $this->user()?->affiliate;
 
+        $profileIncomplete = $affiliate && str_ends_with((string) $this->user()?->email, '@siafco.com') && (
+            blank($affiliate->address)
+            || blank($affiliate->birth_date)
+            || blank($affiliate->marital_status)
+            || blank($affiliate->photo_path)
+        );
+
         return [
-            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120', 'dimensions:min_width=300,min_height=300'],
+            'photo' => [$profileIncomplete && blank($affiliate?->photo_path) ? 'required' : 'nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120', 'dimensions:min_width=300,min_height=300'],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+().\s-]*$/'],
             'email' => [
                 'required', 'email:rfc', 'max:150',
                 Rule::unique('affiliates', 'email')->ignore($affiliate?->id),
                 Rule::unique('users', 'email')->ignore($this->user()?->id),
             ],
-            'address' => ['nullable', 'string', 'max:255'],
-            'birth_date' => ['nullable', 'date', 'before:today'],
-            'marital_status' => ['nullable', 'string', 'max:50', Rule::in(PublicAffiliationCatalogs::MARITAL_STATUSES)],
+            'address' => [$profileIncomplete ? 'required' : 'nullable', 'string', 'max:255'],
+            'birth_date' => [$profileIncomplete ? 'required' : 'nullable', 'date', 'before:today'],
+            'marital_status' => [$profileIncomplete ? 'required' : 'nullable', 'string', 'max:50', Rule::in(PublicAffiliationCatalogs::MARITAL_STATUSES)],
         ];
     }
 
@@ -100,12 +107,16 @@ class UpdateOwnAffiliateProfileRequest extends FormRequest
     {
         return [
             'photo.image' => 'El archivo seleccionado no es una imagen válida.',
+            'photo.required' => 'La fotografía es obligatoria para completar tu perfil.',
             'photo.mimes' => 'La fotografía debe ser JPG, JPEG, PNG o WEBP.',
             'photo.max' => 'La fotografía no debe superar los 5 MB.',
             'photo.dimensions' => 'La fotografía debe medir al menos 300 × 300 píxeles.',
             'phone.regex' => 'El celular contiene caracteres no permitidos.',
             'email.unique' => 'El correo electrónico ya está registrado.',
             'birth_date.before' => 'La fecha de nacimiento debe ser anterior a hoy.',
+            'birth_date.required' => 'La fecha de nacimiento es obligatoria para completar tu perfil.',
+            'address.required' => 'La dirección es obligatoria para completar tu perfil.',
+            'marital_status.required' => 'El estado civil es obligatorio para completar tu perfil.',
         ];
     }
 

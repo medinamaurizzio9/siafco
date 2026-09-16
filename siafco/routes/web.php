@@ -12,6 +12,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CashCollectionReportController;
 use App\Http\Controllers\CashDepositController;
 use App\Http\Controllers\CredentialController;
+use App\Http\Controllers\ExpressAffiliationController;
 use App\Http\Controllers\HomeRedirectController;
 use App\Http\Controllers\InstitutionalQrController;
 use App\Http\Controllers\InstitutionalSettingController;
@@ -113,7 +114,13 @@ Route::prefix('afiliacion')->name('public-affiliation.')->group(function () {
     Route::get('/{application}/completado', [PublicAffiliationController::class, 'completed'])->middleware('throttle:public-affiliation-read')->name('completed');
 });
 
-Route::middleware(['auth', 'password.changed', 'affiliate.active-access'])->group(function () {
+Route::prefix('afiliacion-express')->name('public-affiliation.express.')->group(function () {
+    Route::get('/', [ExpressAffiliationController::class, 'create'])->middleware('throttle:public-affiliation-read')->name('create');
+    Route::post('/', [ExpressAffiliationController::class, 'store'])->middleware('throttle:public-affiliation-register')->name('store');
+    Route::get('/{application}/completado', [ExpressAffiliationController::class, 'completed'])->middleware('throttle:public-affiliation-read')->name('completed');
+});
+
+Route::middleware(['auth', 'password.changed', 'affiliate.profile.complete', 'affiliate.active-access'])->group(function () {
     Route::get('/cerrar-sesion/confirmar', [AuthController::class, 'confirmLogout'])->name('logout.confirm');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/cambiar-contrasena-obligatoria', [PasswordController::class, 'forceEdit'])->name('password.force.edit');

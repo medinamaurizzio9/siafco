@@ -194,7 +194,8 @@ class PublicAffiliationTest extends TestCase
             ->assertOk()
             ->assertSee('¿Aún no estás afiliado?')
             ->assertSee('Crear afiliación')
-            ->assertSee(route('public-affiliation.create'), false);
+            ->assertSee(route('public-affiliation.express.create'), false)
+            ->assertDontSee(route('public-affiliation.create'), false);
     }
 
     public function test_public_navigation_and_sensitive_payment_submission_use_separate_rate_limits(): void

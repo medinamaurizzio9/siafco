@@ -8,9 +8,8 @@ use App\Models\AffiliationPlan;
 use App\Models\InstitutionalSetting;
 use App\Models\Person;
 use App\Models\Sector;
-use App\Models\User;
 use App\Rules\ActivePlanForSector;
-use App\Services\AffiliatePasswordService;
+use App\Services\AffiliateAccountService;
 use App\Services\AffiliatePhotoProcessor;
 use App\Services\AuditService;
 use App\Services\PaymentReceiptNumberService;
@@ -21,7 +20,7 @@ use Carbon\Carbon;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -86,21 +85,8 @@ class OfficeAffiliationController extends Controller
                     ]
                 );
 
-                $user = User::create([
-                    'person_id' => $person->id,
-                    'name' => $data['full_name'],
-                    'email' => $data['email'],
-                    'username' => $this->uniqueAffiliateUsername($data['ci']),
-                    'role' => 'afiliado',
-                    'user_type' => 'affiliate',
-                    'is_active' => true,
-                    'must_change_password' => true,
-                    'password' => Hash::make(app(AffiliatePasswordService::class)->temporaryPasswordFromCi($data['ci'])),
-                ]);
-
                 $affiliate = Affiliate::create([
                     ...$data,
-                    'user_id' => $user->id,
                     'person_id' => $person->id,
                     'regional' => ($data['regional'] ?? null) ?: $sector->regional,
                     'institution' => ($data['institution'] ?? null) ?: $sector->institution,
@@ -109,6 +95,8 @@ class OfficeAffiliationController extends Controller
                     'status' => 'pendiente_pago',
                     'verification_token' => Str::uuid()->toString(),
                 ]);
+
+                app(AffiliateAccountService::class)->ensureForAffiliate($affiliate, $person);
 
                 $payment = AffiliationPayment::create([
                     'affiliate_id' => $affiliate->id,
@@ -168,11 +156,12 @@ class OfficeAffiliationController extends Controller
         $actor = $request->user();
         abort_unless($actor?->isInternal() && $actor->hasRole(self::AUTHORIZED_ROLES), 403);
 
-        $payment->load('affiliate.sector', 'affiliate.plan', 'affiliate.credential', 'cashier', 'registrar', 'plan');
+        $payment->load('affiliate.sector', 'affiliate.plan', 'affiliate.credential', 'affiliate.user', 'cashier', 'registrar', 'plan');
 
         return view('affiliates.office-summary', [
             'payment' => $payment,
             'affiliate' => $payment->affiliate,
+            'temporaryPassword' => app(AffiliateAccountService::class)->normalizedCi($payment->affiliate?->ci),
         ]);
     }
 
@@ -217,19 +206,6 @@ class OfficeAffiliationController extends Controller
         $data['paid_at'] = Carbon::parse($data['paid_at']);
 
         return $data;
-    }
-
-    private function uniqueAffiliateUsername(string $registration): string
-    {
-        $base = str('afiliado_'.$registration)->lower()->replaceMatches('/[^a-z0-9]+/', '_')->trim('_')->toString();
-        $username = $base;
-        $suffix = 1;
-
-        while (User::where('username', $username)->exists()) {
-            $username = $base.'_'.$suffix++;
-        }
-
-        return $username;
     }
 
     private function throwDuplicateValidationException(UniqueConstraintViolationException $exception): never

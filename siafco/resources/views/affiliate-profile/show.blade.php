@@ -26,7 +26,12 @@
 
         @if($affiliate->status !== 'activo')
             <div class="rounded border border-amber-300 bg-amber-50 px-4 py-3 font-semibold text-amber-950">
-                Tu afiliación se encuentra inactiva.
+                Tu afiliación está en revisión. Recibimos tus datos y el pago reportado; Secretaría validará la información antes de activar tu registro definitivo.
+            </div>
+        @endif
+        @if(blank($affiliate->address) || blank($affiliate->birth_date) || blank($affiliate->marital_status) || blank($affiliate->photo_path))
+            <div class="rounded border border-sky-300 bg-sky-50 px-4 py-3 font-semibold text-sky-950">
+                Completa dirección, fecha de nacimiento, estado civil y fotografía para continuar.
             </div>
         @endif
 

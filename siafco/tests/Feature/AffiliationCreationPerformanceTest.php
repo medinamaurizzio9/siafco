@@ -149,7 +149,7 @@ class AffiliationCreationPerformanceTest extends TestCase
     {
         return [
             'full_name' => 'PERSONA '.$suffix,
-            'ci' => 'CI-'.$suffix,
+            'ci' => 'CI'.$suffix,
             'phone' => '70000001',
             'email' => strtolower($suffix).'@performance.test',
             'address' => 'DIRECCION '.$suffix,

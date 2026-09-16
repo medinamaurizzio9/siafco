@@ -18,6 +18,122 @@ use Illuminate\Validation\ValidationException;
 
 class PublicAffiliationService
 {
+    public function registerExpress(array $data, ?string $receiptPath, string $ip, ?string $userAgent): PublicAffiliationRequest
+    {
+        $data = TextNormalizer::fields($data, ['full_name', 'issued_in', 'bank_name', 'payer_name', 'observations']);
+        $data['phone'] = preg_replace('/\D/u', '', (string) ($data['phone'] ?? ''));
+        $data['email'] = app(AffiliateAccountService::class)->syntheticEmailFromCi($data['ci'] ?? null);
+
+        try {
+            return DB::transaction(function () use ($data, $receiptPath, $ip, $userAgent) {
+                $plan = AffiliationPlan::query()
+                    ->whereKey($data['affiliation_plan_id'])
+                    ->where('is_active', true)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($plan->sector_id && (int) $plan->sector_id !== (int) $data['sector_id']) {
+                    throw ValidationException::withMessages(['affiliation_plan_id' => 'El plan no corresponde al sector seleccionado.']);
+                }
+
+                $person = Person::where('ci', $data['ci'])->lockForUpdate()->first();
+                if ($person?->affiliate) {
+                    $pending = PublicAffiliationRequest::where('person_id', $person->id)
+                        ->whereNotIn('status', ['rejected', 'cancelled'])
+                        ->latest()
+                        ->first();
+
+                    throw ValidationException::withMessages([
+                        'ci' => $pending
+                            ? 'Ya existe una solicitud en proceso para este CI. Código: '.$pending->request_code
+                            : 'Ya existe una afiliación asociada a esta cédula.',
+                    ]);
+                }
+
+                if ($person && $this->normalized($person->full_name) !== $this->normalized($data['full_name'])) {
+                    throw ValidationException::withMessages([
+                        'ci' => 'El CI ya existe con datos distintos. La solicitud requiere revisión administrativa.',
+                    ]);
+                }
+
+                $person = Person::updateOrCreate(['ci' => $data['ci']], [
+                    'full_name' => $data['full_name'],
+                    'issued_in' => $data['issued_in'],
+                    'phone' => $data['phone'],
+                    'email' => $data['email'],
+                ]);
+
+                $affiliate = Affiliate::create([
+                    'person_id' => $person->id,
+                    'sector_id' => $data['sector_id'],
+                    'affiliation_plan_id' => $plan->id,
+                    'full_name' => $data['full_name'],
+                    'ci' => $data['ci'],
+                    'phone' => $data['phone'],
+                    'email' => $data['email'],
+                    'status' => 'pago_en_revision',
+                ]);
+
+                $user = app(AffiliateAccountService::class)->ensureForAffiliate($affiliate, $person);
+
+                $application = PublicAffiliationRequest::create([
+                    'person_id' => $person->id,
+                    'affiliate_id' => $affiliate->id,
+                    'user_id' => $user->id,
+                    'sector_id' => $data['sector_id'],
+                    'affiliation_plan_id' => $plan->id,
+                    'public_token' => (string) Str::uuid(),
+                    'request_code' => 'SOL-'.now()->format('Ymd').'-'.Str::upper(Str::random(6)),
+                    'amount_due' => $plan->total_amount,
+                    'status' => 'payment_submitted',
+                    'submitted_at' => now(),
+                    'payment_submitted_at' => now(),
+                    'ip_address' => $ip,
+                    'user_agent' => Str::limit($userAgent, 1000, ''),
+                    'terms_accepted_at' => now(),
+                    'privacy_accepted_at' => now(),
+                    'terms_version' => config('siafco.terms_version', '2026.1'),
+                    'privacy_version' => config('siafco.privacy_version', '2026.1'),
+                    'acceptance_ip' => $ip,
+                    'acceptance_user_agent' => Str::limit($userAgent, 1000, ''),
+                ]);
+
+                AffiliationPayment::create([
+                    'affiliate_id' => $affiliate->id,
+                    'public_affiliation_request_id' => $application->id,
+                    'affiliation_plan_id' => $plan->id,
+                    'amount' => $application->amount_due,
+                    'expected_amount' => $application->amount_due,
+                    'paid_amount' => $application->amount_due,
+                    'currency' => $plan->currency ?? 'BOB',
+                    'payment_method' => 'qr',
+                    'bank_name' => $data['bank_name'],
+                    'payer_name' => $data['payer_name'],
+                    'transaction_number' => $data['transaction_number'],
+                    'voucher_path' => $receiptPath,
+                    'payment_date' => $data['payment_date'],
+                    'paid_at' => $data['payment_date'],
+                    'observations' => $data['observations'] ?? null,
+                    'submitted_at' => now(),
+                    'status' => PaymentStatus::UNDER_REVIEW,
+                    'source' => 'web',
+                    'institutional_qr_path' => \App\Models\InstitutionalSetting::current()->payment_qr_path,
+                ]);
+
+                return $application->fresh(['person', 'sector', 'plan', 'payment', 'user']);
+            });
+        } catch (QueryException $exception) {
+            if ($this->isDuplicateConstraint($exception)) {
+                throw ValidationException::withMessages([
+                    'ci' => 'Ya existe una cuenta o solicitud asociada a estos datos.',
+                    'phone' => 'Ya existe una cuenta o solicitud asociada a estos datos.',
+                ]);
+            }
+
+            throw $exception;
+        }
+    }
+
     public function register(array $data, ?string $photoPath, string $ip, ?string $userAgent): PublicAffiliationRequest
     {
         $data = TextNormalizer::fields($data, [
@@ -189,6 +305,7 @@ class PublicAffiliationService
                     'observations' => $data['observations'] ?? null,
                     'status' => $initialStatus,
                     'submitted_at' => now(),
+                    'source' => 'web',
                 ]
             );
             $request->update(['status' => 'payment_submitted', 'payment_submitted_at' => now(), 'rejection_reason' => null]);
