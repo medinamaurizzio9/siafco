@@ -64,7 +64,7 @@
                         'Institución' => $affiliate->institution ?: $affiliate->sector?->institution ?: 'No registrada',
                         'Regional' => $affiliate->regional ?: $affiliate->sector?->regional ?: 'No registrada',
                         'Estado' => \App\Support\AffiliationStatusPresenter::label($affiliate->status),
-                        'Fecha de afiliación' => $affiliate->created_at?->format('d/m/Y'),
+                        'Fecha de afiliación' => \App\Support\SiafcoDate::dateTime($affiliate->created_at),
                         'Tipo de afiliado' => $affiliate->plan?->name ?: 'No registrado',
                         'Usuario de acceso' => $affiliate->user?->email ?: 'No registrado',
                     ];
@@ -170,7 +170,7 @@
             <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <div class="rounded bg-slate-50 p-3"><p class="text-xs font-bold uppercase text-slate-500">Total de pagos</p><p class="mt-1 text-xl font-black text-[#0b1f3a]">{{ $paymentSummary['count'] }}</p></div>
                 <div class="rounded bg-slate-50 p-3"><p class="text-xs font-bold uppercase text-slate-500">Total pagado</p><p class="mt-1 text-xl font-black text-[#0b1f3a]">Bs {{ number_format($paymentSummary['total'], 2, ',', '.') }}</p></div>
-                <div class="rounded bg-slate-50 p-3"><p class="text-xs font-bold uppercase text-slate-500">Último pago</p><p class="mt-1 font-black text-[#0b1f3a]">{{ $paymentSummary['latest'] ? ($paymentSummary['latest']->payment_date ?: $paymentSummary['latest']->created_at)->format('d/m/Y') : 'Sin pagos' }}</p></div>
+                <div class="rounded bg-slate-50 p-3"><p class="text-xs font-bold uppercase text-slate-500">Último pago</p><p class="mt-1 font-black text-[#0b1f3a]">{{ $paymentSummary['latest'] ? \App\Support\SiafcoDate::date($paymentSummary['latest']->payment_date ?: $paymentSummary['latest']->paid_at ?: $paymentSummary['latest']->created_at) : 'Sin pagos' }}</p></div>
             </div>
             <nav class="affiliate-tabs mt-4" aria-label="Origen de pagos">
                 <span class="is-active">Todos</span><span>Oficina</span><span>Web</span><span>App</span>
@@ -196,7 +196,7 @@
                             @foreach($payments as $payment)
                                 @php($currency = $payment->plan?->currency ?: 'BOB')
                                 <tr class="border-b border-slate-200 align-top">
-                                    <td class="p-3">{{ ($payment->payment_date ?: $payment->submitted_at ?: $payment->created_at)?->format('d/m/Y') }}</td>
+                                    <td class="p-3">{{ \App\Support\SiafcoDate::date($payment->payment_date ?: $payment->paid_at ?: $payment->submitted_at ?: $payment->created_at) }}</td>
                                     <td class="p-3 font-bold">{{ $payment->receipt_number ?: 'Sin recibo' }}<br><span class="text-xs text-slate-500">{{ $payment->publicRequest?->request_code ?: 'Sin SOL' }}</span><br><span class="text-xs text-slate-500">{{ $payment->transaction_number ?: $payment->reference_number ?: 'Sin transacción' }}</span></td>
                                     <td class="p-3">{{ $payment->plan?->name ?: 'Afiliación' }}</td>
                                     <td class="p-3">{{ \App\Support\PaymentMethodPresenter::label($payment->payment_method) }}</td>
@@ -219,7 +219,7 @@
                         @php($currency = $payment->plan?->currency ?: 'BOB')
                         <article class="rounded-lg border border-slate-200 bg-slate-50 p-4">
                             <div class="flex items-start justify-between gap-3">
-                                <div><p class="text-xs font-bold uppercase text-slate-500">{{ ($payment->payment_date ?: $payment->submitted_at ?: $payment->created_at)?->format('d/m/Y') }}</p><h4 class="mt-1 font-black text-[#0b1f3a]">{{ $payment->plan?->name ?: 'Afiliación' }}</h4></div>
+                                <div><p class="text-xs font-bold uppercase text-slate-500">{{ \App\Support\SiafcoDate::date($payment->payment_date ?: $payment->paid_at ?: $payment->submitted_at ?: $payment->created_at) }}</p><h4 class="mt-1 font-black text-[#0b1f3a]">{{ $payment->plan?->name ?: 'Afiliación' }}</h4></div>
                                 <x-affiliation-status :status="$payment->status" size="sm" />
                             </div>
                             <dl class="mt-3 grid gap-2 text-sm">

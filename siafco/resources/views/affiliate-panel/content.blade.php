@@ -2,7 +2,7 @@
 @php
     $photoUrl = $affiliate->photo_path ? Storage::disk('public')->url($affiliate->photo_path) : null;
     $credentialState = $affiliate->credential ? 'Vigente' : 'En preparación';
-    $latestPaymentDate = $latestPayment ? ($latestPayment->payment_date ?: $latestPayment->paid_at ?: $latestPayment->created_at)?->format('d/m/Y') : 'Sin pagos registrados';
+    $latestPaymentDate = $latestPayment ? \App\Support\SiafcoDate::date($latestPayment->payment_date ?: $latestPayment->paid_at ?: $latestPayment->created_at) : 'Sin pagos registrados';
     $quickActions = [
         ['title' => 'Mi credencial', 'copy' => 'Tu identificación digital', 'route' => route('affiliate.credential.preview'), 'icon' => 'credit-card'],
         ['title' => 'Mis pagos', 'copy' => 'Consulta tu historial', 'route' => route('affiliate.profile.show').'#payments', 'icon' => 'receipt'],

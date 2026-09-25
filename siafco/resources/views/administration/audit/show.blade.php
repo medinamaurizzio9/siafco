@@ -2,7 +2,7 @@
     <div class="grid gap-6">
         <x-ui.card eyebrow="Evento de auditoria" :title="str($audit->action)->replace(['_', '.'], ' ')->headline()">
             <div class="grid gap-3 text-sm md:grid-cols-3">
-                <div><p class="font-black text-siafco-muted">Fecha</p><p>{{ $audit->created_at->format('d/m/Y H:i:s') }}</p></div>
+                <div><p class="font-black text-siafco-muted">Fecha</p><p>{{ \App\Support\SiafcoDate::dateTimeWithSeconds($audit->created_at) }}</p></div>
                 <div><p class="font-black text-siafco-muted">Actor</p><p>{{ $audit->user?->name ?? 'Sistema' }}</p></div>
                 <div><p class="font-black text-siafco-muted">Rol</p><p>{{ $audit->user?->roleLabel() ?? '—' }}</p></div>
                 <div><p class="font-black text-siafco-muted">Modulo</p><p>{{ $module }}</p></div>

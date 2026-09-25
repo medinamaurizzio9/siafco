@@ -11,6 +11,7 @@ use App\Models\Sector;
 use App\Models\StoreOrder;
 use App\Models\User;
 use App\Support\PaymentStatus;
+use App\Support\SiafcoDate;
 use App\Support\StoreOrderStatus;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -61,10 +62,12 @@ class DashboardMetricsService
             StoreOrderStatus::PAYMENT_REVIEW,
         ];
         $confirmedPayments = AffiliationPayment::whereIn('status', $confirmedStatuses);
+        [$todayStart, $todayEnd] = SiafcoDate::utcDayBounds(null);
+        [$trendStart] = SiafcoDate::utcDayBounds(now(SiafcoDate::timezone())->subDays(29)->format('Y-m-d'));
         $confirmedAmount = (clone $confirmedPayments)->get()
             ->sum(fn ($payment) => (float) ($payment->paid_amount ?? $payment->amount));
         $todayRevenue = (clone $confirmedPayments)
-            ->whereDate(DB::raw('COALESCE(confirmed_at, paid_at, created_at)'), today())
+            ->whereBetween(DB::raw('COALESCE(confirmed_at, paid_at, created_at)'), [$todayStart, $todayEnd])
             ->get()
             ->sum(fn ($payment) => (float) ($payment->paid_amount ?? $payment->amount));
         $statusDistribution = Affiliate::query()
@@ -74,31 +77,31 @@ class DashboardMetricsService
             ->map(fn ($value) => (int) $value)
             ->all();
         $trendDates = collect(range(29, 0))
-            ->map(fn (int $days) => today()->subDays($days))
+            ->map(fn (int $days) => now(SiafcoDate::timezone())->startOfDay()->subDays($days))
             ->values();
         $affiliationTrend = $this->trend(
-            Affiliate::query()->whereDate('created_at', '>=', today()->subDays(29))->get(['created_at']),
+            Affiliate::query()->where('created_at', '>=', $trendStart)->get(['created_at']),
             $trendDates,
             fn ($affiliate) => $affiliate->created_at,
         );
         $revenueTrend = $this->trend(
             AffiliationPayment::query()
                 ->whereIn('status', $confirmedStatuses)
-                ->whereDate(DB::raw('COALESCE(confirmed_at, paid_at, created_at)'), '>=', today()->subDays(29))
+                ->where(DB::raw('COALESCE(confirmed_at, paid_at, created_at)'), '>=', $trendStart)
                 ->get(['paid_amount', 'amount', 'confirmed_at', 'paid_at', 'created_at']),
             $trendDates,
             fn ($payment) => $payment->confirmed_at ?? $payment->paid_at ?? $payment->created_at,
             fn ($payment) => (float) ($payment->paid_amount ?? $payment->amount),
         );
         $credentialTrend = $this->trend(
-            DigitalCredential::query()->whereDate('created_at', '>=', today()->subDays(29))->get(['created_at']),
+            DigitalCredential::query()->where('created_at', '>=', $trendStart)->get(['created_at']),
             $trendDates,
             fn ($credential) => $credential->created_at,
         );
         $storeOrderTrend = $this->trend(
             StoreOrder::query()
                 ->whereIn('status', $attentionOrderStatuses)
-                ->whereDate('created_at', '>=', today()->subDays(29))
+                ->where('created_at', '>=', $trendStart)
                 ->get(['created_at']),
             $trendDates,
             fn ($order) => $order->created_at,
@@ -107,7 +110,7 @@ class DashboardMetricsService
             User::query()
                 ->where(fn ($query) => $query->where('user_type', 'internal')->orWhereNull('user_type'))
                 ->whereNotNull('last_login_at')
-                ->whereDate('last_login_at', '>=', today()->subDays(29))
+                ->where('last_login_at', '>=', $trendStart)
                 ->get(['last_login_at']),
             $trendDates,
             fn ($user) => $user->last_login_at,
@@ -115,12 +118,12 @@ class DashboardMetricsService
 
         $metrics = [
             'affiliates' => Affiliate::count(),
-            'newAffiliates' => Affiliate::whereDate('created_at', today())->count(),
+            'newAffiliates' => Affiliate::whereBetween('created_at', [$todayStart, $todayEnd])->count(),
             'active' => Affiliate::where('status', 'activo')->count(),
             'pendingAffiliations' => PublicAffiliationRequest::whereIn('status', ['submitted', 'payment_submitted', 'under_review', 'pendiente_pago', 'pago_en_revision', 'observed'])->count(),
             'pendingPayments' => AffiliationPayment::whereIn('status', $pendingStatuses)->count(),
             'confirmedPayments' => (clone $confirmedPayments)->count(),
-            'todayPayments' => AffiliationPayment::whereDate('created_at', today())->count(),
+            'todayPayments' => AffiliationPayment::whereBetween('created_at', [$todayStart, $todayEnd])->count(),
             'confirmedAmount' => $confirmedAmount,
             'todayRevenue' => $todayRevenue,
             'rejectedPayments' => AffiliationPayment::whereIn('status', PaymentStatus::rejectedValues())->count(),
@@ -139,7 +142,7 @@ class DashboardMetricsService
             'recentAccesses' => User::query()
                 ->where(fn ($query) => $query->where('user_type', 'internal')->orWhereNull('user_type'))
                 ->whereNotNull('last_login_at')
-                ->where('last_login_at', '>=', now()->subDay())
+                ->where('last_login_at', '>=', now(SiafcoDate::timezone())->subDay()->utc())
                 ->count(),
             'pendingStoreOrders' => StoreOrder::whereIn('status', $attentionOrderStatuses)->count(),
             'pendingCashDeposits' => CashDeposit::where('status', CashDeposit::UNDER_REVIEW)->count(),
@@ -171,7 +174,7 @@ class DashboardMetricsService
 
     private function trend($records, $dates, callable $dateResolver, ?callable $valueResolver = null): array
     {
-        $values = $records->groupBy(fn ($record) => Carbon::parse($dateResolver($record))->toDateString())
+        $values = $records->groupBy(fn ($record) => Carbon::parse($dateResolver($record))->timezone(SiafcoDate::timezone())->toDateString())
             ->map(fn ($group) => $valueResolver
                 ? round($group->sum(fn ($record) => $valueResolver($record)), 2)
                 : $group->count()

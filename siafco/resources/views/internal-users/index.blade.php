@@ -78,7 +78,7 @@
                             </span>
                         </td>
                         <td>{{ $internalUser->last_login_at?->diffForHumans() ?? 'Nunca ingresó' }}</td>
-                        <td>{{ $internalUser->created_at->format('d/m/Y') }}</td>
+                        <td>{{ \App\Support\SiafcoDate::dateTime($internalUser->created_at) }}</td>
                         <td>
                             @if($internalUser->trashed())
                                 @can('restore', $internalUser)

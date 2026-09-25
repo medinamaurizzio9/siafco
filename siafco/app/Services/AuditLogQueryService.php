@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AuditLog;
+use App\Support\SiafcoDate;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -12,8 +13,14 @@ class AuditLogQueryService
     {
         return AuditLog::query()
             ->with('user:id,name,role,user_type')
-            ->when($filters['date_from'] ?? null, fn (Builder $query, string $date) => $query->whereDate('created_at', '>=', $date))
-            ->when($filters['date_to'] ?? null, fn (Builder $query, string $date) => $query->whereDate('created_at', '<=', $date))
+            ->when($filters['date_from'] ?? null, function (Builder $query, string $date) {
+                [$from] = SiafcoDate::utcDayBounds($date);
+                $query->where('created_at', '>=', $from);
+            })
+            ->when($filters['date_to'] ?? null, function (Builder $query, string $date) {
+                [, $to] = SiafcoDate::utcDayBounds($date);
+                $query->where('created_at', '<=', $to);
+            })
             ->when($filters['user_id'] ?? null, fn (Builder $query, string $id) => $query->where('user_id', $id))
             ->when($filters['role'] ?? null, fn (Builder $query, string $role) => $query->whereHas('user', fn (Builder $user) => $user->where('role', $role)))
             ->when($filters['action'] ?? null, fn (Builder $query, string $action) => $query->where('action', 'like', "%{$action}%"))

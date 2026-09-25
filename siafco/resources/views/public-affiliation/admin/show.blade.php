@@ -25,7 +25,7 @@
                     @if(\App\Support\PaymentMethodPresenter::showsTransactionNumber($application->payment->payment_method))
                         <dt class="font-bold">N.º de transacción</dt><dd>{{ $application->payment->reference_number ?: 'No registrado' }}</dd>
                     @endif
-                    <dt class="font-bold">Fecha</dt><dd>{{ $application->payment->payment_date?->format('d/m/Y') }}</dd>
+                    <dt class="font-bold">Fecha</dt><dd>{{ \App\Support\SiafcoDate::date($application->payment->payment_date) }}</dd>
                     <dt class="font-bold">Registrado por</dt><dd>{{ $application->payment->registrar?->name ?? 'No disponible' }}</dd>
                     <dt class="font-bold">Estado</dt><dd><x-payment-status :status="$application->payment->status" size="sm" /></dd>
                 </dl>

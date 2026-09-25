@@ -34,7 +34,7 @@
                     <div><span class="text-slate-500">Estado</span><strong class="block">{{ $order->status }}</strong></div>
                     <div><span class="text-slate-500">Total</span><strong class="block">Bs {{ number_format((float) $order->total, 2) }}</strong></div>
                     <div><span class="text-slate-500">Entrega</span><strong class="block">{{ $order->delivery_method }}</strong></div>
-                    <div><span class="text-slate-500">Fecha</span><strong class="block">{{ $order->created_at->format('d/m/Y') }}</strong></div>
+                    <div><span class="text-slate-500">Fecha</span><strong class="block">{{ \App\Support\SiafcoDate::dateTime($order->created_at) }}</strong></div>
                 </div>
                 <a class="btn-secondary mt-4 min-h-12 w-full" href="{{ route('admin.store.orders.show', $order) }}">Ver</a>
             </article>
@@ -54,7 +54,7 @@
                     <td><span class="rounded bg-slate-100 px-2 py-1 text-xs font-bold">{{ $order->status }}</span></td>
                     <td>{{ $order->delivery_method }}</td>
                     <td>Bs {{ number_format((float) $order->total, 2) }}</td>
-                    <td>{{ $order->created_at->format('d/m/Y H:i') }}</td>
+                    <td>{{ \App\Support\SiafcoDate::dateTime($order->created_at) }}</td>
                     <td class="text-right"><a class="btn-secondary" href="{{ route('admin.store.orders.show', $order) }}">Ver</a></td>
                 </tr>
             @empty

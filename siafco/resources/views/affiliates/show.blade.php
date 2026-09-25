@@ -16,6 +16,38 @@
                         <span class="text-slate-600">{{ $affiliate->sector->name }}</span>
                         <x-affiliation-status :status="$affiliate->status" size="sm" />
                     </div>
+                    @if(auth()->user()->hasPermission('affiliate_jewels.view'))
+                        <div class="mt-4 rounded-lg border {{ $affiliate->jewel_delivered_at ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50' }} p-4 text-left">
+                            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                <div>
+                                    <p class="text-xs font-black uppercase text-slate-500">Joya entregada</p>
+                                    <p class="mt-1 text-lg font-black {{ $affiliate->jewel_delivered_at ? 'text-emerald-800' : 'text-amber-900' }}">{{ $affiliate->jewel_delivered_at ? 'ENTREGADA' : 'PENDIENTE DE ENTREGA' }}</p>
+                                    @if($affiliate->jewel_delivered_at)
+                                        <p class="mt-1 text-sm text-slate-700">Entregada por: <strong>{{ $affiliate->jewelDeliveredBy?->name ?? 'Usuario no disponible' }}</strong></p>
+                                        <p class="text-sm text-slate-700">Fecha: <strong>{{ \App\Support\SiafcoDate::dateTime($affiliate->jewel_delivered_at) }}</strong></p>
+                                    @endif
+                                </div>
+                                @if(auth()->user()->hasPermission('affiliate_jewels.manage'))
+                                    <div class="grid gap-2 sm:min-w-80">
+                                        <form class="grid gap-2" method="post" action="{{ route('affiliates.jewel-delivery.deliver', $affiliate) }}">
+                                            @csrf @method('patch')
+                                            <label class="text-sm font-bold">Fecha de entrega
+                                                <input class="form-input" type="datetime-local" name="delivered_at" value="{{ old('delivered_at', \App\Support\SiafcoDate::inputDateTime($affiliate->jewel_delivered_at)) }}">
+                                            </label>
+                                            <button class="{{ $affiliate->jewel_delivered_at ? 'btn-secondary' : 'btn-primary' }}" type="submit">{{ $affiliate->jewel_delivered_at ? 'Actualizar fecha' : 'Marcar entregada' }}</button>
+                                        </form>
+                                        @if($affiliate->jewel_delivered_at)
+                                            <form class="grid gap-2" method="post" action="{{ route('affiliates.jewel-delivery.revert', $affiliate) }}" data-confirm-title="Revertir entrega de joya" data-confirm-message="La joya volverá a estado pendiente y se conservará el historial." data-confirm-accept="Revertir entrega" data-confirm-variant="danger">
+                                                @csrf @method('patch')
+                                                <input class="form-input" name="reason" placeholder="Motivo de reversión" required>
+                                                <button class="btn-danger" type="submit">Revertir entrega</button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
                     <dl class="mt-4 grid gap-3 text-left sm:grid-cols-2">
                         <div><dt class="text-xs font-black uppercase text-slate-500">Celular</dt><dd class="font-bold">{{ $affiliate->phone ?: 'Sin dato' }}</dd></div>
                         <div><dt class="text-xs font-black uppercase text-slate-500">Correo</dt><dd class="break-all font-bold">{{ $affiliate->email ?: 'Sin dato' }}</dd></div>
@@ -39,7 +71,7 @@
             <details class="collapsible-section mt-5">
                 <summary>Informacion completa</summary>
                 <dl class="collapsible-section__body grid gap-4 md:grid-cols-2">
-                    @foreach(['CI' => $affiliate->ci, 'Correo' => $affiliate->email, 'Celular' => $affiliate->phone, 'Regional' => $affiliate->regional, 'Institucion' => $affiliate->institution, 'Cargo/profesion' => $affiliate->position, 'Tipo de afiliado' => $affiliate->affiliate_type, 'Direccion' => $affiliate->address, 'Fecha de nacimiento' => $affiliate->birth_date?->format('d/m/Y'), 'Estado civil' => $affiliate->marital_status] as $label => $value)
+                    @foreach(['CI' => $affiliate->ci, 'Correo' => $affiliate->email, 'Celular' => $affiliate->phone, 'Regional' => $affiliate->regional, 'Institucion' => $affiliate->institution, 'Cargo/profesion' => $affiliate->position, 'Tipo de afiliado' => $affiliate->affiliate_type, 'Direccion' => $affiliate->address, 'Fecha de nacimiento' => \App\Support\SiafcoDate::date($affiliate->birth_date), 'Estado civil' => $affiliate->marital_status] as $label => $value)
                         <div><dt class="text-xs font-black uppercase text-slate-500">{{ $label }}</dt><dd>{{ $value ?: 'Sin dato' }}</dd></div>
                     @endforeach
                 </dl>
@@ -192,7 +224,7 @@
                 <div><dt class="text-xs font-black uppercase text-slate-500">Correo de acceso</dt><dd class="mt-1 break-all font-bold text-slate-900">{{ $accessUser?->email ?? $affiliate->email ?? 'Sin correo' }}</dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Usuario compatible</dt><dd class="mt-1 break-all font-bold text-slate-900">{{ $accessUser?->username ?: 'Generado internamente' }}</dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Cambio obligatorio</dt><dd class="mt-1 font-bold text-slate-900">{{ $accessUser?->must_change_password ? 'Pendiente' : 'No pendiente' }}</dd></div>
-                <div><dt class="text-xs font-black uppercase text-slate-500">Ultimo acceso</dt><dd class="mt-1 font-bold text-slate-900">{{ $accessUser?->last_login_at?->format('d/m/Y H:i') ?? 'Nunca ingreso' }}</dd></div>
+                <div><dt class="text-xs font-black uppercase text-slate-500">Ultimo acceso</dt><dd class="mt-1 font-bold text-slate-900">{{ \App\Support\SiafcoDate::dateTime($accessUser?->last_login_at, 'Nunca ingreso') }}</dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Ultima IP</dt><dd class="mt-1 font-bold text-slate-900">{{ $accessUser?->last_login_ip ?: 'No registrada' }}</dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Acceso movil</dt><dd class="mt-1 font-bold text-slate-900">{{ $accessUser?->is_active ? 'Habilitado' : 'Requiere activacion' }}</dd></div>
             </dl>
@@ -225,6 +257,31 @@
         @endcan
     @endcan
 
+    @if(auth()->user()->hasPermission('affiliate_jewels.view'))
+        <section class="mt-6 rounded-lg border border-slate-200 bg-white p-5">
+            <p class="text-xs font-black uppercase text-[#b8942f]">Historial de joya</p>
+            <div class="mt-4 overflow-x-auto">
+                <table class="table">
+                    <thead><tr><th>Acción</th><th>Fecha anterior</th><th>Fecha nueva</th><th>Usuario</th><th>Motivo</th><th>Registrado</th></tr></thead>
+                    <tbody>
+                    @forelse($affiliate->jewelDeliveryHistories as $history)
+                        <tr>
+                            <td>{{ str($history->action)->replace('_', ' ')->headline() }}</td>
+                            <td>{{ \App\Support\SiafcoDate::dateTime($history->delivery_date_before, 'No aplica') }}</td>
+                            <td>{{ \App\Support\SiafcoDate::dateTime($history->delivery_date_after, 'No aplica') }}</td>
+                            <td>{{ $history->performer?->name ?? 'Usuario no disponible' }}</td>
+                            <td>{{ $history->reason ?: 'Sin motivo' }}</td>
+                            <td>{{ \App\Support\SiafcoDate::dateTime($history->created_at) }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="6">Sin movimientos de entrega de joya.</td></tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    @endif
+
     <section class="mt-6 rounded-lg border border-slate-200 bg-white p-5">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -240,7 +297,7 @@
             <div><dt class="text-xs font-black uppercase text-slate-500">Total confirmado</dt><dd class="font-bold">BOB {{ number_format($treasury['confirmed_amount'], 2) }}</dd></div>
             <div><dt class="text-xs font-black uppercase text-slate-500">Saldo pendiente</dt><dd class="font-bold">BOB {{ number_format($treasury['pending_balance'], 2) }}</dd></div>
             <div><dt class="text-xs font-black uppercase text-slate-500">Cantidad de pagos</dt><dd class="font-bold">{{ $treasury['payment_count'] }}</dd></div>
-            <div><dt class="text-xs font-black uppercase text-slate-500">Ultimo pago</dt><dd class="font-bold">{{ $treasury['latest_payment']?->paid_at?->format('d/m/Y H:i') ?? $treasury['latest_payment']?->created_at?->format('d/m/Y H:i') ?? 'Sin pagos' }}</dd></div>
+            <div><dt class="text-xs font-black uppercase text-slate-500">Ultimo pago</dt><dd class="font-bold">{{ $treasury['latest_payment'] ? \App\Support\SiafcoDate::date($treasury['latest_payment']->payment_date ?? $treasury['latest_payment']->paid_at) : 'Sin pagos' }}</dd></div>
             <div><dt class="text-xs font-black uppercase text-slate-500">Estado del pago</dt><dd class="font-bold">{{ \App\Support\PaymentStatus::label($treasury['payment_status']) }}</dd></div>
             <div><dt class="text-xs font-black uppercase text-slate-500">Estado de afiliacion</dt><dd><x-affiliation-status :status="$affiliate->status" size="sm" /></dd></div>
             <div><dt class="text-xs font-black uppercase text-slate-500">Credencial</dt><dd class="font-bold">{{ $treasury['credential_status'] === 'generada' ? 'Generada' : 'No generada' }}</dd></div>
@@ -263,7 +320,7 @@
                         </div>
                         <x-payment-status :status="$payment->status" size="sm" />
                     </div>
-                    <p class="mt-3 text-sm text-slate-600">{{ $payment->paid_at?->format('d/m/Y H:i') ?? $payment->payment_date?->format('d/m/Y') ?? 'Sin fecha' }} · {{ \App\Support\PaymentMethodPresenter::label($payment->payment_method) }}</p>
+                    <p class="mt-3 text-sm text-slate-600">{{ \App\Support\SiafcoDate::date($payment->payment_date ?? $payment->paid_at) }} · {{ \App\Support\PaymentMethodPresenter::label($payment->payment_method) }}</p>
                     <div class="mt-4 grid gap-2">
                         <a class="btn-secondary min-h-12 w-full" href="{{ route('payments.show', $payment) }}">Ver pago</a>
                         @if((auth()->user()->hasPermission('payments.view_receipt') || auth()->user()->hasRole('caja')) && $payment->canRenderReceipt())
@@ -281,7 +338,7 @@
                 <tbody>
                 @foreach($affiliate->payments as $payment)
                     <tr>
-                        <td>{{ $payment->paid_at?->format('d/m/Y H:i') ?? $payment->payment_date?->format('d/m/Y') ?? 'Sin fecha' }}</td>
+                        <td>{{ \App\Support\SiafcoDate::date($payment->payment_date ?? $payment->paid_at) }}</td>
                         <td class="font-black">{{ $payment->receipt_number ?: 'Sin recibo' }}</td>
                         <td>{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</td>
                         <td>{{ \App\Support\PaymentMethodPresenter::label($payment->payment_method) }}</td>
@@ -332,7 +389,7 @@
                 @forelse($timeline as $event)
                     <div class="rounded border border-slate-200 p-3">
                         <p class="font-black text-[#0b1f3a]">{{ $event['label'] }}</p>
-                        <p class="text-sm text-slate-600">{{ $event['occurred_at']?->format('d/m/Y H:i') }}</p>
+                        <p class="text-sm text-slate-600">{{ \App\Support\SiafcoDate::dateTime($event['occurred_at']) }}</p>
                     </div>
                 @empty
                     <p class="text-sm text-slate-600">Sin eventos auditados.</p>
@@ -352,7 +409,7 @@
                         @php($origin = \App\Support\AuditLogPresenter::origin($log))
                         <tr>
                             <td>{{ \App\Support\AuditLogPresenter::actionLabel($log->action) }}</td>
-                            <td>{{ $log->created_at?->format('d/m/Y H:i') }}</td>
+                            <td>{{ \App\Support\SiafcoDate::dateTime($log->created_at) }}</td>
                             <td class="max-w-lg">
                                 <p class="font-semibold text-slate-800">{{ \App\Support\AuditLogPresenter::detail($log) }}</p>
                                 @if($origin)

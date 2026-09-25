@@ -7,6 +7,7 @@ use App\Models\StoreOrder;
 use App\Services\Store\StoreOrderStatusService;
 use App\Support\StoreDeliveryMethod;
 use App\Support\StoreOrderStatus;
+use App\Support\SiafcoDate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -35,8 +36,14 @@ class OrderController extends Controller
                 })
                 ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
                 ->when($filters['delivery_method'] ?? null, fn ($query, $method) => $query->where('delivery_method', $method))
-                ->when($filters['from'] ?? null, fn ($query, $from) => $query->whereDate('created_at', '>=', $from))
-                ->when($filters['to'] ?? null, fn ($query, $to) => $query->whereDate('created_at', '<=', $to))
+                ->when($filters['from'] ?? null, function ($query, $from) {
+                    [$fromUtc] = SiafcoDate::utcDayBounds($from);
+                    $query->where('created_at', '>=', $fromUtc);
+                })
+                ->when($filters['to'] ?? null, function ($query, $to) {
+                    [, $toUtc] = SiafcoDate::utcDayBounds($to);
+                    $query->where('created_at', '<=', $toUtc);
+                })
                 ->latest()
                 ->paginate(15)->withQueryString(),
             'filters' => $filters,

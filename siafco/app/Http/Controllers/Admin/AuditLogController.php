@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use App\Models\User;
 use App\Services\AuditLogQueryService;
 use App\Services\AuditLogSanitizer;
+use App\Support\SiafcoDate;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -67,7 +68,7 @@ class AuditLogController extends Controller
             $this->logs->query($filters)->chunk(200, function ($records) use ($handle) {
                 foreach ($records as $record) {
                     fputcsv($handle, [
-                        optional($record->created_at)->format('Y-m-d H:i:s'),
+                        SiafcoDate::dateTimeWithSeconds($record->created_at, ''),
                         $record->user?->name ?? 'Sistema',
                         $record->user?->role ?? '',
                         $record->action,

@@ -7,6 +7,7 @@ use App\Models\AffiliationPlan;
 use App\Models\Sector;
 use App\Models\User;
 use App\Support\PaymentStatus;
+use App\Support\SiafcoDate;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -105,8 +106,14 @@ class CashCollectionReportController extends Controller
     {
         return AffiliationPayment::query()
             ->whereIn('status', PaymentStatus::confirmedValues())
-            ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('confirmed_at', '>=', $date))
-            ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('confirmed_at', '<=', $date))
+            ->when($filters['date_from'] ?? null, function ($query, $date) {
+                [$from] = SiafcoDate::utcDayBounds($date);
+                $query->where('confirmed_at', '>=', $from);
+            })
+            ->when($filters['date_to'] ?? null, function ($query, $date) {
+                [, $to] = SiafcoDate::utcDayBounds($date);
+                $query->where('confirmed_at', '<=', $to);
+            })
             ->when($filters['cashier_id'] ?? null, fn ($query, $id) => $query->where('registered_by', $id))
             ->when($filters['receipt_number'] ?? null, fn ($query, $receipt) => $query->where('receipt_number', 'like', "%{$receipt}%"))
             ->when($filters['reference_number'] ?? null, fn ($query, $reference) => $query->where('reference_number', 'like', "%{$reference}%"))

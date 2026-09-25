@@ -11,17 +11,17 @@
                     <tr>
                         <td>{{ $deposit->registrar?->name }}</td>
                         <td>{{ $deposit->currency }} {{ number_format((float) $deposit->amount, 2) }}</td>
-                        <td>{{ $deposit->deposited_at->format('d/m/Y H:i') }}</td>
+                        <td>{{ \App\Support\SiafcoDate::dateTime($deposit->deposited_at) }}</td>
                         <td>{{ $deposit->transaction_number }}</td>
                         <td>@if($deposit->voucher_path)<a class="font-bold text-blue-700 underline" target="_blank" href="{{ route('cash-deposits.admin.voucher', $deposit) }}">Ver</a>@else No adjunto @endif</td>
                         <td>{{ $deposit->status === 'confirmed' ? 'Confirmado' : ($deposit->status === 'rejected' ? 'Rechazado' : 'En revisión') }}</td>
-                        <td>{{ $deposit->created_at->format('d/m/Y H:i') }}</td>
+                        <td>{{ \App\Support\SiafcoDate::dateTime($deposit->created_at) }}</td>
                         <td>{{ $deposit->reviewer?->name ?? 'Pendiente' }}</td>
                         <td>
                             @if($deposit->status === 'under_review')
                                 <div class="flex gap-2">
                                     <a class="btn-secondary" href="{{ route('cash-deposits.admin.show', $deposit) }}">Ver</a>
-                                    <form method="post" action="{{ route('cash-deposits.admin.confirm', $deposit) }}" data-confirm-title="¿Confirmar depósito de caja?" data-confirm-message="Cajero: {{ $deposit->registrar?->name }}. Monto: {{ $deposit->currency }} {{ number_format((float) $deposit->amount, 2) }}. Transacción: {{ $deposit->transaction_number }}. Fecha: {{ $deposit->deposited_at->format('d/m/Y') }}." data-confirm-accept="Confirmar">@csrf<button class="btn-primary">Confirmar</button></form>
+                                    <form method="post" action="{{ route('cash-deposits.admin.confirm', $deposit) }}" data-confirm-title="¿Confirmar depósito de caja?" data-confirm-message="Cajero: {{ $deposit->registrar?->name }}. Monto: {{ $deposit->currency }} {{ number_format((float) $deposit->amount, 2) }}. Transacción: {{ $deposit->transaction_number }}. Fecha: {{ \App\Support\SiafcoDate::dateTime($deposit->deposited_at) }}." data-confirm-accept="Confirmar">@csrf<button class="btn-primary">Confirmar</button></form>
                                     <form method="post" action="{{ route('cash-deposits.admin.reject', $deposit) }}" data-confirm-title="Rechazar depósito" data-confirm-message="El depósito quedará rechazado con el motivo indicado." data-confirm-accept="Rechazar" data-confirm-variant="danger">@csrf<input class="form-input" name="rejection_reason" placeholder="Motivo" required minlength="5"><button class="btn-danger mt-2">Rechazar</button></form>
                                 </div>
                             @elseif($deposit->rejection_reason)

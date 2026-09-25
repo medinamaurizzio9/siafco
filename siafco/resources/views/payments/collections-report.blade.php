@@ -128,7 +128,7 @@
             <div class="border-b border-amber-200 bg-amber-50 p-4"><h3 class="font-black text-amber-950">Pagos pendientes de verificación</h3></div>
             <div class="overflow-x-auto"><table class="table"><thead><tr><th>Fecha</th><th>Afiliado</th><th>CI</th><th>Monto</th><th>Operación</th><th>Registrado por</th><th>Acción</th></tr></thead><tbody>
             @foreach($pendingPayments as $pending)
-                <tr><td>{{ $pending->paid_at?->format('d/m/Y H:i') }}</td><td>{{ $pending->affiliate?->full_name }}</td><td>{{ $pending->affiliate?->ci }}</td><td>{{ $pending->currency ?? 'BOB' }} {{ number_format((float) ($pending->paid_amount ?? $pending->amount), 2) }}</td><td>{{ $pending->reference_number }}</td><td>{{ $pending->registrar?->name ?? 'No registrado' }}</td><td><a class="btn-secondary" href="{{ route('payments.show', $pending) }}">Ver</a></td></tr>
+                <tr><td>{{ \App\Support\SiafcoDate::date($pending->payment_date ?? $pending->paid_at) }}</td><td>{{ $pending->affiliate?->full_name }}</td><td>{{ $pending->affiliate?->ci }}</td><td>{{ $pending->currency ?? 'BOB' }} {{ number_format((float) ($pending->paid_amount ?? $pending->amount), 2) }}</td><td>{{ $pending->reference_number }}</td><td>{{ $pending->registrar?->name ?? 'No registrado' }}</td><td><a class="btn-secondary" href="{{ route('payments.show', $pending) }}">Ver</a></td></tr>
             @endforeach
             </tbody></table></div>
         </section>
@@ -158,7 +158,7 @@
                 @forelse($payments as $payment)
                     <tr>
                         <td class="font-black">{{ $payment->receipt_number ?: 'Sin recibo' }}</td>
-                        <td>{{ $payment->confirmed_at?->format('d/m/Y H:i') ?? $payment->paid_at?->format('d/m/Y H:i') }}</td>
+                        <td>{{ $payment->confirmed_at ? \App\Support\SiafcoDate::dateTime($payment->confirmed_at) : \App\Support\SiafcoDate::date($payment->payment_date ?? $payment->paid_at) }}</td>
                         <td>{{ $payment->affiliate?->full_name ?? 'Afiliado no disponible' }}</td>
                         <td>{{ $payment->affiliate?->ci ?? 'No disponible' }}</td>
                         <td>{{ $payment->affiliate?->registration_number ?: 'Sin codigo' }}</td>

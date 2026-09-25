@@ -27,7 +27,7 @@
                 @php($affiliateDisplayStatus = \App\Support\AffiliationStatusPresenter::forAffiliate($affiliate))
                 <div><dt class="text-xs font-black uppercase text-slate-500">Estado de afiliacion</dt><dd><x-affiliation-status :status="$affiliateDisplayStatus" :label="\App\Support\AffiliationStatusPresenter::officeSummaryLabel($affiliateDisplayStatus)" size="sm" /></dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Registrado por</dt><dd>{{ $payment->registrar?->name ?? 'No registrado' }}</dd></div>
-                <div><dt class="text-xs font-black uppercase text-slate-500">Fecha</dt><dd>{{ $payment->confirmed_at?->format('d/m/Y H:i') ?? $payment->paid_at?->format('d/m/Y H:i') }}</dd></div>
+                <div><dt class="text-xs font-black uppercase text-slate-500">Fecha</dt><dd>{{ $payment->confirmed_at ? \App\Support\SiafcoDate::dateTime($payment->confirmed_at) : \App\Support\SiafcoDate::date($payment->payment_date ?? $payment->paid_at) }}</dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Recibo</dt><dd>{{ $payment->receipt_number ?: 'Pendiente' }}</dd></div>
             </dl>
         </section>

@@ -53,7 +53,7 @@
         </div>
         <div class="section-card">
             <h3 class="mb-3 text-lg font-black text-[#0b1f3a]">Historial</h3>
-            <div class="grid gap-2 text-sm">@forelse($order->statusHistories as $history)<p class="rounded bg-slate-50 p-3">{{ $history->from_status ?: 'inicio' }} -> <strong>{{ $history->to_status }}</strong><br><span class="text-slate-500">{{ $history->changed_at->format('d/m/Y H:i') }} · {{ $history->actor?->name ?: 'Sistema' }}</span></p>@empty<p class="text-slate-600">Sin historial registrado.</p>@endforelse</div>
+            <div class="grid gap-2 text-sm">@forelse($order->statusHistories as $history)<p class="rounded bg-slate-50 p-3">{{ $history->from_status ?: 'inicio' }} -> <strong>{{ $history->to_status }}</strong><br><span class="text-slate-500">{{ \App\Support\SiafcoDate::dateTime($history->changed_at) }} · {{ $history->actor?->name ?: 'Sistema' }}</span></p>@empty<p class="text-slate-600">Sin historial registrado.</p>@endforelse</div>
         </div>
     </section>
 

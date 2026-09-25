@@ -33,7 +33,7 @@
                 <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
                     <div><span class="text-slate-500">Valor</span><strong class="block">{{ $coupon->type === 'percentage' ? number_format((float) $coupon->value, 2).'%' : 'Bs '.number_format((float) $coupon->value, 2) }}</strong></div>
                     <div><span class="text-slate-500">Limite</span><strong class="block">{{ $coupon->global_limit ?: 'Sin limite' }}</strong></div>
-                    <div class="col-span-2"><span class="text-slate-500">Vigencia</span><strong class="block">{{ $coupon->starts_at?->format('d/m/Y H:i') ?: 'Sin inicio' }} - {{ $coupon->ends_at?->format('d/m/Y H:i') ?: 'Sin vencimiento' }}</strong></div>
+                    <div class="col-span-2"><span class="text-slate-500">Vigencia</span><strong class="block">{{ \App\Support\SiafcoDate::dateTime($coupon->starts_at, 'Sin inicio') }} - {{ \App\Support\SiafcoDate::dateTime($coupon->ends_at, 'Sin vencimiento') }}</strong></div>
                 </div>
                 @can('store.manage-coupons')
                     <a class="btn-secondary mt-4 min-h-12 w-full" href="{{ route('admin.store.coupons.edit', $coupon) }}">Editar</a>
@@ -53,7 +53,7 @@
                     <td>{{ $coupon->code_hint }}</td>
                     <td>{{ $types[$coupon->type] ?? $coupon->type }}</td>
                     <td>{{ $coupon->type === 'percentage' ? number_format((float) $coupon->value, 2).'%' : 'Bs '.number_format((float) $coupon->value, 2) }}</td>
-                    <td class="text-sm">{{ $coupon->starts_at?->format('d/m/Y H:i') ?: 'Sin inicio' }}<br>{{ $coupon->ends_at?->format('d/m/Y H:i') ?: 'Sin vencimiento' }}</td>
+                    <td class="text-sm">{{ \App\Support\SiafcoDate::dateTime($coupon->starts_at, 'Sin inicio') }}<br>{{ \App\Support\SiafcoDate::dateTime($coupon->ends_at, 'Sin vencimiento') }}</td>
                     <td class="text-sm">Global: {{ $coupon->global_limit ?: 'Sin límite' }}<br>Afiliado: {{ $coupon->per_affiliate_limit ?: 'Sin límite' }}</td>
                     <td>{{ $coupon->active ? 'Activo' : 'Inactivo' }}</td>
                     <td class="text-right">

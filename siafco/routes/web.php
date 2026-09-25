@@ -5,8 +5,10 @@ use App\Http\Controllers\AffiliateAccessController;
 use App\Http\Controllers\AffiliateAdministrationController;
 use App\Http\Controllers\AffiliateBenefitController;
 use App\Http\Controllers\AffiliatePanelController;
+use App\Http\Controllers\AffiliateJewelDeliveryController;
 use App\Http\Controllers\AffiliateProfileController;
 use App\Http\Controllers\AffiliatePasswordController;
+use App\Http\Controllers\AffiliateSupportReportController;
 use App\Http\Controllers\AffiliationPlanController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CashCollectionReportController;
@@ -266,8 +268,18 @@ Route::middleware(['auth', 'password.changed', 'affiliate.profile.complete', 'af
     Route::middleware('role:administrador,superadministrador,gerente,administrador_sector,secretaria,caja,cajero,consulta')->group(function () {
         Route::get('/afiliados', [AffiliateController::class, 'index'])->name('affiliates.index');
         Route::get('/afiliados/{affiliate}', [AffiliateController::class, 'show'])->name('affiliates.show');
+        Route::patch('/afiliados/{affiliate}/joya/entrega', [AffiliateJewelDeliveryController::class, 'deliver'])
+            ->middleware('permission:affiliate_jewels.manage')->name('affiliates.jewel-delivery.deliver');
+        Route::patch('/afiliados/{affiliate}/joya/revertir', [AffiliateJewelDeliveryController::class, 'revert'])
+            ->middleware('permission:affiliate_jewels.manage')->name('affiliates.jewel-delivery.revert');
         Route::get('/pagos', [PaymentController::class, 'index'])->middleware('permission:payments.view')->name('payments.index');
         Route::get('/reportes', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reportes/joyas/csv', [ReportController::class, 'jewelDeliveryCsv'])
+            ->middleware('permission:affiliate_jewels.report,reports.export')->name('reports.jewels.csv');
+        Route::get('/reportes/afiliacion/soporte', [AffiliateSupportReportController::class, 'index'])
+            ->middleware('permission:affiliate_support_reports.view')->name('reports.affiliate-support.index');
+        Route::get('/reportes/afiliacion/soporte/csv', [AffiliateSupportReportController::class, 'csv'])
+            ->middleware('permission:affiliate_support_reports.export')->name('reports.affiliate-support.csv');
         Route::get('/reportes/pdf', [ReportController::class, 'pdf'])->name('reports.pdf');
     });
 

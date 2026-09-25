@@ -19,7 +19,7 @@
                 <div><dt class="font-bold text-slate-500">Celular</dt><dd>{{ $advisor->phone }}</dd></div>
                 <div><dt class="font-bold text-slate-500">Correo</dt><dd>{{ $advisor->email ?: 'Sin correo' }}</dd></div>
                 <div><dt class="font-bold text-slate-500">Usuario vinculado</dt><dd>{{ $advisor->user?->name ?? 'Sin vincular' }}</dd></div>
-                <div><dt class="font-bold text-slate-500">Fecha de creación</dt><dd>{{ $advisor->created_at->format('d/m/Y H:i') }}</dd></div>
+                <div><dt class="font-bold text-slate-500">Fecha de creación</dt><dd>{{ \App\Support\SiafcoDate::dateTime($advisor->created_at) }}</dd></div>
             </dl>
             @if(auth()->user()->hasPermission('investment_advisors.update'))
                 <div class="mt-5"><a class="btn-secondary" href="{{ route('investments.advisors.edit', $advisor) }}">Editar asesor</a></div>

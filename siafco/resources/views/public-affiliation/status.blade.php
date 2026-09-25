@@ -16,8 +16,8 @@
                 <div><dt class="text-sm font-bold text-slate-500">Plan</dt><dd>{{ $application->plan->name }}</dd></div>
                 <div><dt class="text-sm font-bold text-slate-500">Monto</dt><dd>BOB {{ number_format($application->amount_due, 2) }}</dd></div>
                 <div><dt class="text-sm font-bold text-slate-500">Estado</dt><dd class="mt-1"><x-affiliation-status :status="$application->status" size="sm" /></dd></div>
-                <div><dt class="text-sm font-bold text-slate-500">Registro</dt><dd>{{ $application->submitted_at->format('d/m/Y H:i') }}</dd></div>
-                <div><dt class="text-sm font-bold text-slate-500">Pago enviado</dt><dd>{{ $application->payment_submitted_at?->format('d/m/Y H:i') ?: 'Aún no enviado' }}</dd></div>
+                <div><dt class="text-sm font-bold text-slate-500">Registro</dt><dd>{{ \App\Support\SiafcoDate::dateTime($application->submitted_at) }}</dd></div>
+                <div><dt class="text-sm font-bold text-slate-500">Pago enviado</dt><dd>{{ \App\Support\SiafcoDate::dateTime($application->payment_submitted_at, 'Aún no enviado') }}</dd></div>
             </dl>
         </section>
 

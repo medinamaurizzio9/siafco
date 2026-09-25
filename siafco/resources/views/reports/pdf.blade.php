@@ -28,7 +28,7 @@
 
     <div class="metric">Pendientes<strong>{{ $pendingPayments }}</strong></div>
     <div class="metric">Confirmados<strong>{{ $confirmedPayments }}</strong></div>
-    <div class="metric">Credenciales<strong>{{ $credentials }}</strong></div>
+    <div class="metric">Credenciales generadas<strong>{{ $credentials }}</strong></div>
     <div class="metric">Ingresos<strong>Bs {{ number_format($income, 2) }}</strong></div>
 
     <h2>Afiliados por sector</h2>

@@ -12,6 +12,7 @@ use App\Http\Responses\MobileApiResponse;
 use App\Models\MobileApiIdempotencyKey;
 use App\Models\StoreOrder;
 use App\Services\Store\StoreOrderService;
+use App\Support\SiafcoDate;
 use App\Support\StoreOrderStatus;
 
 class OrderController extends Controller
@@ -48,8 +49,14 @@ class OrderController extends Controller
             ->with(['items'])
             ->where('affiliate_id', $request->user()->affiliate->id)
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
-            ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('created_at', '>=', $date))
-            ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('created_at', '<=', $date))
+            ->when($filters['date_from'] ?? null, function ($query, $date) {
+                [$from] = SiafcoDate::utcDayBounds($date);
+                $query->where('created_at', '>=', $from);
+            })
+            ->when($filters['date_to'] ?? null, function ($query, $date) {
+                [, $to] = SiafcoDate::utcDayBounds($date);
+                $query->where('created_at', '<=', $to);
+            })
             ->when($filters['code'] ?? null, fn ($query, $code) => $query->where('code', 'like', "%{$code}%"))
             ->when(($filters['attention_only'] ?? false) === true, fn ($query) => $query->whereIn('status', self::ATTENTION_STATUSES))
             ->latest()

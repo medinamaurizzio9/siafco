@@ -4,7 +4,6 @@
 </style></head><body>
 @php
     $receipt = $receipt ?? app(\App\Services\AffiliationPaymentReceiptPresenter::class)->present($payment);
-    $date = $receipt['date'];
 @endphp
 <main class="receipt">
 <table class="header-table"><tr>
@@ -13,7 +12,7 @@
 <td class="receipt-cell"><h1 class="receipt-title">RECIBO DE PAGO</h1><div class="receipt-number">{{ $payment->receipt_number ?: 'SIN NUMERO' }}</div></td>
 </tr></table>
 <div class="gold-rule"></div>
-<table class="meta-row"><tr><td><div class="label">Fecha</div><div class="value">{{ $date?->format('d/m/Y') ?? 'Sin fecha' }}</div></td><td><div class="label">Hora</div><div class="value">{{ $date?->format('H:i') ?? 'Sin hora' }}</div></td></tr></table>
+<table class="meta-row"><tr><td><div class="label">Fecha</div><div class="value">{{ $receipt['date_label'] ?? 'Sin fecha' }}</div></td><td><div class="label">Hora</div><div class="value">{{ $receipt['time_label'] ?? 'Sin hora' }}</div></td></tr></table>
 <section class="section"><h2 class="section-title">Datos de la persona</h2><table class="info-table"><tr>
 <td><div class="label">Nombre completo</div><div class="value">{{ $receipt['person_name'] }}</div></td>
 <td><div class="label">CI</div><div class="value">{{ $receipt['person_ci'] }}</div></td>

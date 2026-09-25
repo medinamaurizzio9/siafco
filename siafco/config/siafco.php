@@ -5,6 +5,7 @@ return [
     'public_affiliation_receipt_max_kb' => (int) env('AFFILIATION_RECEIPT_MAX_KB', 6144),
     'terms_version' => env('SIAFCO_TERMS_VERSION', '2026.1'),
     'privacy_version' => env('SIAFCO_PRIVACY_VERSION', '2026.1'),
+    'display_timezone' => env('SIAFCO_DISPLAY_TIMEZONE', 'America/La_Paz'),
     'credential_version' => env('CREDENTIAL_VERSION', '2026.1'),
     'credential_export' => [
         'chrome_binary' => env('CHROME_BINARY'),

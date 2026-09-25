@@ -18,7 +18,7 @@
                     <div>
                         <span>{{ $order->status }}</span>
                         <h3>{{ $order->code }}</h3>
-                        <p>{{ $order->created_at->format('d/m/Y H:i') }} · {{ $order->delivery_method }}</p>
+                        <p>{{ \App\Support\SiafcoDate::dateTime($order->created_at) }} · {{ $order->delivery_method }}</p>
                     </div>
                     <strong>Bs {{ number_format((float) $order->total, 2) }}</strong>
                     <a class="btn-secondary" href="{{ route('store.orders.show', $order) }}">Ver pedido</a>

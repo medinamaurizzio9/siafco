@@ -19,7 +19,7 @@
                     <div><dt class="text-xs font-black uppercase text-slate-500">N.º de transacción</dt><dd>{{ $payment->reference_number ?: 'No registrado' }}</dd></div>
                 @endif
                 <div><dt class="text-xs font-black uppercase text-slate-500">Transaccion</dt><dd>{{ $payment->transaction_number ?: 'Sin transaccion' }}</dd></div>
-                <div><dt class="text-xs font-black uppercase text-slate-500">Pago realizado</dt><dd>{{ $payment->paid_at?->format('d/m/Y H:i') ?? $payment->payment_date?->format('d/m/Y') ?? 'Sin fecha' }}</dd></div>
+                <div><dt class="text-xs font-black uppercase text-slate-500">Pago realizado</dt><dd>{{ \App\Support\SiafcoDate::date($payment->payment_date ?? $payment->paid_at) }}</dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Registrado por</dt><dd>{{ $payment->registrar?->name ?? 'No registrado' }}</dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Confirmado por</dt><dd>{{ $payment->cashier?->name ?? 'No confirmado' }}</dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Origen</dt><dd>{{ $payment->source ?: 'web' }}</dd></div>

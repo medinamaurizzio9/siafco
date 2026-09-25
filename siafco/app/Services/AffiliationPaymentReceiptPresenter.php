@@ -6,6 +6,7 @@ use App\Models\AffiliationPayment;
 use App\Support\AffiliationStatusPresenter;
 use App\Support\PaymentMethodPresenter;
 use App\Support\PaymentStatus;
+use App\Support\SiafcoDate;
 
 class AffiliationPaymentReceiptPresenter
 {
@@ -26,7 +27,8 @@ class AffiliationPaymentReceiptPresenter
         $affiliate = $payment->affiliate;
         $request = $payment->publicRequest;
         $person = $affiliate?->person ?? $request?->person;
-        $date = $payment->confirmed_at ?? $payment->paid_at ?? $payment->payment_date ?? $payment->created_at;
+        $date = $payment->payment_date ?? $payment->paid_at ?? $payment->created_at;
+        $time = $payment->confirmed_at ?? $payment->created_at;
         $registrationNumber = $affiliate?->registration_number;
 
         return [
@@ -50,6 +52,8 @@ class AffiliationPaymentReceiptPresenter
             'method_label' => $this->methodLabel($payment),
             'amount' => (float) ($payment->paid_amount ?? $payment->amount),
             'date' => $date,
+            'date_label' => SiafcoDate::date($date),
+            'time_label' => SiafcoDate::time($time),
             'registered_by' => $payment->registrar?->name ?? 'No registrado',
             'confirmed_by' => $payment->cashier?->name ?? 'No confirmado',
         ];

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store;
 
 use App\Http\Controllers\Controller;
 use App\Models\StoreOrder;
+use App\Support\SiafcoDate;
 use App\Support\StoreOrderStatus;
 use Illuminate\Http\Request;
 
@@ -22,7 +23,10 @@ class OrderController extends Controller
                 ->where('affiliate_id', $request->user()->affiliate->id)
                 ->when($filters['search'] ?? null, fn ($query, $search) => $query->where('code', 'like', "%{$search}%"))
                 ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
-                ->when($filters['from'] ?? null, fn ($query, $from) => $query->whereDate('created_at', '>=', $from))
+                ->when($filters['from'] ?? null, function ($query, $from) {
+                    [$fromUtc] = SiafcoDate::utcDayBounds($from);
+                    $query->where('created_at', '>=', $fromUtc);
+                })
                 ->latest()
                 ->paginate(10)->withQueryString(),
             'filters' => $filters,

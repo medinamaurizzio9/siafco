@@ -3,10 +3,10 @@
 namespace App\Services\Store;
 
 use App\Models\StoreOrder;
+use App\Support\SiafcoDate;
 use App\Support\StoreOrderStatus;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
 
 class StoreAdminReportService
 {
@@ -25,13 +25,14 @@ class StoreAdminReportService
     public function dashboard(): array
     {
         $salesQuery = $this->salesQuery();
+        [$todayStart, $todayEnd] = SiafcoDate::utcDayBounds(null);
 
         return [
             'confirmed_sales' => (clone $salesQuery)->count(),
             'sold_amount' => (float) (clone $salesQuery)->sum('total'),
             'pending_orders' => StoreOrder::query()->whereIn('status', self::ATTENTION_STATUSES)->count(),
             'payment_review_orders' => StoreOrder::query()->where('status', StoreOrderStatus::PAYMENT_REVIEW)->count(),
-            'today_orders' => StoreOrder::query()->whereDate('created_at', today())->count(),
+            'today_orders' => StoreOrder::query()->whereBetween('created_at', [$todayStart, $todayEnd])->count(),
         ];
     }
 
@@ -47,7 +48,8 @@ class StoreAdminReportService
     public function salesSummary(array $filters = []): array
     {
         $salesQuery = $this->filteredSalesQuery($filters);
-        $todaySalesQuery = $this->salesQuery()->whereDate('confirmed_at', today());
+        [$todayStart, $todayEnd] = SiafcoDate::utcDayBounds(null);
+        $todaySalesQuery = $this->salesQuery()->whereBetween('confirmed_at', [$todayStart, $todayEnd]);
 
         return [
             'registered_sales' => (clone $salesQuery)->count(),
@@ -82,7 +84,13 @@ class StoreAdminReportService
                 });
             })
             ->when($filters['delivery_method'] ?? null, fn (Builder $query, string $method) => $query->where('delivery_method', $method))
-            ->when($filters['from'] ?? null, fn (Builder $query, string $from) => $query->whereDate('confirmed_at', '>=', Carbon::parse($from)))
-            ->when($filters['to'] ?? null, fn (Builder $query, string $to) => $query->whereDate('confirmed_at', '<=', Carbon::parse($to)));
+            ->when($filters['from'] ?? null, function (Builder $query, string $from): void {
+                [$fromUtc] = SiafcoDate::utcDayBounds($from);
+                $query->where('confirmed_at', '>=', $fromUtc);
+            })
+            ->when($filters['to'] ?? null, function (Builder $query, string $to): void {
+                [, $toUtc] = SiafcoDate::utcDayBounds($to);
+                $query->where('confirmed_at', '<=', $toUtc);
+            });
     }
 }

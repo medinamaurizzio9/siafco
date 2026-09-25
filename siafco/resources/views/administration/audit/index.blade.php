@@ -43,7 +43,7 @@
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <p class="font-black text-siafco-primary-900">{{ str($record->action)->replace(['_', '.'], ' ')->headline() }}</p>
-                            <p class="text-xs text-siafco-muted">{{ $record->created_at->format('d/m/Y H:i') }} · {{ $record->user?->name ?? 'Sistema' }}</p>
+                            <p class="text-xs text-siafco-muted">{{ \App\Support\SiafcoDate::dateTime($record->created_at) }} · {{ $record->user?->name ?? 'Sistema' }}</p>
                         </div>
                         <x-ui.badge variant="info">{{ $logService->moduleFor($record->action) }}</x-ui.badge>
                     </div>
@@ -74,7 +74,7 @@
             <tbody>
                 @forelse($records as $record)
                     <tr>
-                        <td>{{ $record->created_at->format('d/m/Y H:i') }}</td>
+                        <td>{{ \App\Support\SiafcoDate::dateTime($record->created_at) }}</td>
                         <td>{{ $record->user?->name ?? 'Sistema' }}</td>
                         <td>{{ $record->user?->roleLabel() ?? '—' }}</td>
                         <td class="font-mono text-xs">{{ $record->action }}</td>

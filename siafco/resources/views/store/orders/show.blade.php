@@ -40,7 +40,7 @@
         @endif
         <div class="mt-4 grid gap-2">
             @foreach($order->receipts as $receipt)
-                <p class="rounded bg-slate-50 p-3 text-sm">Comprobante {{ $receipt->status }} · {{ $receipt->submitted_at->format('d/m/Y H:i') }} · <a class="font-bold text-[#0b1f3a]" href="{{ route('store.orders.receipts.show', [$order, $receipt]) }}">Descargar</a></p>
+                <p class="rounded bg-slate-50 p-3 text-sm">Comprobante {{ $receipt->status }} · {{ \App\Support\SiafcoDate::dateTime($receipt->submitted_at) }} · <a class="font-bold text-[#0b1f3a]" href="{{ route('store.orders.receipts.show', [$order, $receipt]) }}">Descargar</a></p>
             @endforeach
         </div>
     </section>
@@ -48,7 +48,7 @@
     <section class="store-pwa-card">
         <h3 class="mb-3 text-lg font-black text-[#0b1f3a]">Historial</h3>
         @forelse($order->statusHistories as $history)
-            <p class="text-sm">{{ $history->from_status ?: 'inicio' }} -> <strong>{{ $history->to_status }}</strong> · {{ $history->changed_at->format('d/m/Y H:i') }}</p>
+            <p class="text-sm">{{ $history->from_status ?: 'inicio' }} -> <strong>{{ $history->to_status }}</strong> · {{ \App\Support\SiafcoDate::dateTime($history->changed_at) }}</p>
         @empty
             <p class="text-sm text-slate-600">Sin cambios registrados.</p>
         @endforelse

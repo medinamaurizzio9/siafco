@@ -47,7 +47,7 @@
                         <td><span class="rounded bg-slate-100 px-2 py-1 text-xs font-bold">{{ $order->status }}</span></td>
                         <td>{{ $order->delivery_method }}</td>
                         <td>Bs {{ number_format((float) $order->total, 2) }}</td>
-                        <td>{{ $order->created_at->format('d/m/Y H:i') }}</td>
+                        <td>{{ \App\Support\SiafcoDate::dateTime($order->created_at) }}</td>
                         <td class="text-right"><a class="btn-secondary" href="{{ route('admin.store.orders.show', $order) }}">Ver</a></td>
                     </tr>
                 @empty

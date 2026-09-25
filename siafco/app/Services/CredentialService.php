@@ -86,7 +86,7 @@ class CredentialService
             'sector' => mb_strtoupper($affiliate->sector?->name ?? 'NO REGISTRADO'),
             'regional' => mb_strtoupper($affiliate->regional ?: 'NO REGISTRADO'),
             'institution' => mb_strtoupper($affiliate->institution ?: $institution->institution_name ?: 'NO REGISTRADO'),
-            'issued_at' => $date?->timezone(config('app.timezone'))->format('d/m/Y') ?? 'NO REGISTRADA',
+            'issued_at' => \App\Support\SiafcoDate::date($date, 'NO REGISTRADA'),
             'version' => config('siafco.credential_version', '2026.1'),
             'institutional_website' => config('siafco.institutional_website', 'www.cooperativatierrabendita.com'),
             'status_label' => mb_strtoupper(AffiliationStatusPresenter::label($affiliate->status)),

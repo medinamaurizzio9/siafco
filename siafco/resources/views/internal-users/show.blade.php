@@ -30,10 +30,10 @@
                         'Área' => $internalUser->area ?: 'No registrada',
                         'Rol' => $internalUser->roleLabel(),
                         'Estado' => $internalUser->is_active ? 'Activo' : 'Bloqueado',
-                        'Último acceso' => $internalUser->last_login_at?->format('d/m/Y H:i') ?? 'Nunca ingresó',
+                        'Último acceso' => \App\Support\SiafcoDate::dateTime($internalUser->last_login_at, 'Nunca ingresó'),
                         'IP último acceso' => $internalUser->last_login_ip ?: 'No registrada',
-                        'Creación' => $internalUser->created_at->format('d/m/Y H:i'),
-                        'Actualización' => $internalUser->updated_at->format('d/m/Y H:i'),
+                        'Creación' => \App\Support\SiafcoDate::dateTime($internalUser->created_at),
+                        'Actualización' => \App\Support\SiafcoDate::dateTime($internalUser->updated_at),
                     ] as $label => $value)
                         <div><dt class="text-xs font-black uppercase text-slate-500">{{ $label }}</dt><dd class="mt-1 break-words font-bold text-slate-900">{{ $value }}</dd></div>
                     @endforeach
@@ -76,7 +76,7 @@
                     <thead><tr><th>Fecha</th><th>Acción</th><th>IP</th><th>Resultado</th></tr></thead>
                     <tbody>
                     @forelse($history as $event)
-                        <tr><td>{{ $event->created_at->format('d/m/Y H:i') }}</td><td>{{ str($event->action)->replace('_', ' ')->upper() }}</td><td>{{ $event->ip_address ?: '—' }}</td><td>{{ data_get($event->metadata, 'result', 'registrado') }}</td></tr>
+                        <tr><td>{{ \App\Support\SiafcoDate::dateTime($event->created_at) }}</td><td>{{ str($event->action)->replace('_', ' ')->upper() }}</td><td>{{ $event->ip_address ?: '—' }}</td><td>{{ data_get($event->metadata, 'result', 'registrado') }}</td></tr>
                     @empty
                         <tr><td colspan="4" class="text-center text-slate-500">Sin acciones registradas.</td></tr>
                     @endforelse

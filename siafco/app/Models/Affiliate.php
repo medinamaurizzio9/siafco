@@ -36,6 +36,8 @@ class Affiliate extends Model
         'deleted_by',
         'deletion_reason',
         'verification_token',
+        'jewel_delivered_at',
+        'jewel_delivered_by',
     ];
 
     protected function casts(): array
@@ -43,6 +45,7 @@ class Affiliate extends Model
         return [
             'birth_date' => 'date',
             'status_changed_at' => 'datetime',
+            'jewel_delivered_at' => 'datetime',
         ];
     }
 
@@ -81,6 +84,11 @@ class Affiliate extends Model
         return $this->hasOne(AffiliationPayment::class)->latestOfMany();
     }
 
+    public function initialPayment()
+    {
+        return $this->hasOne(AffiliationPayment::class)->oldestOfMany();
+    }
+
     public function credential()
     {
         return $this->hasOne(DigitalCredential::class)->latestOfMany();
@@ -109,5 +117,15 @@ class Affiliate extends Model
     public function benefitRedemptions()
     {
         return $this->hasMany(AffiliateBenefitRedemption::class);
+    }
+
+    public function jewelDeliveredBy()
+    {
+        return $this->belongsTo(User::class, 'jewel_delivered_by');
+    }
+
+    public function jewelDeliveryHistories()
+    {
+        return $this->hasMany(AffiliateJewelDeliveryHistory::class);
     }
 }

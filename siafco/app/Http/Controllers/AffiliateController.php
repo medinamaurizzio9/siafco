@@ -153,6 +153,8 @@ class AffiliateController extends Controller
             'credential',
             'user',
             'person',
+            'jewelDeliveredBy',
+            'jewelDeliveryHistories' => fn ($query) => $query->with('performer')->latest()->limit(10),
         ]);
 
         return view('affiliates.show', [
