@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\PublicAffiliationRequest;
 use App\Support\PaymentStatus;
+use App\Support\PaymentTransactionNumber;
 use Illuminate\Validation\Rule;
 
 class StoreAssistedAffiliationPaymentRequest extends StoreManualPaymentRequest
@@ -40,6 +41,13 @@ class StoreAssistedAffiliationPaymentRequest extends StoreManualPaymentRequest
                 && ! $this->filled('reference_number')
                 && ! $this->filled('transaction_number')) {
                 $validator->errors()->add('reference_number', 'Debe registrar una referencia o numero de transaccion.');
+            }
+
+            $transaction = PaymentTransactionNumber::normalize($this->input('transaction_number'))
+                ?? PaymentTransactionNumber::normalize($this->input('reference_number'));
+            if (in_array($this->input('payment_method'), ['qr', 'transferencia'], true)
+                && PaymentTransactionNumber::hasDuplicate($transaction, $this->route('application')?->payment?->id)) {
+                $validator->errors()->add('transaction_number', PaymentTransactionNumber::duplicateMessage());
             }
 
             $application = $this->route('application');

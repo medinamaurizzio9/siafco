@@ -14,7 +14,7 @@
             <td>{{ $application->person->full_name }}<br><span class="text-xs text-slate-500">CI {{ $application->person->ci }}</span>@if($application->affiliate?->registration_number)<br><span class="text-xs font-bold text-slate-500">Registro definitivo: {{ $application->affiliate->registration_number }}</span>@endif</td>
             <td>{{ $application->sector->name }}<br><span class="text-xs text-slate-500">{{ $application->plan->name }}</span></td>
             <td>BOB {{ number_format($application->amount_due, 2) }}</td>
-            <td>{{ $application->payment?->transaction_number ?: 'Sin pago' }}</td>
+            <td>{{ $application->payment?->transactionNumber() ?: 'Sin pago' }}</td>
             <td><x-affiliation-status :status="$application->status" size="sm" /></td>
             <td><div class="flex gap-2"><a class="btn-secondary" href="{{ route('public-affiliation.admin.show', $application) }}">Revisar</a>
                 @if($application->affiliate && auth()->user()->can('delete', $application->affiliate))

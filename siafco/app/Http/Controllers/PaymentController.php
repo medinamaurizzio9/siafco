@@ -15,7 +15,10 @@ use App\Services\PaymentActionAuthorization;
 use App\Services\PaymentBalanceService;
 use App\Services\PaymentLifecycleService;
 use App\Services\PaymentReceiptService;
+use App\Services\PaymentVoucherService;
+use App\Support\PaymentTransactionNumber;
 use App\Support\PaymentStatus;
+use App\Support\SiafcoDate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Storage;
@@ -36,8 +39,14 @@ class PaymentController extends Controller
             ->when($request->source, fn ($query, $source) => $query->where('source', $source))
             ->when($request->registered_by, fn ($query, $id) => $query->where('registered_by', $id))
             ->when($request->confirmed_by, fn ($query, $id) => $query->where('confirmed_by', $id))
-            ->when($request->date_from, fn ($query, $date) => $query->whereDate('paid_at', '>=', $date))
-            ->when($request->date_to, fn ($query, $date) => $query->whereDate('paid_at', '<=', $date))
+            ->when($request->date_from, function ($query, $date) {
+                [$from] = SiafcoDate::utcDayBounds($date);
+                $query->where('paid_at', '>=', $from);
+            })
+            ->when($request->date_to, function ($query, $date) {
+                [, $to] = SiafcoDate::utcDayBounds($date);
+                $query->where('paid_at', '<=', $to);
+            })
             ->when($request->search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('reference_number', 'like', "%{$search}%")
@@ -126,29 +135,58 @@ class PaymentController extends Controller
         return redirect()->route('payments.show', $payment)->with('status', 'Pago actualizado.');
     }
 
-    public function updateProof(Request $request, AffiliationPayment $payment)
+    public function updateProof(Request $request, AffiliationPayment $payment, PaymentVoucherService $vouchers)
     {
-        $data = $request->validate([
-            'transaction_number' => ['required', 'string', 'max:120'],
-            'voucher' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,application/pdf', 'mimes:jpg,jpeg,png,pdf', 'max:4096'],
-        ]);
+        abort_unless($this->canManageVoucher($request, $payment), 403);
 
-        if ($request->hasFile('voucher')) {
-            $data['voucher_path'] = $request->file('voucher')->store('payments/vouchers', 'local');
+        $data = $request->validate([
+            'transaction_number' => ['nullable', 'string', 'max:120'],
+            'voucher' => ['required', 'file', 'mimetypes:image/jpeg,image/png,image/webp,application/pdf', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+        ]);
+        $data['transaction_number'] = PaymentTransactionNumber::normalize($data['transaction_number'] ?? null);
+
+        if ($data['transaction_number'] && PaymentTransactionNumber::hasDuplicate($data['transaction_number'], $payment->id)) {
+            return back()->withErrors(['transaction_number' => PaymentTransactionNumber::duplicateMessage()])->withInput();
         }
 
-        $payment->update($data + [
-            'status' => PaymentStatus::UNDER_REVIEW,
+        $oldVoucherPath = $payment->voucher_path;
+        $newVoucherPath = null;
+        if ($request->hasFile('voucher')) {
+            $newVoucherPath = $vouchers->store($request->file('voucher'));
+            $data['voucher_path'] = $newVoucherPath;
+        }
+
+        $updates = [
+            ...array_filter([
+                'transaction_number' => $data['transaction_number'] ?? null,
+                'voucher_path' => $data['voucher_path'] ?? null,
+            ], fn ($value) => $value !== null),
             'source' => $payment->source ?: 'web',
             'registered_by' => $payment->registered_by
                 ?: ($request->user()?->isInternal() ? $request->user()->id : null),
             'submitted_at' => $payment->submitted_at ?: now(),
-        ]);
-        AuditService::record('payment_under_review', $payment, [
-            'has_voucher' => $request->hasFile('voucher'),
+        ];
+        if (PaymentStatus::isEditable($payment->status)) {
+            $updates['status'] = PaymentStatus::UNDER_REVIEW;
+        }
+
+        try {
+            $payment->update($updates);
+        } catch (\Throwable $exception) {
+            if ($newVoucherPath) {
+                Storage::disk('local')->delete($newVoucherPath);
+            }
+            throw $exception;
+        }
+
+        AuditService::record($oldVoucherPath ? 'payment_voucher_replaced' : 'payment_voucher_uploaded', $payment->fresh(), [
+            'payment_id' => $payment->id,
+            'actor_id' => $request->user()?->id,
+            'replaced_existing' => (bool) $oldVoucherPath,
+            'file' => $vouchers->metadata($request->file('voucher'), $newVoucherPath),
             'registered_by' => $payment->registered_by,
             'payment_method' => $payment->payment_method,
-            'reference_number' => $payment->reference_number,
+            'transaction_number' => PaymentTransactionNumber::resolve($payment->fresh()),
         ]);
 
         return back()->with('status', 'Comprobante registrado.');
@@ -168,7 +206,7 @@ class PaymentController extends Controller
                 'payment_id' => $payment->id,
                 'affiliate_id' => $payment->affiliate_id,
                 'amount' => (string) ($payment->paid_amount ?? $payment->amount),
-                'reference_number' => $payment->reference_number,
+                'transaction_number' => PaymentTransactionNumber::resolve($payment->fresh()),
                 'received_by' => $payment->registered_by,
                 'approved_by' => $request->user()->id,
             ]);
@@ -193,7 +231,7 @@ class PaymentController extends Controller
                 'payment_id' => $payment->id,
                 'affiliate_id' => $payment->affiliate_id,
                 'amount' => (string) ($payment->paid_amount ?? $payment->amount),
-                'reference_number' => $payment->reference_number,
+                'transaction_number' => PaymentTransactionNumber::resolve($payment->fresh()),
                 'received_by' => $payment->registered_by,
                 'rejected_by' => $request->user()->id,
             ]);
@@ -245,5 +283,22 @@ class PaymentController extends Controller
         $user = $request->user();
 
         return (bool) ($user?->hasPermission('payments.view_receipt') || ($user?->isInternal() && $user->hasRole('caja')));
+    }
+
+    private function canManageVoucher(Request $request, AffiliationPayment $payment): bool
+    {
+        $user = $request->user();
+        if (! $user) {
+            return false;
+        }
+
+        $isOwnAffiliatePayment = $user->role === 'afiliado'
+            && $payment->affiliate?->user_id === $user->id;
+        $isInternalDocumentRole = $user->isInternal()
+            && $user->hasRole(['caja', 'cajero', 'secretaria', 'administrador', 'superadministrador', 'gerente']);
+        $canEditConfirmed = $user->hasPermission('payments.void');
+
+        return ($isOwnAffiliatePayment || $isInternalDocumentRole)
+            && (PaymentStatus::isEditable($payment->status) || $canEditConfirmed);
     }
 }

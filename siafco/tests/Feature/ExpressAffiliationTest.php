@@ -78,7 +78,9 @@ class ExpressAffiliationTest extends TestCase
             'transaction_number' => '5551516845313',
             'bank_name' => 'ACONOMICO',
             'payer_name' => 'MAURIZZIO MEDINA HH',
-            'payment_date' => '2026-09-16',
+            'payment_date' => '2026-09-16T09:20',
+            'browser_timezone' => 'America/La_Paz',
+            'receipt' => UploadedFile::fake()->image('voucher.jpg', 600, 600),
         ]);
 
         $application = PublicAffiliationRequest::with('payment', 'affiliate', 'person')->firstOrFail();
@@ -89,6 +91,8 @@ class ExpressAffiliationTest extends TestCase
         $this->assertSame('5551516845313', $application->payment->transaction_number);
         $this->assertSame('ACONOMICO', $application->payment->bank_name);
         $this->assertSame(305.0, (float) $application->payment->paid_amount);
+        $this->assertSame('2026-09-16 13:20:00', $application->payment->paid_at->utc()->format('Y-m-d H:i:s'));
+        $this->assertSame('America/La_Paz', $application->payment->payment_timezone);
     }
 
     public function test_express_creates_existing_entities_with_synthetic_access_without_activating_affiliate(): void
@@ -283,7 +287,9 @@ class ExpressAffiliationTest extends TestCase
             'transaction_number' => 'TRX-EXP-1',
             'bank_name' => 'Banco Unión',
             'payer_name' => 'Sulema Condor',
-            'payment_date' => today()->format('Y-m-d'),
+            'payment_date' => today()->format('Y-m-d').'T09:20',
+            'browser_timezone' => 'America/La_Paz',
+            'receipt' => UploadedFile::fake()->image('voucher.jpg', 600, 600),
             'observations' => 'Pago QR',
         ], $overrides);
     }

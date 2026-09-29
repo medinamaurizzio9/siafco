@@ -10,6 +10,7 @@ use App\Services\PaymentLifecycleService;
 use App\Services\PublicAffiliationApprovalService;
 use App\Services\AffiliateDeletionService;
 use App\Support\PaymentStatus;
+use App\Support\PaymentTransactionNumber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -62,7 +63,7 @@ class PublicAffiliationAdminController extends Controller
             ->when($request->search, fn ($q, $v) => $q->where(function ($q) use ($v) {
                 $q->where('request_code', 'like', "%{$v}%")
                     ->orWhereHas('person', fn ($q) => $q->where('full_name', 'like', "%{$v}%")->orWhere('ci', 'like', "%{$v}%"))
-                    ->orWhereHas('payment', fn ($q) => $q->where('transaction_number', 'like', "%{$v}%"));
+                    ->orWhereHas('payment', fn ($q) => $q->where('transaction_number', 'like', "%{$v}%")->orWhere('reference_number', 'like', "%{$v}%"));
             }))
             ->latest()->paginate(15)->withQueryString();
 
@@ -76,9 +77,12 @@ class PublicAffiliationAdminController extends Controller
     )
     {
         $application->load(['person', 'affiliate', 'sector', 'plan', 'payment.registrar']);
-        $duplicates = $application->payment?->transaction_number
-            ? AffiliationPayment::where('transaction_number', $application->payment->transaction_number)
-                ->whereKeyNot($application->payment->id)->with('affiliate')->get()
+        $transaction = PaymentTransactionNumber::resolve($application->payment);
+        $duplicates = $transaction
+            ? AffiliationPayment::where(fn ($query) => $query->where('transaction_number', $transaction)->orWhere('reference_number', $transaction))
+                ->whereKeyNot($application->payment->id)
+                ->with('affiliate')
+                ->get()
             : collect();
         $payment = $application->payment;
         $canLoadPayment = $this->canLoadPayment($request, $application);

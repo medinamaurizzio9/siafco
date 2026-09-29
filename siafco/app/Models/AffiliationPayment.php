@@ -25,6 +25,7 @@ class AffiliationPayment extends Model
         'voucher_path',
         'payment_date',
         'paid_at',
+        'payment_timezone',
         'payment_method',
         'bank_name',
         'payer_name',
@@ -103,5 +104,10 @@ class AffiliationPayment extends Model
         return filled($this->receipt_number)
             && $this->hasValidReceiptStatus()
             && ($this->isOfficePayment() || PaymentStatus::isConfirmed($this->status));
+    }
+
+    public function transactionNumber(): ?string
+    {
+        return \App\Support\PaymentTransactionNumber::resolve($this);
     }
 }

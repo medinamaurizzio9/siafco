@@ -22,7 +22,7 @@
                 <div><dt class="text-xs font-black uppercase text-slate-500">Plan</dt><dd>{{ $affiliate->plan?->name ?? $payment->plan?->name ?? 'Sin plan' }}</dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Monto pagado</dt><dd>{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</dd></div>
                 <div><dt class="text-xs font-black uppercase text-slate-500">Metodo</dt><dd>{{ \App\Support\PaymentMethodPresenter::label($payment->payment_method) }}</dd></div>
-                @if(\App\Support\PaymentMethodPresenter::showsTransactionNumber($payment->payment_method))<div><dt class="text-xs font-black uppercase text-slate-500">N.º de transacción</dt><dd>{{ $payment->reference_number }}</dd></div>@endif
+                @if(\App\Support\PaymentMethodPresenter::showsTransactionNumber($payment->payment_method))<div><dt class="text-xs font-black uppercase text-slate-500">N.º de transacción</dt><dd>{{ $payment->transactionNumber() }}</dd></div>@endif
                 <div><dt class="text-xs font-black uppercase text-slate-500">Estado del pago</dt><dd><x-payment-status :status="$payment->status" size="sm" /></dd></div>
                 @php($affiliateDisplayStatus = \App\Support\AffiliationStatusPresenter::forAffiliate($affiliate))
                 <div><dt class="text-xs font-black uppercase text-slate-500">Estado de afiliacion</dt><dd><x-affiliation-status :status="$affiliateDisplayStatus" :label="\App\Support\AffiliationStatusPresenter::officeSummaryLabel($affiliateDisplayStatus)" size="sm" /></dd></div>

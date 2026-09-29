@@ -15,6 +15,7 @@
 
     <form class="grid gap-4 rounded-lg border border-slate-200 bg-white p-5" method="post" enctype="multipart/form-data" action="{{ $payment->exists ? route('payments.update', $payment) : route('payments.store') }}">
         @csrf
+        <input type="hidden" name="browser_timezone" value="{{ old('browser_timezone') }}" data-browser-timezone>
         @if($payment->exists)
             @method('PUT')
         @endif
@@ -40,10 +41,10 @@
                 <select class="form-input" name="currency"><option value="BOB" @selected(old('currency', $payment->currency ?? 'BOB') === 'BOB')>BOB</option></select>
             </label>
             <label class="grid gap-2 text-sm font-bold text-slate-700">Fecha y hora de pago
-                <input class="form-input" type="datetime-local" name="paid_at" value="{{ old('paid_at', optional($payment->paid_at ?? now())->format('Y-m-d\\TH:i')) }}" required>
+                <input class="form-input" type="datetime-local" name="paid_at" value="{{ old('paid_at', \App\Support\SiafcoDate::inputDateTime($payment->paid_at ?? now())) }}" required>
             </label>
             <label class="grid gap-2 text-sm font-bold text-slate-700">Metodo
-                <select class="form-input" name="payment_method" required>
+                <select class="form-input" name="payment_method" required data-payment-method>
                     @foreach(['efectivo' => 'Efectivo', 'qr' => 'QR', 'transferencia' => 'Transferencia', 'deposito' => 'Deposito', 'pos' => 'POS', 'otro' => 'Otro'] as $value => $label)
                         <option value="{{ $value }}" @selected(old('payment_method', $payment->payment_method) === $value)>{{ $label }}</option>
                     @endforeach
@@ -63,8 +64,9 @@
             <label class="grid gap-2 text-sm font-bold text-slate-700">Numero de transaccion
                 <input class="form-input" name="transaction_number" value="{{ old('transaction_number', $payment->transaction_number) }}" maxlength="120">
             </label>
-            <label class="grid gap-2 text-sm font-bold text-slate-700">Comprobante
-                <input class="form-input" type="file" name="voucher" accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf">
+            <label class="grid gap-2 text-sm font-bold text-slate-700" data-voucher-block>Comprobante / voucher <span class="font-black text-amber-700" data-voucher-required hidden>* Obligatorio</span>
+                <input class="form-input" type="file" name="voucher" accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf" data-voucher-input>
+                <span class="text-xs font-medium text-slate-600">Adjunta una fotografía o PDF del comprobante de pago.</span>
             </label>
         </div>
 
@@ -82,4 +84,25 @@
             <button class="btn-primary">{{ $payment->exists ? 'Guardar cambios' : 'Registrar pago' }}</button>
         </div>
     </form>
+    @push('scripts')
+        <script>
+            (() => {
+                const form = document.querySelector('form[action*="/pagos"]');
+                if (!form) return;
+                const timezone = form.querySelector('[data-browser-timezone]');
+                if (timezone && !timezone.value) timezone.value = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/La_Paz';
+                const method = form.querySelector('[data-payment-method]');
+                const voucher = form.querySelector('[data-voucher-input]');
+                const requiredLabel = form.querySelector('[data-voucher-required]');
+                const hasExistingVoucher = @json((bool) $payment->voucher_path);
+                const syncVoucher = () => {
+                    const required = ['qr', 'transferencia', 'deposito'].includes(method?.value) && !hasExistingVoucher;
+                    if (voucher) voucher.required = required;
+                    if (requiredLabel) requiredLabel.hidden = !required;
+                };
+                method?.addEventListener('change', syncVoucher);
+                syncVoucher();
+            })();
+        </script>
+    @endpush
 </x-layouts.app>

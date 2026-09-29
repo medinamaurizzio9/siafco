@@ -13,10 +13,12 @@ use App\Services\AffiliateAccountService;
 use App\Services\AffiliatePhotoProcessor;
 use App\Services\AuditService;
 use App\Services\PaymentReceiptNumberService;
+use App\Services\PaymentVoucherService;
 use App\Support\PaymentStatus;
+use App\Support\PaymentTransactionNumber;
 use App\Support\PublicAffiliationCatalogs;
+use App\Support\SiafcoDate;
 use App\Support\TextNormalizer;
-use Carbon\Carbon;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -41,7 +43,7 @@ class OfficeAffiliationController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, PaymentVoucherService $vouchers)
     {
         $actor = $request->user();
         abort_unless($actor?->isInternal() && $actor->hasRole(self::AUTHORIZED_ROLES), 403);
@@ -49,6 +51,12 @@ class OfficeAffiliationController extends Controller
         $data = $this->validated($request);
         $paymentMethod = $data['payment_method'];
         $isElectronic = in_array($paymentMethod, ['qr', 'transferencia'], true);
+        $data['reference_number'] = PaymentTransactionNumber::normalize($data['reference_number'] ?? null);
+        if ($isElectronic && PaymentTransactionNumber::hasDuplicate($data['reference_number'])) {
+            throw ValidationException::withMessages([
+                'reference_number' => PaymentTransactionNumber::duplicateMessage(),
+            ]);
+        }
         $plan = AffiliationPlan::where('is_active', true)->findOrFail($data['affiliation_plan_id']);
         $received = round((float) $data['received_amount'], 2);
         $required = round((float) $plan->total_amount, 2);
@@ -66,10 +74,11 @@ class OfficeAffiliationController extends Controller
                 AffiliatePhotoProcessor::CREDENTIAL_HEIGHT
             )
             : null;
+        $voucherPath = $vouchers->store($request->file('voucher'));
         $institutionalQrPath = InstitutionalSetting::current()->payment_qr_path;
 
         try {
-            $payment = DB::transaction(function () use ($data, $plan, $received, $required, $actor, $paymentMethod, $isElectronic, $photoPath, $institutionalQrPath) {
+            $payment = DB::transaction(function () use ($data, $plan, $received, $required, $actor, $paymentMethod, $isElectronic, $photoPath, $voucherPath, $institutionalQrPath) {
                 $sector = Sector::whereKey($data['sector_id'])->firstOrFail();
 
                 $person = Person::updateOrCreate(
@@ -108,9 +117,11 @@ class OfficeAffiliationController extends Controller
                     'institutional_qr_path' => $institutionalQrPath,
                     'payment_method' => $paymentMethod,
                     'reference_number' => $data['reference_number'] ?? null,
+                    'voucher_path' => $voucherPath,
                     'observations' => $data['observations'] ?? null,
                     'payment_date' => $data['paid_at']->toDateString(),
                     'paid_at' => $data['paid_at'],
+                    'payment_timezone' => $data['payment_timezone'] ?? null,
                     'submitted_at' => now(),
                     'status' => PaymentStatus::UNDER_REVIEW,
                     'source' => $isElectronic ? 'office_qr' : 'office_cash',
@@ -139,6 +150,9 @@ class OfficeAffiliationController extends Controller
         } catch (\Throwable $exception) {
             if ($photoPath) {
                 Storage::disk('public')->delete($photoPath);
+            }
+            if ($voucherPath) {
+                Storage::disk('local')->delete($voucherPath);
             }
             if ($exception instanceof UniqueConstraintViolationException) {
                 $this->throwDuplicateValidationException($exception);
@@ -189,13 +203,16 @@ class OfficeAffiliationController extends Controller
             'birth_date' => ['nullable', 'date'],
             'marital_status' => ['nullable', 'string', Rule::in(PublicAffiliationCatalogs::MARITAL_STATUSES)],
             'received_amount' => ['required', 'numeric', 'min:0.01'],
-            'paid_at' => ['required', 'date'],
+            'paid_at' => ['required', 'date', 'before_or_equal:now'],
+            'browser_timezone' => ['nullable', 'string', 'timezone'],
             'payment_method' => ['required', Rule::in(['efectivo', 'qr', 'transferencia'])],
             'reference_number' => [Rule::requiredIf(in_array($request->input('payment_method'), ['qr', 'transferencia'], true)), 'nullable', 'string', 'max:120'],
+            'voucher' => [Rule::requiredIf(in_array($request->input('payment_method'), ['qr', 'transferencia'], true)), 'nullable', 'file', 'mimetypes:image/jpeg,image/png,image/webp,application/pdf', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
             'observations' => ['nullable', 'string', 'max:1000'],
         ], [
             'email.unique' => 'El correo electrónico ya está registrado en el sistema.',
             'ci.unique' => 'El número de CI ya se encuentra registrado.',
+            'voucher.required' => 'Adjunta una fotografía o PDF del comprobante de pago.',
         ]);
 
         $data = TextNormalizer::fields($data, [
@@ -203,7 +220,9 @@ class OfficeAffiliationController extends Controller
         ]);
         $data['email'] = TextNormalizer::lowercaseEmail($data['email'] ?? null);
         $data['phone'] = TextNormalizer::squish($data['phone'] ?? null);
-        $data['paid_at'] = Carbon::parse($data['paid_at']);
+        $data['payment_timezone'] = SiafcoDate::validTimezoneOrDefault($data['browser_timezone'] ?? null);
+        $data['paid_at'] = SiafcoDate::fromLocalInput($data['paid_at'], $data['payment_timezone']);
+        unset($data['browser_timezone']);
 
         return $data;
     }

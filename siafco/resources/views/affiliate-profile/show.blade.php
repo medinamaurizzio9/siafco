@@ -13,11 +13,37 @@
             </div>
         </header>
 
+        <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm" aria-labelledby="profile-completion-title">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h3 id="profile-completion-title" class="text-sm font-black uppercase text-[#0b1f3a]">Completa tu perfil</h3>
+                    <p class="mt-1 text-sm font-bold text-slate-600">{{ $profileCompletion['percentage'] }}% completado</p>
+                </div>
+                <div class="h-3 w-full overflow-hidden rounded-full bg-slate-100 sm:max-w-xs" aria-hidden="true">
+                    <div class="h-full rounded-full bg-[#d4af37]" style="width: {{ $profileCompletion['percentage'] }}%"></div>
+                </div>
+            </div>
+            <div class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                @foreach($profileCompletion['items'] as $key => $item)
+                    <div class="flex items-center justify-between gap-3 rounded border {{ $item['complete'] ? 'border-slate-200 bg-slate-50' : 'border-amber-200 bg-amber-50' }} px-3 py-2">
+                        <div class="min-w-0">
+                            <p class="truncate text-sm font-black {{ $item['complete'] ? 'text-slate-700' : 'text-amber-950' }}">{{ $item['label'] }}</p>
+                            <p class="text-xs font-semibold {{ $item['complete'] ? 'text-emerald-700' : 'text-amber-700' }}">{{ $item['complete'] ? '✓ Completo' : '⚠ Falta completar' }}</p>
+                        </div>
+                        @unless($item['complete'])
+                            <button type="button" class="min-h-10 rounded border border-amber-300 bg-white px-3 text-xs font-black text-amber-800 hover:bg-amber-100" data-profile-target="{{ $item['target'] }}">{{ $item['action'] }} &gt;</button>
+                        @endunless
+                    </div>
+                @endforeach
+            </div>
+        </section>
+
         <section class="affiliate-settings-list">
-            <a href="#personal-data"><x-ui.icon name="user" class="h-5 w-5" /><span><strong>Datos personales</strong><small>Nombre, CI, contacto</small></span><x-ui.icon name="arrow-right" class="h-4 w-4" /></a>
-            <a href="#institutional-data"><x-ui.icon name="users" class="h-5 w-5" /><span><strong>Información de afiliación</strong><small>Sector, regional, fecha</small></span><x-ui.icon name="arrow-right" class="h-4 w-4" /></a>
-            <a href="#security"><x-ui.icon name="key" class="h-5 w-5" /><span><strong>Seguridad</strong><small>Contraseña y acceso</small></span><x-ui.icon name="arrow-right" class="h-4 w-4" /></a>
-            <a href="#payments"><x-ui.icon name="receipt" class="h-5 w-5" /><span><strong>Mis pagos</strong><small>Historial y recibos</small></span><x-ui.icon name="arrow-right" class="h-4 w-4" /></a>
+            <a href="#personal-data"><x-ui.icon name="user" class="h-5 w-5" /><span><strong>Datos personales</strong><small>Nombre, CI, contacto</small></span><span class="ml-auto text-xs font-black {{ $profileCompletion['sections']['personal']['pending'] ? 'text-amber-700' : 'text-emerald-700' }}">{{ $profileCompletion['sections']['personal']['pending'] ? '⚠ '.$profileCompletion['sections']['personal']['pending'] : '✓' }}</span><x-ui.icon name="arrow-right" class="h-4 w-4" /></a>
+            <a href="#institutional-data"><x-ui.icon name="users" class="h-5 w-5" /><span><strong>Información de afiliación</strong><small>Sector, regional, fecha</small></span><span class="ml-auto text-xs font-black text-emerald-700">✓</span><x-ui.icon name="arrow-right" class="h-4 w-4" /></a>
+            <a href="#profile-photo"><x-ui.icon name="file-text" class="h-5 w-5" /><span><strong>Fotografía / Credencial</strong><small>Imagen para credencial</small></span><span class="ml-auto text-xs font-black {{ $profileCompletion['sections']['photo']['pending'] ? 'text-amber-700' : 'text-emerald-700' }}">{{ $profileCompletion['sections']['photo']['pending'] ? '⚠ '.$profileCompletion['sections']['photo']['pending'] : '✓' }}</span><x-ui.icon name="arrow-right" class="h-4 w-4" /></a>
+            <a href="#security"><x-ui.icon name="key" class="h-5 w-5" /><span><strong>Seguridad</strong><small>Contraseña y acceso</small></span><span class="ml-auto text-xs font-black text-emerald-700">✓</span><x-ui.icon name="arrow-right" class="h-4 w-4" /></a>
+            <a href="#payments"><x-ui.icon name="receipt" class="h-5 w-5" /><span><strong>Mis pagos</strong><small>Historial y recibos</small></span><span class="ml-auto text-xs font-black text-slate-500">→</span><x-ui.icon name="arrow-right" class="h-4 w-4" /></a>
             <form method="post" action="{{ route('logout') }}" data-confirm-title="Cerrar sesión" data-confirm-message="¿Deseas cerrar tu sesión actual?" data-confirm-accept="Cerrar sesión" data-confirm-variant="warning">
                 @csrf
                 <button type="submit"><x-ui.icon name="log-out" class="h-5 w-5" /><span><strong>Cerrar sesión</strong></span><x-ui.icon name="arrow-right" class="h-4 w-4" /></button>
@@ -29,17 +55,11 @@
                 Tu afiliación está en revisión. Recibimos tus datos y el pago reportado; Secretaría validará la información antes de activar tu registro definitivo.
             </div>
         @endif
-        @if(blank($affiliate->address) || blank($affiliate->birth_date) || blank($affiliate->marital_status) || blank($affiliate->photo_path))
-            <div class="rounded border border-sky-300 bg-sky-50 px-4 py-3 font-semibold text-sky-950">
-                Completa dirección, fecha de nacimiento, estado civil y fotografía para continuar.
-            </div>
-        @endif
-
         <form method="post" action="{{ route('affiliate.profile.update') }}" enctype="multipart/form-data" class="space-y-6" data-profile-form>
             @csrf
             @method('PATCH')
 
-            <section class="section-card" id="institutional-data">
+            <section class="section-card {{ in_array('photo', $profileCompletion['missing'], true) ? 'border-amber-200 bg-amber-50/40' : '' }}" id="profile-photo" data-profile-field="photo">
                 <x-forms.photo-cropper
                     :required="false"
                     :initial-src="$affiliate->photo_path ? Storage::disk('public')->url($affiliate->photo_path) : null"
@@ -48,9 +68,12 @@
                     select-label="CAMBIAR FOTOGRAFÍA"
                     cancel-label="CANCELAR CAMBIO"
                 />
+                @if(in_array('photo', $profileCompletion['missing'], true))
+                    <p class="mt-3 rounded bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">⚠ Este dato está pendiente.</p>
+                @endif
             </section>
 
-            <section class="section-card" id="personal-data">
+            <section class="section-card" id="institutional-data">
                 <div class="border-b border-slate-200 pb-4">
                     <h3 class="text-lg font-black text-[#0b1f3a]">DATOS INSTITUCIONALES</h3>
                     <p class="mt-1 text-sm text-slate-600">Estos datos forman parte de tu registro institucional. Para solicitar una corrección, comunícate con Secretaría.</p>
@@ -62,14 +85,29 @@
                         'Código de afiliado' => $affiliate->registration_number ?: 'No registrado',
                         'Sector' => $affiliate->sector?->name ?: 'No registrado',
                         'Institución' => $affiliate->institution ?: $affiliate->sector?->institution ?: 'No registrada',
-                        'Regional' => $affiliate->regional ?: $affiliate->sector?->regional ?: 'No registrada',
                         'Estado' => \App\Support\AffiliationStatusPresenter::label($affiliate->status),
                         'Fecha de afiliación' => \App\Support\SiafcoDate::dateTime($affiliate->created_at),
                         'Tipo de afiliado' => $affiliate->plan?->name ?: 'No registrado',
                         'Usuario de acceso' => $affiliate->user?->email ?: 'No registrado',
                     ];
+                    $regionalValue = old('regional', $affiliate->regional ?: $affiliate->sector?->regional);
+                    $regionalOptions = \App\Support\PublicAffiliationCatalogs::regionalOptions();
+                    if($regionalValue && ! array_key_exists($regionalValue, $regionalOptions)) {
+                        $regionalOptions = [$regionalValue => mb_convert_case($regionalValue, MB_CASE_TITLE, 'UTF-8')] + $regionalOptions;
+                    }
                 @endphp
-                <p class="mt-4 rounded bg-slate-50 px-4 py-3 text-sm text-slate-600">Los siguientes datos están protegidos y solo pueden ser corregidos por Secretaría.</p>
+                <div class="mt-4 grid gap-2 text-sm font-bold text-slate-700 sm:max-w-md">
+                    <label for="affiliate-regional">Regional</label>
+                    <select class="form-input" id="affiliate-regional" name="regional">
+                        <option value="">No registrada</option>
+                        @foreach($regionalOptions as $value => $label)
+                            <option value="{{ $value }}" @selected($regionalValue === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <p class="text-xs font-semibold text-slate-500/75">Lugar donde trabaja</p>
+                    @error('regional')<span class="text-sm text-red-700">{{ $message }}</span>@enderror
+                </div>
+                <p class="mt-4 rounded bg-slate-50 px-4 py-3 text-sm text-slate-600">Los demás datos están protegidos y solo pueden ser corregidos por Secretaría.</p>
                 <dl class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     @foreach($lockedFields as $label => $value)
                         <div class="min-w-0 rounded-lg border border-slate-200 bg-white p-3 shadow-sm {{ $label === 'Usuario de acceso' ? 'lg:col-span-3' : '' }}">
@@ -85,7 +123,7 @@
                 </dl>
             </section>
 
-            <section class="section-card">
+            <section class="section-card" id="personal-data">
                 <div class="border-b border-slate-200 pb-4">
                     <h3 class="text-lg font-black text-[#0b1f3a]">DATOS PERSONALES</h3>
                     <p class="mt-1 text-sm text-slate-600">Mantén actualizados tus datos de contacto.</p>
@@ -102,20 +140,22 @@
                         <input class="form-input" type="email" name="email" value="{{ old('email', $affiliate->email) }}" maxlength="150" required autocomplete="email">
                         @error('email')<span class="text-sm text-red-700">{{ $message }}</span>@enderror
                     </label>
-                    <label class="grid gap-2 text-sm font-bold text-slate-700 sm:col-span-2">
+                    <label class="grid gap-2 rounded text-sm font-bold text-slate-700 sm:col-span-2 {{ in_array('address', $profileCompletion['missing'], true) ? 'bg-amber-50/70 p-3 ring-1 ring-amber-200' : '' }}" data-profile-field="address">
                         Dirección
                         <input class="form-input" name="address" value="{{ old('address', $affiliate->address) }}" maxlength="255" autocomplete="street-address">
+                        @if(in_array('address', $profileCompletion['missing'], true))<span class="text-sm font-semibold text-amber-700">⚠ Este dato está pendiente.</span>@endif
                         @error('address')<span class="text-sm text-red-700">{{ $message }}</span>@enderror
                     </label>
                 </div>
                 <h4 class="mt-6 text-xs font-black uppercase text-[#b8942f]">Información personal</h4>
                 <div class="mt-3 grid gap-5 sm:grid-cols-2">
-                    <label class="grid gap-2 text-sm font-bold text-slate-700">
+                    <label class="grid gap-2 rounded text-sm font-bold text-slate-700 {{ in_array('birth_date', $profileCompletion['missing'], true) ? 'bg-amber-50/70 p-3 ring-1 ring-amber-200' : '' }}" data-profile-field="birth_date">
                         Fecha de nacimiento
                         <input class="form-input" type="date" name="birth_date" value="{{ old('birth_date', $affiliate->birth_date?->format('Y-m-d')) }}" max="{{ now()->subDay()->format('Y-m-d') }}">
+                        @if(in_array('birth_date', $profileCompletion['missing'], true))<span class="text-sm font-semibold text-amber-700">⚠ Este dato está pendiente.</span>@endif
                         @error('birth_date')<span class="text-sm text-red-700">{{ $message }}</span>@enderror
                     </label>
-                    <label class="grid gap-2 text-sm font-bold text-slate-700">
+                    <label class="grid gap-2 rounded text-sm font-bold text-slate-700 {{ in_array('marital_status', $profileCompletion['missing'], true) ? 'bg-amber-50/70 p-3 ring-1 ring-amber-200' : '' }}" data-profile-field="marital_status">
                         Estado civil
                         <select class="form-input" name="marital_status">
                             <option value="">No especificado</option>
@@ -123,6 +163,7 @@
                                 <option value="{{ $option }}" @selected(old('marital_status', $affiliate->marital_status) === $option)>{{ $option }}</option>
                             @endforeach
                         </select>
+                        @if(in_array('marital_status', $profileCompletion['missing'], true))<span class="text-sm font-semibold text-amber-700">⚠ Este dato está pendiente.</span>@endif
                         @error('marital_status')<span class="text-sm text-red-700">{{ $message }}</span>@enderror
                     </label>
                 </div>
@@ -197,7 +238,7 @@
                                 @php($currency = $payment->plan?->currency ?: 'BOB')
                                 <tr class="border-b border-slate-200 align-top">
                                     <td class="p-3">{{ \App\Support\SiafcoDate::date($payment->payment_date ?: $payment->paid_at ?: $payment->submitted_at ?: $payment->created_at) }}</td>
-                                    <td class="p-3 font-bold">{{ $payment->receipt_number ?: 'Sin recibo' }}<br><span class="text-xs text-slate-500">{{ $payment->publicRequest?->request_code ?: 'Sin SOL' }}</span><br><span class="text-xs text-slate-500">{{ $payment->transaction_number ?: $payment->reference_number ?: 'Sin transacción' }}</span></td>
+                                    <td class="p-3 font-bold">{{ $payment->receipt_number ?: 'Sin recibo' }}<br><span class="text-xs text-slate-500">{{ $payment->publicRequest?->request_code ?: 'Sin SOL' }}</span><br><span class="text-xs text-slate-500">{{ $payment->transactionNumber() ?: 'Sin transacción' }}</span></td>
                                     <td class="p-3">{{ $payment->plan?->name ?: 'Afiliación' }}</td>
                                     <td class="p-3">{{ \App\Support\PaymentMethodPresenter::label($payment->payment_method) }}</td>
                                     <td class="p-3"><span class="badge {{ \App\Support\PaymentSourcePresenter::badgeClasses($payment->source) }}">{{ \App\Support\PaymentSourcePresenter::channel($payment->source) }}</span></td>
@@ -224,7 +265,7 @@
                             </div>
                             <dl class="mt-3 grid gap-2 text-sm">
                                 <div class="flex justify-between gap-3"><dt class="text-slate-500">Recibo</dt><dd class="text-right font-semibold">{{ $payment->receipt_number ?: 'Sin recibo' }}</dd></div>
-                                <div class="flex justify-between gap-3"><dt class="text-slate-500">Transacción</dt><dd class="text-right font-semibold">{{ $payment->transaction_number ?: $payment->reference_number ?: 'Sin transacción' }}</dd></div>
+                                <div class="flex justify-between gap-3"><dt class="text-slate-500">N.º de transacción</dt><dd class="text-right font-semibold">{{ $payment->transactionNumber() ?: 'Sin transacción' }}</dd></div>
                                 <div class="flex justify-between gap-3"><dt class="text-slate-500">Origen</dt><dd><span class="badge {{ \App\Support\PaymentSourcePresenter::badgeClasses($payment->source) }}">{{ \App\Support\PaymentSourcePresenter::channel($payment->source) }}</span></dd></div>
                                 <div class="flex justify-between gap-3"><dt class="text-slate-500">Monto</dt><dd class="font-black">{{ $currency }} {{ number_format($payment->paid_amount ?? $payment->amount, 2, ',', '.') }}</dd></div>
                             </dl>
@@ -239,5 +280,21 @@
             @endif
         </section>
     </div>
+
+    <script>
+        document.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-profile-target]');
+            if (!button) return;
+
+            const target = document.querySelector(`[data-profile-field="${button.dataset.profileTarget}"]`);
+            if (!target) return;
+
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => {
+                const control = target.querySelector('input, select, textarea, button');
+                if (control) control.focus({ preventScroll: true });
+            }, 350);
+        });
+    </script>
 
 </x-layouts.app>

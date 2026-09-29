@@ -23,7 +23,7 @@
 <tr><th>Plan</th><td>{{ $receipt['plan_name'] }}</td></tr><tr><th>Metodo de pago</th><td>{{ $receipt['method_label'] }}</td></tr>
 <tr><th>Codigo de solicitud</th><td>{{ $receipt['request_code'] ?: 'No aplica' }}</td></tr>
 <tr><th>Registro de afiliado</th><td>{{ $receipt['registration_number'] }}</td></tr>
-@if(\App\Support\PaymentMethodPresenter::showsTransactionNumber($payment->payment_method) && $payment->reference_number)<tr><th>N.º de transacción</th><td>{{ $payment->reference_number }}</td></tr>@endif
+@if(\App\Support\PaymentMethodPresenter::showsTransactionNumber($payment->payment_method) && $payment->transactionNumber())<tr><th>N.º de transacción</th><td>{{ $payment->transactionNumber() }}</td></tr>@endif
 <tr><th>Estado del pago</th><td class="status" style="color:{{ $receipt['payment_status_color'] }}">{{ mb_strtoupper($receipt['payment_status_label']) }}</td></tr></table></section>
 <section class="section"><h2 class="section-title">Datos de caja</h2><table class="cash-table">
 <tr><th>Registrado por</th><td>{{ $receipt['registered_by'] }}</td></tr>

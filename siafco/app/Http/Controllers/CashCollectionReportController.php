@@ -116,7 +116,7 @@ class CashCollectionReportController extends Controller
             })
             ->when($filters['cashier_id'] ?? null, fn ($query, $id) => $query->where('registered_by', $id))
             ->when($filters['receipt_number'] ?? null, fn ($query, $receipt) => $query->where('receipt_number', 'like', "%{$receipt}%"))
-            ->when($filters['reference_number'] ?? null, fn ($query, $reference) => $query->where('reference_number', 'like', "%{$reference}%"))
+            ->when($filters['reference_number'] ?? null, fn ($query, $reference) => $query->where(fn ($inner) => $inner->where('reference_number', 'like', "%{$reference}%")->orWhere('transaction_number', 'like', "%{$reference}%")))
             ->when($filters['payment_method'] ?? null, fn ($query, $method) => $query->where('payment_method', $method))
             ->when($filters['source'] ?? null, fn ($query, $source) => $query->where('source', $source))
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
@@ -130,10 +130,16 @@ class CashCollectionReportController extends Controller
     {
         return AffiliationPayment::query()
             ->where('status', PaymentStatus::UNDER_REVIEW)
-            ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('paid_at', '>=', $date))
-            ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('paid_at', '<=', $date))
+            ->when($filters['date_from'] ?? null, function ($query, $date) {
+                [$from] = SiafcoDate::utcDayBounds($date);
+                $query->where('paid_at', '>=', $from);
+            })
+            ->when($filters['date_to'] ?? null, function ($query, $date) {
+                [, $to] = SiafcoDate::utcDayBounds($date);
+                $query->where('paid_at', '<=', $to);
+            })
             ->when($filters['cashier_id'] ?? null, fn ($query, $id) => $query->where('registered_by', $id))
-            ->when($filters['reference_number'] ?? null, fn ($query, $reference) => $query->where('reference_number', 'like', "%{$reference}%"))
+            ->when($filters['reference_number'] ?? null, fn ($query, $reference) => $query->where(fn ($inner) => $inner->where('reference_number', 'like', "%{$reference}%")->orWhere('transaction_number', 'like', "%{$reference}%")))
             ->when($filters['payment_method'] ?? null, fn ($query, $method) => $query->where('payment_method', $method))
             ->when($filters['source'] ?? null, fn ($query, $source) => $query->where('source', $source))
             ->when($filters['sector_id'] ?? null, fn ($query, $sectorId) => $query->whereHas('affiliate', fn ($affiliate) => $affiliate->where('sector_id', $sectorId)))
@@ -149,10 +155,16 @@ class CashCollectionReportController extends Controller
                 $query->whereIn('status', PaymentStatus::confirmedValues())
                     ->orWhere('status', PaymentStatus::UNDER_REVIEW);
             })
-            ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('paid_at', '>=', $date))
-            ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('paid_at', '<=', $date))
+            ->when($filters['date_from'] ?? null, function ($query, $date) {
+                [$from] = SiafcoDate::utcDayBounds($date);
+                $query->where('paid_at', '>=', $from);
+            })
+            ->when($filters['date_to'] ?? null, function ($query, $date) {
+                [, $to] = SiafcoDate::utcDayBounds($date);
+                $query->where('paid_at', '<=', $to);
+            })
             ->when($filters['cashier_id'] ?? null, fn ($query, $id) => $query->where('registered_by', $id))
-            ->when($filters['reference_number'] ?? null, fn ($query, $reference) => $query->where('reference_number', 'like', "%{$reference}%"))
+            ->when($filters['reference_number'] ?? null, fn ($query, $reference) => $query->where(fn ($inner) => $inner->where('reference_number', 'like', "%{$reference}%")->orWhere('transaction_number', 'like', "%{$reference}%")))
             ->when($filters['payment_method'] ?? null, fn ($query, $method) => $query->where('payment_method', $method))
             ->when($filters['source'] ?? null, fn ($query, $source) => $query->where('source', $source))
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
@@ -166,10 +178,16 @@ class CashCollectionReportController extends Controller
     {
         return AffiliationPayment::query()
             ->whereIn('status', PaymentStatus::rejectedValues())
-            ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('paid_at', '>=', $date))
-            ->when($filters['date_to'] ?? null, fn ($query, $date) => $query->whereDate('paid_at', '<=', $date))
+            ->when($filters['date_from'] ?? null, function ($query, $date) {
+                [$from] = SiafcoDate::utcDayBounds($date);
+                $query->where('paid_at', '>=', $from);
+            })
+            ->when($filters['date_to'] ?? null, function ($query, $date) {
+                [, $to] = SiafcoDate::utcDayBounds($date);
+                $query->where('paid_at', '<=', $to);
+            })
             ->when($filters['cashier_id'] ?? null, fn ($query, $id) => $query->where('registered_by', $id))
-            ->when($filters['reference_number'] ?? null, fn ($query, $reference) => $query->where('reference_number', 'like', "%{$reference}%"))
+            ->when($filters['reference_number'] ?? null, fn ($query, $reference) => $query->where(fn ($inner) => $inner->where('reference_number', 'like', "%{$reference}%")->orWhere('transaction_number', 'like', "%{$reference}%")))
             ->when($filters['payment_method'] ?? null, fn ($query, $method) => $query->where('payment_method', $method))
             ->when($filters['source'] ?? null, fn ($query, $source) => $query->where('source', $source))
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))

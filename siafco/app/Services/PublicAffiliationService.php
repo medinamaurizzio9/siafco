@@ -9,6 +9,7 @@ use App\Models\Person;
 use App\Models\PublicAffiliationRequest;
 use App\Models\User;
 use App\Support\PaymentStatus;
+use App\Support\SiafcoDate;
 use App\Support\TextNormalizer;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -111,8 +112,9 @@ class PublicAffiliationService
                     'payer_name' => $data['payer_name'],
                     'transaction_number' => $data['transaction_number'],
                     'voucher_path' => $receiptPath,
-                    'payment_date' => $data['payment_date'],
-                    'paid_at' => $data['payment_date'],
+                    'payment_date' => $data['paid_at']->toDateString(),
+                    'paid_at' => $data['paid_at'],
+                    'payment_timezone' => $data['payment_timezone'] ?? null,
                     'observations' => $data['observations'] ?? null,
                     'submitted_at' => now(),
                     'status' => PaymentStatus::UNDER_REVIEW,
@@ -281,6 +283,8 @@ class PublicAffiliationService
     ): AffiliationPayment
     {
         $data = TextNormalizer::fields($data, ['bank_name', 'payer_name', 'observations']);
+        $data['payment_timezone'] = SiafcoDate::validTimezoneOrDefault($data['payment_timezone'] ?? $data['browser_timezone'] ?? null);
+        $data['paid_at'] ??= SiafcoDate::fromLocalInput($data['payment_date'] ?? null, $data['payment_timezone']);
 
         return DB::transaction(function () use ($request, $data, $receiptPath, $initialStatus) {
             $request = PublicAffiliationRequest::whereKey($request->id)->lockForUpdate()->firstOrFail();
@@ -297,7 +301,9 @@ class PublicAffiliationService
                     'expected_amount' => $request->amount_due,
                     'paid_amount' => $data['paid_amount'],
                     'transaction_number' => $data['transaction_number'],
-                    'payment_date' => $data['payment_date'],
+                    'payment_date' => $data['paid_at']->toDateString(),
+                    'paid_at' => $data['paid_at'],
+                    'payment_timezone' => $data['payment_timezone'] ?? null,
                     'payment_method' => 'transferencia',
                     'bank_name' => $data['bank_name'] ?? null,
                     'payer_name' => $data['payer_name'],

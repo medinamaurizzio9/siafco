@@ -37,11 +37,94 @@ class AffiliateProfileTest extends TestCase
             ->assertSee($affiliate->full_name)
             ->assertSee($affiliate->ci)
             ->assertSee($affiliate->registration_number)
+            ->assertSee('Completa tu perfil')
             ->assertSee('solo pueden ser corregidos por Secretaría')
             ->assertSee('No tienes pagos registrados.')
             ->assertDontSee('name="full_name"', false)
             ->assertDontSee('name="ci"', false)
             ->assertDontSee('name="registration_number"', false);
+    }
+
+    public function test_profile_without_required_data_shows_real_pending_checklist(): void
+    {
+        [$user, $affiliate] = $this->affiliate();
+        $affiliate->update([
+            'address' => null,
+            'birth_date' => null,
+            'marital_status' => null,
+            'photo_path' => null,
+        ]);
+
+        $this->actingAs($user)->get(route('affiliate.profile.show'))
+            ->assertOk()
+            ->assertSee('0% completado')
+            ->assertSee('Dirección')
+            ->assertSee('Fecha de nacimiento')
+            ->assertSee('Estado civil')
+            ->assertSee('Fotografía')
+            ->assertSee('Falta completar')
+            ->assertSee('data-profile-target="address"', false)
+            ->assertSee('data-profile-field="birth_date"', false)
+            ->assertSee('⚠ Este dato está pendiente.');
+    }
+
+    public function test_partially_complete_profile_calculates_percentage_and_optional_empty_fields_do_not_reduce_it(): void
+    {
+        [$user, $affiliate] = $this->affiliate();
+        $affiliate->update([
+            'phone' => null,
+            'address' => 'LA PAZ',
+            'birth_date' => null,
+            'marital_status' => null,
+            'photo_path' => null,
+        ]);
+
+        $this->actingAs($user)->get(route('affiliate.profile.show'))
+            ->assertOk()
+            ->assertSee('25% completado')
+            ->assertSee('⚠ 2')
+            ->assertSee('⚠ 1');
+    }
+
+    public function test_complete_profile_shows_one_hundred_percent_and_existing_photo_counts(): void
+    {
+        [$user, $affiliate] = $this->affiliate();
+        $affiliate->update([
+            'address' => 'LA PAZ',
+            'birth_date' => '1990-05-10',
+            'marital_status' => 'CASADO',
+            'photo_path' => 'affiliates/photos/existente.jpg',
+            'status' => 'pago_en_revision',
+        ]);
+
+        $this->actingAs($user)->get(route('affiliate.profile.show'))
+            ->assertOk()
+            ->assertSee('100% completado')
+            ->assertSee('Pago en revisión')
+            ->assertDontSee('Falta completar');
+    }
+
+    public function test_completing_address_removes_that_pending_item_after_redirect(): void
+    {
+        [$user, $affiliate] = $this->affiliate();
+        $affiliate->update([
+            'address' => null,
+            'birth_date' => null,
+            'marital_status' => null,
+            'photo_path' => null,
+        ]);
+
+        $this->actingAs($user)->patch(route('affiliate.profile.update'), [
+            'email' => $affiliate->email,
+            'address' => 'Zona Central',
+        ])->assertRedirect(route('affiliate.profile.show'));
+
+        $affiliate->refresh();
+        $this->assertSame('ZONA CENTRAL', $affiliate->address);
+
+        $this->actingAs($user)->get(route('affiliate.profile.show'))
+            ->assertOk()
+            ->assertSee('25% completado');
     }
 
     public function test_affiliate_updates_only_allowed_contact_fields_and_audit_is_recorded(): void
@@ -54,6 +137,7 @@ class AffiliateProfileTest extends TestCase
             'address' => '  Calle Principal  123 ',
             'birth_date' => '1990-05-10',
             'marital_status' => 'CASADO',
+            'regional' => 'COCHABAMBA',
         ])->assertRedirect(route('affiliate.profile.show'));
 
         $affiliate->refresh();
@@ -61,6 +145,7 @@ class AffiliateProfileTest extends TestCase
         $this->assertSame('nuevo@example.com', $affiliate->email);
         $this->assertSame('CALLE PRINCIPAL 123', $affiliate->address);
         $this->assertSame('CASADO', $affiliate->marital_status);
+        $this->assertSame('COCHABAMBA', $affiliate->regional);
         $this->assertSame('nuevo@example.com', $affiliate->user->email);
         $this->assertSame('nuevo@example.com', $affiliate->person->email);
         $this->assertSame('CALLE PRINCIPAL 123', $affiliate->person->address);
@@ -84,7 +169,7 @@ class AffiliateProfileTest extends TestCase
             'registration_number' => 'ALTERADO',
             'status' => 'activo',
             'sector_id' => 999,
-            'regional' => 'Otra',
+            'regional' => 'COCHABAMBA',
         ])->assertSessionHasErrors('profile');
 
         $this->assertSame($original, $affiliate->fresh()->only(array_keys($original)));
@@ -93,6 +178,60 @@ class AffiliateProfileTest extends TestCase
             'action' => 'affiliate_profile_institutional_change_rejected',
             'auditable_id' => $affiliate->id,
         ]);
+    }
+
+    public function test_affiliate_can_change_own_regional_and_reload_profile_shows_value(): void
+    {
+        [$user, $affiliate] = $this->affiliate();
+
+        $this->actingAs($user)->patch(route('affiliate.profile.update'), [
+            'email' => $affiliate->email,
+            'regional' => 'SANTA CRUZ',
+        ])->assertRedirect(route('affiliate.profile.show'));
+
+        $affiliate->refresh();
+        $this->assertSame('SANTA CRUZ', $affiliate->regional);
+
+        $this->actingAs($user)->get(route('affiliate.profile.show'))
+            ->assertOk()
+            ->assertSee('Regional')
+            ->assertSee('Lugar donde trabaja')
+            ->assertSee('value="SANTA CRUZ" selected', false)
+            ->assertDontSee('Lugar de trabajo');
+    }
+
+    public function test_affiliate_cannot_modify_another_affiliates_regional_or_other_institutional_fields(): void
+    {
+        [$user, $affiliate] = $this->affiliate();
+        [, $other] = $this->affiliate('other-regional@example.com', 'OTR-000002');
+        $original = $affiliate->only([
+            'full_name', 'ci', 'registration_number', 'status', 'sector_id',
+            'institution', 'affiliation_plan_id',
+        ]);
+
+        $this->actingAs($user)->patch(route('affiliate.profile.update'), [
+            'email' => $affiliate->email,
+            'affiliate_id' => $other->id,
+            'sector_id' => $other->sector_id,
+            'institution' => 'OTRA INSTITUCION',
+            'registration_number' => 'OTR-999999',
+            'regional' => 'BENI',
+        ])->assertSessionHasErrors('profile');
+
+        $this->assertSame('La Paz', $affiliate->fresh()->regional);
+        $this->assertSame('La Paz', $other->fresh()->regional);
+        $this->assertSame($original, $affiliate->fresh()->only(array_keys($original)));
+    }
+
+    public function test_historical_profile_with_non_catalog_regional_still_loads(): void
+    {
+        [$user, $affiliate] = $this->affiliate();
+        $affiliate->update(['regional' => 'Regional Historica']);
+
+        $this->actingAs($user)->get(route('affiliate.profile.show'))
+            ->assertOk()
+            ->assertSee('Regional Historica')
+            ->assertSee('Lugar donde trabaja');
     }
 
     public function test_photo_replaces_old_file_and_invalidates_only_credential_exports(): void

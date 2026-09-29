@@ -14,6 +14,7 @@ use App\Models\PublicAffiliationRequest;
 use App\Models\Sector;
 use App\Models\User;
 use App\Support\PaymentStatus;
+use App\Support\PaymentTransactionNumber;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -26,7 +27,8 @@ class PaymentLifecycleService
     public function __construct(
         private CredentialService $credentials,
         private PaymentBalanceService $balances,
-        private PaymentReceiptNumberService $receiptNumbers
+        private PaymentReceiptNumberService $receiptNumbers,
+        private PaymentVoucherService $vouchers
     ) {}
 
     public function createManual(Affiliate $affiliate, array $data, ?UploadedFile $voucher, User $actor): AffiliationPayment
@@ -55,6 +57,7 @@ class PaymentLifecycleService
                     'voucher_path' => $voucherPath,
                     'payment_date' => $data['paid_at']->toDateString(),
                     'paid_at' => $data['paid_at'],
+                    'payment_timezone' => $data['payment_timezone'] ?? null,
                     'submitted_at' => now(),
                     'status' => PaymentStatus::UNDER_REVIEW,
                     'source' => 'manual_admin',
@@ -75,7 +78,7 @@ class PaymentLifecycleService
                     'status' => $payment->status,
                     'registered_by' => $actor->id,
                     'payment_method' => $payment->payment_method,
-                    'reference_number' => $payment->reference_number,
+                    'transaction_number' => PaymentTransactionNumber::resolve($payment),
                 ]);
 
                 return $payment;
@@ -135,6 +138,7 @@ class PaymentLifecycleService
                     'observations' => $data['observations'] ?? null,
                     'payment_date' => $data['paid_at']->toDateString(),
                     'paid_at' => $data['paid_at'],
+                    'payment_timezone' => $data['payment_timezone'] ?? null,
                     'submitted_at' => now(),
                     'status' => PaymentStatus::UNDER_REVIEW,
                     'source' => 'manual_admin',
@@ -172,7 +176,7 @@ class PaymentLifecycleService
                     'request_code' => $application->request_code,
                     'registered_by' => $actor->id,
                     'payment_method' => $payment->payment_method,
-                    'reference_number' => $payment->reference_number,
+                    'transaction_number' => PaymentTransactionNumber::resolve($payment),
                     'status' => PaymentStatus::UNDER_REVIEW,
                 ]);
 
@@ -217,6 +221,7 @@ class PaymentLifecycleService
                     'observations' => $data['observations'] ?? null,
                     'payment_date' => $data['paid_at']->toDateString(),
                     'paid_at' => $data['paid_at'],
+                    'payment_timezone' => $data['payment_timezone'] ?? null,
                     'status' => PaymentStatus::UNDER_REVIEW,
                 ];
 
@@ -434,10 +439,7 @@ class PaymentLifecycleService
             return null;
         }
 
-        $extension = strtolower($voucher->extension() ?: $voucher->guessExtension() ?: 'bin');
-        $name = (string) Str::uuid().'.'.$extension;
-
-        return $voucher->storeAs('payments/vouchers', $name, 'local');
+        return $this->vouchers->store($voucher);
     }
 
     private function safeAuditValues(array $values): array

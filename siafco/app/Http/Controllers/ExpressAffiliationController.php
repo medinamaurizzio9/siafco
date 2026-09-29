@@ -3,13 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\AffiliationPlan;
+use App\Models\Affiliate;
 use App\Models\InstitutionalSetting;
+use App\Models\Person;
 use App\Models\PublicAffiliationRequest;
 use App\Models\Sector;
+use App\Models\User;
 use App\Services\AffiliateAccountService;
+use App\Services\PaymentVoucherService;
 use App\Services\PublicAffiliationService;
+use App\Support\PaymentTransactionNumber;
 use App\Support\PublicAffiliationCatalogs;
 use App\Support\PublicAffiliationValidation;
+use App\Support\SiafcoDate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -23,16 +29,28 @@ class ExpressAffiliationController extends Controller
             'plans' => AffiliationPlan::query()->available()->orderBy('name')->get(),
             'expeditionPlaces' => PublicAffiliationCatalogs::issuedInSelectOptions(),
             'institution' => InstitutionalSetting::current(),
-            'today' => today()->format('Y-m-d'),
+            'nowInput' => now(SiafcoDate::timezone())->format('Y-m-d\TH:i'),
         ]);
     }
 
-    public function store(Request $request, PublicAffiliationService $service)
+    public function store(Request $request, PublicAffiliationService $service, PaymentVoucherService $vouchers)
     {
         $data = $request->validate($this->rules(), $this->messages());
-        $receiptPath = $request->hasFile('receipt')
-            ? $request->file('receipt')->store('payments/vouchers', 'local')
-            : null;
+        $timezone = SiafcoDate::validTimezoneOrDefault($data['browser_timezone'] ?? null);
+        if (SiafcoDate::fromLocalInput($data['payment_date'], $timezone)->timezone($timezone)->toDateString() > now()->toDateString()) {
+            return back()->withErrors(['payment_date' => 'La fecha y hora de pago no puede ser futura.'])->withInput();
+        }
+        $data['transaction_number'] = PaymentTransactionNumber::normalize($data['transaction_number'] ?? null);
+        $ciAlreadyExists = Affiliate::where('ci', $data['ci'] ?? null)->exists()
+            || Person::where('ci', $data['ci'] ?? null)->exists()
+            || User::where('ci', $data['ci'] ?? null)->exists();
+        if (! $ciAlreadyExists && PaymentTransactionNumber::hasDuplicate($data['transaction_number'])) {
+            return back()->withErrors(['transaction_number' => PaymentTransactionNumber::duplicateMessage()])->withInput();
+        }
+        $data['payment_timezone'] = $timezone;
+        $data['paid_at'] = SiafcoDate::fromLocalInput($data['payment_date'], $data['payment_timezone']);
+        unset($data['browser_timezone']);
+        $receiptPath = $vouchers->store($request->file('receipt'), 'receipt');
 
         try {
             $application = $service->registerExpress(
@@ -78,8 +96,9 @@ class ExpressAffiliationController extends Controller
             'transaction_number' => ['required', 'string', 'max:120'],
             'bank_name' => ['required', 'string', 'max:120'],
             'payer_name' => ['required', 'string', 'max:255'],
-            'payment_date' => ['required', 'date', 'before_or_equal:today'],
-            'receipt' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'payment_date' => ['required', 'date'],
+            'browser_timezone' => ['nullable', 'string', 'timezone'],
+            'receipt' => ['required', 'file', 'mimetypes:image/jpeg,image/png,image/webp,application/pdf', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
             'observations' => ['nullable', 'string', 'max:1000'],
         ];
     }
@@ -90,7 +109,8 @@ class ExpressAffiliationController extends Controller
             'phone.regex' => 'Ingresa un número de celular válido de 8 dígitos.',
             'bank_name.required' => 'El banco es obligatorio.',
             'transaction_number.required' => 'El número de transacción es obligatorio.',
-            'payment_date.before_or_equal' => 'La fecha de pago no puede ser futura.',
+            'payment_date.before_or_equal' => 'La fecha y hora de pago no puede ser futura.',
+            'receipt.required' => 'Adjunta una fotografía o PDF del comprobante de pago.',
         ]);
     }
 }

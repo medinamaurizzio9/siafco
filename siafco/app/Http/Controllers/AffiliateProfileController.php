@@ -7,6 +7,7 @@ use App\Models\Affiliate;
 use App\Models\AffiliationPayment;
 use App\Models\Person;
 use App\Services\AffiliatePhotoProcessor;
+use App\Services\AffiliateProfileCompletionService;
 use App\Services\AuditService;
 use App\Services\PaymentReceiptService;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class AffiliateProfileController extends Controller
 {
-    public function show(Request $request)
+    public function show(Request $request, AffiliateProfileCompletionService $completion)
     {
         $affiliate = $this->affiliate($request);
         $payments = $affiliate->payments()
@@ -34,7 +35,9 @@ class AffiliateProfileController extends Controller
             'latest' => $affiliate->payments()->latest('payment_date')->latest('created_at')->first(),
         ];
 
-        return view('affiliate-profile.show', compact('affiliate', 'payments', 'paymentSummary'));
+        $profileCompletion = $completion->summary($affiliate);
+
+        return view('affiliate-profile.show', compact('affiliate', 'payments', 'paymentSummary', 'profileCompletion'));
     }
 
     public function update(
@@ -43,7 +46,7 @@ class AffiliateProfileController extends Controller
     ) {
         $affiliate = $this->affiliate($request)->loadMissing('person', 'user', 'credential');
         $data = Arr::only($request->validated(), [
-            'phone', 'email', 'address', 'birth_date', 'marital_status',
+            'phone', 'email', 'address', 'birth_date', 'marital_status', 'regional',
         ]);
         $before = $affiliate->only(array_keys($data));
         $oldPhoto = $affiliate->photo_path;

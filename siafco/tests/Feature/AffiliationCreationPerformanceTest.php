@@ -182,12 +182,18 @@ class AffiliationCreationPerformanceTest extends TestCase
 
     private function officePayload(Sector $sector, AffiliationPlan $plan, string $suffix, string $method): array
     {
-        return $this->commonPayload($sector, $plan, $suffix) + [
+        $payload = $this->commonPayload($sector, $plan, $suffix) + [
             'received_amount' => '120.00',
             'paid_at' => now()->format('Y-m-d\TH:i'),
             'payment_method' => $method,
             'reference_number' => $method === 'qr' ? 'TRX-'.$suffix : null,
             'observations' => 'PRUEBA DE RENDIMIENTO',
         ];
+
+        if ($method === 'qr') {
+            $payload['voucher'] = UploadedFile::fake()->image('voucher-'.$suffix.'.jpg', 800, 800);
+        }
+
+        return $payload;
     }
 }

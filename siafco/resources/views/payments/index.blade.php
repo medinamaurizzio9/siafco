@@ -61,6 +61,7 @@
                 <p class="mt-2 text-sm"><span class="text-slate-500">Cobrado por:</span> <strong>{{ $payment->registrar?->name ?? 'Sin registro' }}</strong></p>
                 <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
                     <div><span class="text-slate-500">Monto</span><strong class="block">{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</strong></div>
+                    <div><span class="text-slate-500">Fecha / hora</span><strong class="block">{{ \App\Support\SiafcoDate::paymentInputDateTime($payment->paid_at ?: $payment->payment_date) }}</strong></div>
                     <div><span class="text-slate-500">Metodo</span><strong class="block">{{ \App\Support\PaymentMethodPresenter::label($payment->payment_method) }}</strong></div>
                     <div><span class="text-slate-500">Recibo</span><strong class="block">{{ $payment->receipt_number ?: 'Sin recibo' }}</strong></div>
                     <div class="col-span-2"><x-payment-status :status="$payment->status" size="sm" /></div>
@@ -80,7 +81,7 @@
     <div class="desktop-table overflow-hidden rounded-lg border border-slate-200 bg-white">
         <div class="overflow-x-auto">
             <table class="table">
-                <thead><tr><th>Afiliado</th><th>SOL / recibo</th><th>Monto</th><th>Metodo</th><th>N.º de transacción</th><th>Origen</th><th>Cajero / registrador</th><th>Estado</th><th>Acciones</th></tr></thead>
+                <thead><tr><th>Afiliado</th><th>SOL / recibo</th><th>Fecha / hora</th><th>Monto</th><th>Metodo</th><th>N.º de transacción</th><th>Origen</th><th>Cajero / registrador</th><th>Estado</th><th>Acciones</th></tr></thead>
                 <tbody>
                 @forelse($payments as $payment)
                     <tr>
@@ -92,9 +93,10 @@
                             <div class="font-bold">{{ $payment->publicRequest?->request_code ?: 'Sin SOL' }}</div>
                             <div class="text-xs text-slate-500">{{ $payment->receipt_number ?: 'Sin recibo' }}</div>
                         </td>
+                        <td>{{ \App\Support\SiafcoDate::paymentInputDateTime($payment->paid_at ?: $payment->payment_date) }}</td>
                         <td>{{ $payment->currency ?? 'BOB' }} {{ number_format((float) ($payment->paid_amount ?? $payment->amount), 2) }}</td>
                         <td>{{ \App\Support\PaymentMethodPresenter::label($payment->payment_method) }}</td>
-                        <td>{{ \App\Support\PaymentMethodPresenter::showsTransactionNumber($payment->payment_method) ? ($payment->reference_number ?: 'No registrado') : 'No aplica' }}</td>
+                        <td>{{ \App\Support\PaymentMethodPresenter::showsTransactionNumber($payment->payment_method) ? ($payment->transactionNumber() ?: 'No registrado') : 'No aplica' }}</td>
                         <td><span class="badge {{ \App\Support\PaymentSourcePresenter::badgeClasses($payment->source) }}">{{ \App\Support\PaymentSourcePresenter::channel($payment->source) }}</span><div class="mt-1 text-xs text-slate-500">{{ \App\Support\PaymentSourcePresenter::label($payment->source) }}</div></td>
                         <td>{{ $payment->registrar?->name ?? 'Sin registro' }}</td>
                         <td><x-payment-status :status="$payment->status" size="sm" /></td>
@@ -105,7 +107,7 @@
                                     <a class="btn-secondary" href="{{ route('payments.edit', $payment) }}">Editar</a>
                                 @endif
                                 @if(app(\App\Services\PaymentActionAuthorization::class)->canConfirm(auth()->user(), $payment))
-                                    <form method="post" action="{{ route('payments.confirm', $payment) }}" data-confirm-title="{{ $payment->source === 'office_qr' ? 'Confirmar pago QR' : 'Confirmar pago' }}" data-confirm-message="{{ $payment->source === 'office_qr' ? 'Confirme que la operación '.$payment->reference_number.' por '.($payment->currency ?? 'BOB').' '.number_format((float) ($payment->paid_amount ?? $payment->amount), 2).' fue verificada correctamente.' : 'El pago quedará confirmado.' }}" data-confirm-accept="Confirmar pago" data-confirm-variant="warning">@csrf<button class="btn-primary">Confirmar</button></form>
+                                    <form method="post" action="{{ route('payments.confirm', $payment) }}" data-confirm-title="{{ $payment->source === 'office_qr' ? 'Confirmar pago QR' : 'Confirmar pago' }}" data-confirm-message="{{ $payment->source === 'office_qr' ? 'Confirme que la operación '.$payment->transactionNumber().' por '.($payment->currency ?? 'BOB').' '.number_format((float) ($payment->paid_amount ?? $payment->amount), 2).' fue verificada correctamente.' : 'El pago quedará confirmado.' }}" data-confirm-accept="Confirmar pago" data-confirm-variant="warning">@csrf<button class="btn-primary">Confirmar</button></form>
                                 @endif
                                 @if(auth()->user()->hasPermission('payments.view_receipt') && $payment->voucher_path)
                                     <a class="btn-secondary" href="{{ route('payments.voucher', $payment) }}" target="_blank">Comprobante</a>
@@ -117,7 +119,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="9">Sin pagos registrados.</td></tr>
+                    <tr><td colspan="10">Sin pagos registrados.</td></tr>
                 @endforelse
                 </tbody>
             </table>

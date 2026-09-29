@@ -376,6 +376,180 @@ class ManualTreasuryPaymentTest extends TestCase
         $this->assertSame('pendiente_pago', $affiliate->fresh()->status);
     }
 
+    public function test_manual_payment_interprets_browser_timezone_and_keeps_created_at_system_time(): void
+    {
+        [$affiliate] = $this->affiliateFixture();
+        $secretary = $this->internalUser('secretaria');
+        $this->travelTo('2026-09-28 20:00:00');
+
+        $this->actingAs($secretary)->post(route('payments.store'), $this->paymentPayload($affiliate, [
+            'payment_method' => 'qr',
+            'paid_at' => '2026-09-28T09:20',
+            'browser_timezone' => 'America/La_Paz',
+            'reference_number' => 'TZ-REF',
+            'transaction_number' => 'TZ-TRX',
+        ]))->assertSessionHasNoErrors();
+
+        $payment = AffiliationPayment::where('transaction_number', 'TZ-TRX')->firstOrFail();
+        $this->assertSame('2026-09-28 13:20:00', $payment->paid_at->utc()->format('Y-m-d H:i:s'));
+        $this->assertSame('America/La_Paz', $payment->payment_timezone);
+        $this->assertSame('2026-09-28 20:00:00', $payment->created_at->utc()->format('Y-m-d H:i:s'));
+    }
+
+    public function test_invalid_browser_timezone_is_rejected(): void
+    {
+        [$affiliate] = $this->affiliateFixture();
+        $secretary = $this->internalUser('secretaria');
+
+        $this->actingAs($secretary)->post(route('payments.store'), $this->paymentPayload($affiliate, [
+            'payment_method' => 'qr',
+            'browser_timezone' => 'Mars/La_Paz',
+        ]))->assertSessionHasErrors('browser_timezone');
+    }
+
+    public function test_duplicate_transaction_number_is_rejected_across_legacy_fields(): void
+    {
+        Storage::fake('local');
+        [$affiliate] = $this->affiliateFixture();
+        $secretary = $this->internalUser('secretaria');
+
+        AffiliationPayment::create([
+            'affiliate_id' => $affiliate->id,
+            'affiliation_plan_id' => $affiliate->affiliation_plan_id,
+            'amount' => 120,
+            'paid_amount' => 120,
+            'expected_amount' => 120,
+            'currency' => 'BOB',
+            'payment_method' => 'qr',
+            'reference_number' => 'WEB-LEGACY-001',
+            'status' => PaymentStatus::UNDER_REVIEW,
+            'source' => 'web',
+            'paid_at' => now(),
+        ]);
+
+        $this->actingAs($secretary)->post(route('payments.store'), $this->paymentPayload($affiliate, [
+            'payment_method' => 'transferencia',
+            'transaction_number' => ' WEB-LEGACY-001 ',
+            'reference_number' => null,
+        ]))->assertSessionHasErrors('transaction_number');
+    }
+
+    public function test_cashier_can_upload_and_replace_pending_voucher_without_confirm_permission(): void
+    {
+        Storage::fake('local');
+        [$affiliate] = $this->affiliateFixture();
+        $cashier = $this->internalUser('cajero');
+        $payment = AffiliationPayment::create([
+            'affiliate_id' => $affiliate->id,
+            'affiliation_plan_id' => $affiliate->affiliation_plan_id,
+            'amount' => 120,
+            'paid_amount' => 120,
+            'expected_amount' => 120,
+            'currency' => 'BOB',
+            'payment_method' => 'qr',
+            'transaction_number' => 'DOC-001',
+            'status' => PaymentStatus::UNDER_REVIEW,
+            'source' => 'manual_admin',
+            'paid_at' => now(),
+        ]);
+
+        $this->actingAs($cashier)->post(route('payments.proof', $payment), [
+            'voucher' => UploadedFile::fake()->image('voucher.jpg', 800, 800),
+        ])->assertRedirect();
+        $firstPath = $payment->fresh()->voucher_path;
+        Storage::disk('local')->assertExists($firstPath);
+
+        $this->actingAs($cashier)->post(route('payments.proof', $payment), [
+            'voucher' => UploadedFile::fake()->image('voucher-2.png', 800, 800),
+        ])->assertRedirect();
+        $payment->refresh();
+
+        $this->assertNotSame($firstPath, $payment->voucher_path);
+        Storage::disk('local')->assertExists($payment->voucher_path);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'payment_voucher_uploaded', 'auditable_id' => $payment->id]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'payment_voucher_replaced', 'auditable_id' => $payment->id]);
+        $this->actingAs($cashier)->post(route('payments.confirm', $payment))->assertForbidden();
+    }
+
+    public function test_cashier_cannot_replace_confirmed_voucher_and_unauthorized_user_cannot_replace(): void
+    {
+        Storage::fake('local');
+        [$affiliate] = $this->affiliateFixture();
+        $cashier = $this->internalUser('cajero');
+        $viewer = $this->internalUser('consulta');
+        $payment = AffiliationPayment::create([
+            'affiliate_id' => $affiliate->id,
+            'affiliation_plan_id' => $affiliate->affiliation_plan_id,
+            'amount' => 120,
+            'paid_amount' => 120,
+            'expected_amount' => 120,
+            'currency' => 'BOB',
+            'payment_method' => 'qr',
+            'transaction_number' => 'CONF-001',
+            'voucher_path' => UploadedFile::fake()->image('voucher.jpg')->storeAs('payments/vouchers', 'original.jpg', 'local'),
+            'status' => PaymentStatus::CONFIRMED,
+            'source' => 'manual_admin',
+            'paid_at' => now(),
+        ]);
+
+        $this->actingAs($cashier)->post(route('payments.proof', $payment), [
+            'voucher' => UploadedFile::fake()->image('nuevo.jpg', 800, 800),
+        ])->assertForbidden();
+
+        $payment->update(['status' => PaymentStatus::UNDER_REVIEW]);
+        $this->actingAs($viewer)->post(route('payments.proof', $payment), [
+            'voucher' => UploadedFile::fake()->image('nuevo.jpg', 800, 800),
+        ])->assertForbidden();
+    }
+
+    public function test_voucher_service_processes_large_images_keeps_small_images_and_preserves_pdf(): void
+    {
+        Storage::fake('local');
+        $service = app(\App\Services\PaymentVoucherService::class);
+
+        $large = $service->store(UploadedFile::fake()->image('large.jpg', 2600, 1800)->size(900), 'voucher');
+        $this->assertStringEndsWith('.webp', $large);
+        Storage::disk('local')->assertExists($large);
+        $this->assertSame('image/webp', mime_content_type(Storage::disk('local')->path($large)));
+
+        $small = $service->store(UploadedFile::fake()->image('small.png', 640, 480)->size(120), 'voucher');
+        $this->assertStringEndsWith('.png', $small);
+        Storage::disk('local')->assertExists($small);
+
+        $pdf = $service->store(UploadedFile::fake()->create('voucher.pdf', 100, 'application/pdf'), 'voucher');
+        $this->assertStringEndsWith('.pdf', $pdf);
+        Storage::disk('local')->assertExists($pdf);
+    }
+
+    public function test_fake_jpg_is_rejected_and_legacy_transaction_renders_once(): void
+    {
+        Storage::fake('local');
+        [$affiliate] = $this->affiliateFixture();
+        $secretary = $this->internalUser('secretaria');
+        $payment = AffiliationPayment::create([
+            'affiliate_id' => $affiliate->id,
+            'affiliation_plan_id' => $affiliate->affiliation_plan_id,
+            'amount' => 120,
+            'paid_amount' => 120,
+            'expected_amount' => 120,
+            'currency' => 'BOB',
+            'payment_method' => 'transferencia',
+            'reference_number' => 'LEGACY-REF-ONLY',
+            'status' => PaymentStatus::UNDER_REVIEW,
+            'source' => 'manual_admin',
+            'paid_at' => now(),
+        ]);
+
+        $this->actingAs($secretary)->post(route('payments.proof', $payment), [
+            'voucher' => UploadedFile::fake()->createWithContent('fake.jpg', 'no soy imagen'),
+        ])->assertSessionHasErrors('voucher');
+
+        $html = $this->actingAs($secretary)->get(route('payments.show', $payment))->assertOk()->getContent();
+        $this->assertSame(1, substr_count($html, 'N.º de transacción'));
+        $this->assertStringContainsString('LEGACY-REF-ONLY', $html);
+        $this->assertStringNotContainsString('Referencia interna', $html);
+    }
+
     private function affiliateFixture(array $overrides = []): array
     {
         $sector = Sector::create(['name' => 'Salud', 'code' => 'SAL', 'is_active' => true]);
@@ -422,11 +596,12 @@ class ManualTreasuryPaymentTest extends TestCase
 
     private function paymentPayload(Affiliate $affiliate, array $overrides = []): array
     {
-        return array_merge([
+        $payload = array_merge([
             'affiliate_id' => $affiliate->id,
             'amount' => '120.00',
             'currency' => 'BOB',
             'paid_at' => now()->format('Y-m-d\TH:i'),
+            'browser_timezone' => 'America/La_Paz',
             'payment_method' => 'transferencia',
             'bank_name' => 'BANCO TEST',
             'reference_number' => 'REF-001',
@@ -434,5 +609,12 @@ class ManualTreasuryPaymentTest extends TestCase
             'observations' => 'PAGO MANUAL',
             'status' => 'pending',
         ], $overrides);
+
+        if (in_array($payload['payment_method'] ?? null, ['qr', 'transferencia', 'deposito'], true)
+            && ! array_key_exists('voucher', $overrides)) {
+            $payload['voucher'] = UploadedFile::fake()->image('voucher.jpg', 800, 800);
+        }
+
+        return $payload;
     }
 }

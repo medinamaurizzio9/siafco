@@ -126,9 +126,9 @@
     @if($pendingPayments->isNotEmpty())
         <section class="mb-5 overflow-hidden rounded-lg border border-amber-300 bg-white">
             <div class="border-b border-amber-200 bg-amber-50 p-4"><h3 class="font-black text-amber-950">Pagos pendientes de verificación</h3></div>
-            <div class="overflow-x-auto"><table class="table"><thead><tr><th>Fecha</th><th>Afiliado</th><th>CI</th><th>Monto</th><th>Operación</th><th>Registrado por</th><th>Acción</th></tr></thead><tbody>
+            <div class="overflow-x-auto"><table class="table"><thead><tr><th>Fecha / hora pago</th><th>Afiliado</th><th>CI</th><th>Monto</th><th>Operación</th><th>Registrado por</th><th>Acción</th></tr></thead><tbody>
             @foreach($pendingPayments as $pending)
-                <tr><td>{{ \App\Support\SiafcoDate::date($pending->payment_date ?? $pending->paid_at) }}</td><td>{{ $pending->affiliate?->full_name }}</td><td>{{ $pending->affiliate?->ci }}</td><td>{{ $pending->currency ?? 'BOB' }} {{ number_format((float) ($pending->paid_amount ?? $pending->amount), 2) }}</td><td>{{ $pending->reference_number }}</td><td>{{ $pending->registrar?->name ?? 'No registrado' }}</td><td><a class="btn-secondary" href="{{ route('payments.show', $pending) }}">Ver</a></td></tr>
+                <tr><td>{{ \App\Support\SiafcoDate::paymentInputDateTime($pending->paid_at ?: $pending->payment_date) }}</td><td>{{ $pending->affiliate?->full_name }}</td><td>{{ $pending->affiliate?->ci }}</td><td>{{ $pending->currency ?? 'BOB' }} {{ number_format((float) ($pending->paid_amount ?? $pending->amount), 2) }}</td><td>{{ $pending->transactionNumber() }}</td><td>{{ $pending->registrar?->name ?? 'No registrado' }}</td><td><a class="btn-secondary" href="{{ route('payments.show', $pending) }}">Ver</a></td></tr>
             @endforeach
             </tbody></table></div>
         </section>
@@ -140,7 +140,8 @@
                 <thead>
                     <tr>
                         <th>N. recibo</th>
-                        <th>Fecha y hora</th>
+                        <th>Fecha / hora pago</th>
+                        <th>Registrado en SIAFCO</th>
                         <th>Afiliado</th>
                         <th>CI</th>
                         <th>Codigo</th>
@@ -158,7 +159,8 @@
                 @forelse($payments as $payment)
                     <tr>
                         <td class="font-black">{{ $payment->receipt_number ?: 'Sin recibo' }}</td>
-                        <td>{{ $payment->confirmed_at ? \App\Support\SiafcoDate::dateTime($payment->confirmed_at) : \App\Support\SiafcoDate::date($payment->payment_date ?? $payment->paid_at) }}</td>
+                        <td>{{ \App\Support\SiafcoDate::paymentInputDateTime($payment->paid_at ?: $payment->payment_date) }}</td>
+                        <td>{{ \App\Support\SiafcoDate::dateTime($payment->created_at) }}</td>
                         <td>{{ $payment->affiliate?->full_name ?? 'Afiliado no disponible' }}</td>
                         <td>{{ $payment->affiliate?->ci ?? 'No disponible' }}</td>
                         <td>{{ $payment->affiliate?->registration_number ?: 'Sin codigo' }}</td>
@@ -177,7 +179,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="13">Sin cobros confirmados para los filtros seleccionados.</td></tr>
+                    <tr><td colspan="14">Sin cobros confirmados para los filtros seleccionados.</td></tr>
                 @endforelse
                 </tbody>
             </table>

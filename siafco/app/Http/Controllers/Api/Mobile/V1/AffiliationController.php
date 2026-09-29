@@ -15,7 +15,9 @@ use App\Models\MobileApiIdempotencyKey;
 use App\Models\PublicAffiliationRequest;
 use App\Models\Sector;
 use App\Services\AffiliatePhotoProcessor;
+use App\Services\PaymentVoucherService;
 use App\Services\PublicAffiliationService;
+use App\Support\PaymentTransactionNumber;
 use App\Support\PublicAffiliationCatalogs;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -159,7 +161,7 @@ class AffiliationController extends Controller
         ]);
     }
 
-    public function submitPayment(SubmitAffiliationPaymentRequest $request, PublicAffiliationService $service)
+    public function submitPayment(SubmitAffiliationPaymentRequest $request, PublicAffiliationService $service, PaymentVoucherService $vouchers)
     {
         $application = $this->currentApplication($request);
         if (! $application) {
@@ -174,12 +176,12 @@ class AffiliationController extends Controller
 
         $idempotencyKey = trim((string) $request->header('Idempotency-Key'));
         if ($idempotencyKey === '') {
-            return $this->processPayment($request, $service, $application, false);
+            return $this->processPayment($request, $service, $vouchers, $application, false);
         }
 
         $requestHash = $this->paymentRequestHash($request, $request->validated());
 
-        return DB::transaction(function () use ($request, $service, $application, $idempotencyKey, $requestHash) {
+        return DB::transaction(function () use ($request, $service, $vouchers, $application, $idempotencyKey, $requestHash) {
             $entry = MobileApiIdempotencyKey::query()
                 ->where('user_id', $request->user()->id)
                 ->where('scope', self::PAYMENT_SCOPE)
@@ -207,7 +209,7 @@ class AffiliationController extends Controller
                 'status' => 'processing',
             ]);
 
-            $response = $this->processPayment($request, $service, $application, false);
+            $response = $this->processPayment($request, $service, $vouchers, $application, false);
             $entry->update([
                 'status' => 'completed',
                 'response_status' => $response->getStatusCode(),
@@ -221,13 +223,22 @@ class AffiliationController extends Controller
     private function processPayment(
         SubmitAffiliationPaymentRequest $request,
         PublicAffiliationService $service,
+        PaymentVoucherService $vouchers,
         PublicAffiliationRequest $application,
         bool $idempotent
     ): JsonResponse {
-        $receipt = $request->file('receipt')?->store('affiliation-receipts', 'local');
+        $data = $request->validated();
+        $data['transaction_number'] = PaymentTransactionNumber::normalize($data['transaction_number'] ?? null);
+        if (PaymentTransactionNumber::hasDuplicate($data['transaction_number'], $application->payment?->id)) {
+            return MobileApiResponse::error('El número de transacción ya fue registrado.', 422, [
+                'transaction_number' => [PaymentTransactionNumber::duplicateMessage()],
+            ]);
+        }
+
+        $receipt = $vouchers->store($request->file('receipt'), 'receipt', 'affiliation-receipts');
 
         try {
-            $service->submitPayment($application, $request->validated(), $receipt);
+            $service->submitPayment($application, $data, $receipt);
         } catch (ValidationException $exception) {
             if ($receipt) {
                 Storage::disk('local')->delete($receipt);

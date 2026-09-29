@@ -66,11 +66,12 @@ final class PublicAffiliationValidation
     {
         return [
             'transaction_number' => ['required', 'string', 'max:120'],
-            'payment_date' => ['required', 'date', 'before_or_equal:today'],
+            'payment_date' => ['required', 'date'],
+            'browser_timezone' => ['nullable', 'string', 'timezone'],
             'bank_name' => ['nullable', 'string', 'max:120'],
             'payer_name' => ['required', 'string', 'max:255'],
             'paid_amount' => ['bail', 'required', 'regex:/^\d{1,8}(\.\d{1,2})?$/', 'numeric', 'min:0.01'],
-            'receipt' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:'.$receiptMaxKb],
+            'receipt' => ['required', 'file', 'mimetypes:image/jpeg,image/png,image/webp,application/pdf', 'mimes:jpg,jpeg,png,webp,pdf', 'max:'.$receiptMaxKb],
             'observations' => ['nullable', 'string', 'max:1000'],
         ];
     }

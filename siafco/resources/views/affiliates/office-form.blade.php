@@ -14,6 +14,7 @@
         data-confirm-accept="Registrar para revisión"
         data-confirm-variant="warning">
         @csrf
+        <input type="hidden" name="browser_timezone" value="{{ old('browser_timezone') }}" data-browser-timezone>
         <section class="grid gap-4 rounded-lg border border-slate-200 bg-white p-5 md:grid-cols-2 xl:grid-cols-3">
             <div class="xl:col-span-3">
                 <h3 class="text-lg font-black text-[#0b1f3a]">Datos del afiliado</h3>
@@ -124,14 +125,21 @@
                 @error('received_amount') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
             </div>
             <div>
-                <label class="form-label">Fecha de pago</label>
+                <label class="form-label">Fecha y hora de pago</label>
                 <input class="form-input" type="datetime-local" name="paid_at" value="{{ old('paid_at', $paidAt->format('Y-m-d\TH:i')) }}" required>
                 @error('paid_at') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
+                @error('browser_timezone') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
             </div>
             <div data-office-qr-reference hidden>
                 <label class="form-label">N.º de transferencia / operación</label>
                 <input class="form-input" name="reference_number" value="{{ old('reference_number') }}" maxlength="120" data-office-reference>
                 @error('reference_number') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
+            </div>
+            <div data-office-voucher hidden>
+                <label class="form-label">Comprobante / voucher <span data-office-voucher-required>* Obligatorio</span></label>
+                <input class="form-input" type="file" name="voucher" accept="image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf" data-office-voucher-input>
+                <p class="mt-1 text-xs text-slate-600">Adjunta una fotografía o PDF del comprobante de pago.</p>
+                @error('voucher') <p class="mt-1 text-xs text-red-700">{{ $message }}</p> @enderror
             </div>
             <div class="xl:col-span-3">
                 <label class="form-label">Observacion</label>
@@ -154,8 +162,12 @@
             const method = document.querySelector('[data-office-payment-method]');
             const referenceBlock = document.querySelector('[data-office-qr-reference]');
             const reference = document.querySelector('[data-office-reference]');
+            const voucherBlock = document.querySelector('[data-office-voucher]');
+            const voucher = document.querySelector('[data-office-voucher-input]');
             const submit = document.querySelector('[data-office-submit]');
             const form = document.querySelector('[data-confirm-office-affiliation]');
+            const timezone = document.querySelector('[data-browser-timezone]');
+            if (timezone && !timezone.value) timezone.value = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/La_Paz';
             const syncAmount = () => {
                 const option = plan?.selectedOptions?.[0];
                 const amount = option?.dataset?.amount;
@@ -173,6 +185,8 @@
                 const isElectronic = selectedMethod === 'qr' || selectedMethod === 'transferencia';
                 if (referenceBlock) referenceBlock.hidden = !isElectronic;
                 if (reference) reference.required = isElectronic;
+                if (voucherBlock) voucherBlock.hidden = !isElectronic;
+                if (voucher) voucher.required = isElectronic;
                 if (submit) submit.textContent = 'Registrar afiliacion y enviar a revisión';
                 if (form) {
                     const labels = { efectivo: 'Efectivo', qr: 'QR', transferencia: 'Transferencia' };

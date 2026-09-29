@@ -15,7 +15,7 @@ class UpdateOwnAffiliateProfileRequest extends FormRequest
     private const PROTECTED_FIELDS = [
         'id', 'affiliate_id', 'user_id', 'person_id', 'name', 'full_name', 'ci',
         'ci_complement', 'affiliate_number', 'registration_number', 'status',
-        'sector_id', 'institution_id', 'institution', 'regional_id', 'regional',
+        'sector_id', 'institution_id', 'institution', 'regional_id',
         'affiliation_plan_id', 'verification_token', 'approved_at', 'created_at',
         'updated_at', 'deleted_at',
     ];
@@ -34,7 +34,7 @@ class UpdateOwnAffiliateProfileRequest extends FormRequest
                 : null;
         }
 
-        foreach (['address', 'marital_status'] as $field) {
+        foreach (['address', 'marital_status', 'regional'] as $field) {
             if ($this->exists($field)) {
                 $normalized[$field] = $this->filled($field)
                     ? TextNormalizer::uppercase((string) $this->input($field))
@@ -73,6 +73,10 @@ class UpdateOwnAffiliateProfileRequest extends FormRequest
             'address' => [$profileIncomplete ? 'required' : 'nullable', 'string', 'max:255'],
             'birth_date' => [$profileIncomplete ? 'required' : 'nullable', 'date', 'before:today'],
             'marital_status' => [$profileIncomplete ? 'required' : 'nullable', 'string', 'max:50', Rule::in(PublicAffiliationCatalogs::MARITAL_STATUSES)],
+            'regional' => ['nullable', 'string', 'max:255', Rule::in(array_values(array_unique([
+                ...PublicAffiliationCatalogs::REGIONALS,
+                ...array_filter([(string) $affiliate?->regional]),
+            ])))],
         ];
     }
 

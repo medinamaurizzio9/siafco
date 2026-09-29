@@ -2,6 +2,7 @@
     <div class="express-shell">
         <form method="post" action="{{ route('public-affiliation.express.store') }}" enctype="multipart/form-data" class="express-card" data-express-form>
             @csrf
+            <input type="hidden" name="browser_timezone" value="{{ old('browser_timezone') }}" data-browser-timezone>
             <header class="express-hero">
                 <a href="{{ route('login') }}" aria-label="Volver a iniciar sesión">←</a>
                 <div>
@@ -52,8 +53,9 @@
                 <label><span class="form-label">N.º transacción</span><input class="form-input" name="transaction_number" value="{{ old('transaction_number') }}" maxlength="120" required></label>
                 <label><span class="form-label">Banco</span><input class="form-input" name="bank_name" value="{{ old('bank_name') }}" maxlength="120" required data-uppercase></label>
                 <label><span class="form-label">Pago realizado por</span><input class="form-input" name="payer_name" value="{{ old('payer_name', old('full_name')) }}" maxlength="255" required data-uppercase><small>Indica el nombre de la persona desde cuya cuenta se realizó el pago.</small></label>
-                <label><span class="form-label">Fecha de pago</span><input class="form-input" type="date" name="payment_date" value="{{ old('payment_date', $today) }}" max="{{ $today }}" required></label>
-                <label><span class="form-label">Comprobante (opcional)</span><input class="form-input" type="file" name="receipt" accept="image/jpeg,image/png,image/webp,application/pdf"></label>
+                <label><span class="form-label">Fecha y hora de pago</span><input class="form-input" type="datetime-local" name="payment_date" value="{{ old('payment_date', $nowInput) }}" max="{{ $nowInput }}" required></label>
+                <label><span class="form-label">Comprobante / voucher *</span><input class="form-input" type="file" name="receipt" accept="image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf" required></label>
+                <p class="text-sm text-slate-600">Adjunta una fotografía o PDF del comprobante de pago.</p>
                 <label><span class="form-label">Observaciones (opcional)</span><textarea class="form-input" name="observations" rows="3" maxlength="1000" data-uppercase>{{ old('observations') }}</textarea></label>
                 <div class="express-review">
                     <h2>Resumen</h2>
@@ -81,6 +83,8 @@
             (() => {
                 const form = document.querySelector('[data-express-form]');
                 if (!form) return;
+                const timezone = form.querySelector('[data-browser-timezone]');
+                if (timezone && !timezone.value) timezone.value = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/La_Paz';
                 const step1 = form.querySelector('[data-step-panel="1"]');
                 const step2 = form.querySelector('[data-step-panel="2"]');
                 const dots = form.querySelectorAll('[data-step-dot]');

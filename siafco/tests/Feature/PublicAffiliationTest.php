@@ -321,9 +321,11 @@ class PublicAffiliationTest extends TestCase
         $this->get(route('public-affiliation.payment', $application))->assertOk();
         $this->post(route('public-affiliation.payment.store', $application), [
             'transaction_number' => 'Mixta-AbC-01',
-            'payment_date' => today()->toDateString(),
+            'payment_date' => today()->toDateString().'T09:20',
+            'browser_timezone' => 'America/La_Paz',
             'payer_name' => 'Ana Pérez',
             'paid_amount' => 120,
+            'receipt' => UploadedFile::fake()->image('receipt.jpg'),
         ])->assertRedirect(route('public-affiliation.completed', $application));
 
         $this->get(route('public-affiliation.completed', $application))

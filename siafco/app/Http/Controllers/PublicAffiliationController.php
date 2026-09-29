@@ -8,9 +8,12 @@ use App\Models\InstitutionalSetting;
 use App\Models\PublicAffiliationRequest;
 use App\Models\Sector;
 use App\Services\AffiliatePhotoProcessor;
+use App\Services\PaymentVoucherService;
 use App\Services\PublicAffiliationService;
+use App\Support\PaymentTransactionNumber;
 use App\Support\PublicAffiliationCatalogs;
 use App\Support\PublicAffiliationValidation;
+use App\Support\SiafcoDate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use App\Rules\ActivePlanForSector;
@@ -63,20 +66,32 @@ class PublicAffiliationController extends Controller
         return view('public-affiliation.payment', [
             'application' => $application,
             'institution' => InstitutionalSetting::current(),
+            'nowInput' => now(SiafcoDate::timezone())->format('Y-m-d\TH:i'),
             'duplicateCount' => $application->payment?->transaction_number
                 ? AffiliationPayment::where('transaction_number', $application->payment->transaction_number)->count()
                 : 0,
         ]);
     }
 
-    public function storePayment(Request $request, PublicAffiliationRequest $application, PublicAffiliationService $service)
+    public function storePayment(Request $request, PublicAffiliationRequest $application, PublicAffiliationService $service, PaymentVoucherService $vouchers)
     {
         $passwordKey = 'public_affiliation_password.'.$application->public_token;
         $request->session()->keep($passwordKey);
         $data = $request->validate(PublicAffiliationValidation::paymentRules(
             config('siafco.public_affiliation_receipt_max_kb', 6144)
         ));
-        $receipt = $request->file('receipt')?->store('affiliation-receipts', 'local');
+        $timezone = SiafcoDate::validTimezoneOrDefault($data['browser_timezone'] ?? null);
+        if (SiafcoDate::fromLocalInput($data['payment_date'], $timezone)->timezone($timezone)->toDateString() > now()->toDateString()) {
+            return back()->withErrors(['payment_date' => 'La fecha y hora de pago no puede ser futura.'])->withInput();
+        }
+        $data['transaction_number'] = PaymentTransactionNumber::normalize($data['transaction_number'] ?? null);
+        if (PaymentTransactionNumber::hasDuplicate($data['transaction_number'], $application->payment?->id)) {
+            return back()->withErrors(['transaction_number' => PaymentTransactionNumber::duplicateMessage()])->withInput();
+        }
+        $data['payment_timezone'] = $timezone;
+        $data['paid_at'] = SiafcoDate::fromLocalInput($data['payment_date'], $data['payment_timezone']);
+        unset($data['browser_timezone']);
+        $receipt = $vouchers->store($request->file('receipt'), 'receipt');
         $service->submitWebPayment($application, $data, $receipt);
         if ($temporaryPassword = $request->session()->get($passwordKey)) {
             $request->session()->flash('completed_password.'.$application->public_token, $temporaryPassword);

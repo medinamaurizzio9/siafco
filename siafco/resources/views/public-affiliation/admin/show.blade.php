@@ -23,9 +23,10 @@
                     <dt class="font-bold">Método</dt><dd>{{ ucfirst($application->payment->payment_method ?: 'No indicado') }}</dd>
                     <dt class="font-bold">Monto</dt><dd>BOB {{ number_format($application->payment->paid_amount,2) }}</dd>
                     @if(\App\Support\PaymentMethodPresenter::showsTransactionNumber($application->payment->payment_method))
-                        <dt class="font-bold">N.º de transacción</dt><dd>{{ $application->payment->reference_number ?: 'No registrado' }}</dd>
+                        <dt class="font-bold">N.º de transacción</dt><dd>{{ $application->payment->transactionNumber() ?: 'No registrado' }}</dd>
                     @endif
-                    <dt class="font-bold">Fecha</dt><dd>{{ \App\Support\SiafcoDate::date($application->payment->payment_date) }}</dd>
+                    <dt class="font-bold">Fecha y hora del pago</dt><dd>{{ \App\Support\SiafcoDate::paymentInputDateTime($application->payment->paid_at ?: $application->payment->payment_date) }}</dd>
+                    <dt class="font-bold">Registrado en SIAFCO</dt><dd>{{ \App\Support\SiafcoDate::dateTime($application->payment->created_at) }}</dd>
                     <dt class="font-bold">Registrado por</dt><dd>{{ $application->payment->registrar?->name ?? 'No disponible' }}</dd>
                     <dt class="font-bold">Estado</dt><dd><x-payment-status :status="$application->payment->status" size="sm" /></dd>
                 </dl>
@@ -96,14 +97,16 @@
                     <button type="button" class="text-2xl leading-none" aria-label="Cerrar" onclick="this.closest('dialog').close()">&times;</button>
                 </div>
                 @if($errors->any())<div class="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{{ $errors->first() }}</div>@endif
+                <input type="hidden" name="browser_timezone" value="{{ old('browser_timezone') }}" data-browser-timezone>
                 <div><label for="assisted-payment-method"><span class="form-label">Método de pago</span></label><select class="form-input" name="payment_method" id="assisted-payment-method" required autofocus><option value="efectivo" @selected(old('payment_method', 'efectivo') === 'efectivo')>Efectivo</option><option value="qr" @selected(old('payment_method') === 'qr')>QR</option><option value="transferencia" @selected(old('payment_method') === 'transferencia')>Transferencia</option></select></div>
                 <div><label for="assisted-payment-amount"><span class="form-label">Monto</span></label><input class="form-input" id="assisted-payment-amount" name="amount" value="{{ old('amount', number_format((float) $application->amount_due, 2, '.', '')) }}" readonly></div>
+                <div><label for="assisted-payment-paid-at"><span class="form-label">Fecha y hora del pago</span></label><input class="form-input" id="assisted-payment-paid-at" type="datetime-local" name="paid_at" value="{{ old('paid_at', \App\Support\SiafcoDate::inputDateTime(now())) }}" required></div>
                 <div id="assisted-payment-reference-group" hidden>
                     <label for="assisted-payment-reference"><span class="form-label">Número de transacción</span></label>
                     <input class="form-input" id="assisted-payment-reference" name="reference_number" value="{{ old('reference_number') }}" maxlength="120" placeholder="Ingrese el número de transacción" aria-describedby="assisted-payment-reference-error">
                     @error('reference_number')<span id="assisted-payment-reference-error" class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
                 </div>
-                <div><label for="assisted-payment-voucher"><span class="form-label">Comprobante (opcional)</span></label><input class="form-input" id="assisted-payment-voucher" type="file" name="voucher" accept="image/jpeg,image/png,image/webp,application/pdf"></div>
+                <div><label for="assisted-payment-voucher"><span class="form-label">Comprobante / voucher <span id="assisted-payment-voucher-required" hidden>* Obligatorio</span></span></label><input class="form-input" id="assisted-payment-voucher" type="file" name="voucher" accept="image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf"><p class="mt-1 text-xs text-slate-600">Adjunta una fotografía o PDF del comprobante de pago.</p></div>
                 <div><label for="assisted-payment-observations"><span class="form-label">Observación (opcional)</span></label><textarea class="form-input" id="assisted-payment-observations" name="observations" maxlength="500">{{ old('observations') }}</textarea></div>
                 <div class="flex justify-end gap-3"><button type="button" class="btn-secondary" onclick="this.closest('dialog').close()">Cancelar</button><button type="submit" class="btn-primary">Registrar pago</button></div>
             </form>
@@ -114,10 +117,16 @@
                 const method = document.getElementById('assisted-payment-method');
                 const referenceGroup = document.getElementById('assisted-payment-reference-group');
                 const reference = document.getElementById('assisted-payment-reference');
+                const voucher = document.getElementById('assisted-payment-voucher');
+                const voucherRequired = document.getElementById('assisted-payment-voucher-required');
+                const timezone = dialog.querySelector('[data-browser-timezone]');
+                if (timezone && !timezone.value) timezone.value = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/La_Paz';
                 const syncReference = () => {
                     const requiresReference = method.value === 'qr' || method.value === 'transferencia';
                     referenceGroup.hidden = !requiresReference;
                     reference.required = requiresReference;
+                    voucher.required = requiresReference;
+                    voucherRequired.hidden = !requiresReference;
                     if (!requiresReference) reference.value = '';
                 };
                 method.addEventListener('change', syncReference);

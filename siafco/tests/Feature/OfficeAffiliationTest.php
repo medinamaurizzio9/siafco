@@ -434,6 +434,12 @@ class OfficeAffiliationTest extends TestCase
 
         $this->actingAs($cashier)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
             'payment_method' => 'qr',
+            'reference_number' => 'TRX-WITHOUT-VOUCHER',
+            'voucher' => null,
+        ]))->assertSessionHasErrors('voucher');
+
+        $this->actingAs($cashier)->post(route('affiliates.office.store'), $this->payload($sector, $plan, [
+            'payment_method' => 'qr',
             'reference_number' => '',
         ]))->assertSessionHasErrors('reference_number');
 
@@ -1115,7 +1121,7 @@ class OfficeAffiliationTest extends TestCase
 
     private function payload(Sector $sector, AffiliationPlan $plan, array $overrides = []): array
     {
-        return array_merge([
+        $payload = array_merge([
             'full_name' => 'AFILIADA OFICINA',
             'ci' => 'OFI001',
             'phone' => '70000001',
@@ -1134,6 +1140,13 @@ class OfficeAffiliationTest extends TestCase
             'reference_number' => 'REC-OFFICE',
             'observations' => 'COBRO PRESENCIAL',
         ], $overrides);
+
+        if (in_array($payload['payment_method'] ?? null, ['qr', 'transferencia'], true)
+            && ! array_key_exists('voucher', $overrides)) {
+            $payload['voucher'] = UploadedFile::fake()->image('voucher.jpg', 800, 800);
+        }
+
+        return $payload;
     }
 
     private function internalUser(string $role): User
