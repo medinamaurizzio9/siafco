@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class InstitutionalSetting extends Model
@@ -23,6 +24,7 @@ class InstitutionalSetting extends Model
         'payment_holder',
         'payment_account',
         'payment_instructions',
+        'web_affiliation_manager_id',
         'login_background_path',
         'login_logo_path',
         'login_title',
@@ -38,10 +40,22 @@ class InstitutionalSetting extends Model
 
     public static function current(): self
     {
-        if (self::$currentInstance) {
+        if (! Schema::hasTable('institutional_settings')) {
+            return self::fallback();
+        }
+
+        if (self::$currentInstance && self::$currentInstance->exists && static::whereKey(self::$currentInstance->getKey())->exists()) {
             return self::$currentInstance;
         }
 
+        $cached = Cache::get('institutional_settings.current');
+        if ($cached instanceof self && $cached->exists && static::whereKey($cached->getKey())->exists()) {
+            self::$currentInstance = $cached;
+
+            return self::$currentInstance;
+        }
+
+        Cache::forget('institutional_settings.current');
         self::$currentInstance = Cache::rememberForever('institutional_settings.current', function () {
             return static::firstOrCreate([], [
                 'institution_name' => 'Cooperativa Tierra Bendita',
@@ -110,6 +124,11 @@ class InstitutionalSetting extends Model
         }
 
         return asset('images/login/default-login-background.webp');
+    }
+
+    public function webAffiliationManager()
+    {
+        return $this->belongsTo(User::class, 'web_affiliation_manager_id');
     }
 
     public function loginLogoUrl(): ?string

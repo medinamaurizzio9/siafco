@@ -37,6 +37,25 @@
                 <a class="btn-secondary mt-3" href="{{ route('institutional-qr.show') }}">GESTIONAR QR DE PAGO</a>
             </section>
 
+            <section class="grid gap-4 border-t border-slate-200 pt-6 md:col-span-2">
+                <div>
+                    <p class="text-xs font-black uppercase tracking-wide text-[#b8942f]">Afiliaciones web</p>
+                    <h2 class="mt-1 text-xl font-black text-[#0b1f3a]">Responsable administrativo</h2>
+                    <p class="mt-1 text-sm text-slate-600">Este usuario se asignará como gestionador de nuevas autoafiliaciones web. No modifica registros históricos.</p>
+                </div>
+                <div>
+                    <label class="form-label" for="web_affiliation_manager_id">Responsable de afiliaciones web</label>
+                    <select id="web_affiliation_manager_id" class="form-input" name="web_affiliation_manager_id">
+                        <option value="">Sin responsable configurado</option>
+                        @foreach($webAffiliationManagers as $manager)
+                            <option value="{{ $manager->id }}" @selected((string) old('web_affiliation_manager_id', $setting->web_affiliation_manager_id) === (string) $manager->id)>
+                                {{ $manager->name }} · {{ $manager->roleLabel() }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            </section>
+
             <section class="grid gap-4 border-t border-slate-200 pt-6 md:col-span-2 md:grid-cols-2" data-login-appearance-editor>
                 <div class="md:col-span-2">
                     <p class="text-xs font-black uppercase tracking-wide text-[#b8942f]">Apariencia del inicio de sesión</p>

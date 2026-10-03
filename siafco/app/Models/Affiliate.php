@@ -30,6 +30,11 @@ class Affiliate extends Model
         'marital_status',
         'registration_number',
         'status',
+        'origin',
+        'registered_by',
+        'managed_by',
+        'approved_by',
+        'approved_at',
         'status_changed_at',
         'status_changed_by',
         'status_reason',
@@ -44,6 +49,7 @@ class Affiliate extends Model
     {
         return [
             'birth_date' => 'date',
+            'approved_at' => 'datetime',
             'status_changed_at' => 'datetime',
             'jewel_delivered_at' => 'datetime',
         ];
@@ -97,6 +103,21 @@ class Affiliate extends Model
     public function statusChanger()
     {
         return $this->belongsTo(User::class, 'status_changed_by');
+    }
+
+    public function registrar()
+    {
+        return $this->belongsTo(User::class, 'registered_by');
+    }
+
+    public function manager()
+    {
+        return $this->belongsTo(User::class, 'managed_by');
+    }
+
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function publicRequest()

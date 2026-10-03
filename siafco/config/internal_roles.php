@@ -22,6 +22,7 @@ $permissions = [
     'payments.cancel', 'payments.receipt', 'payments.view_receipt', 'payments.download_receipt',
     'credentials.view', 'credentials.download', 'credentials.print',
     'settings.view', 'settings.update', 'reports.view', 'reports.export',
+    'reports.affiliations.view', 'reports.affiliations.export',
     'roles.view', 'roles.update', 'audit.view', 'audit.export',
     'credits.view', 'credits.create', 'credits.update', 'credits.approve',
     'investors.view', 'investors.create', 'investors.update',
@@ -55,7 +56,7 @@ return [
         'administrador' => $permissions,
         'gerente' => [
             'dashboard.view', 'users.view', 'affiliates.view', 'payments.view', 'credentials.view',
-            'settings.view', 'reports.view', 'reports.export', 'audit.view', 'roles.view',
+            'settings.view', 'reports.view', 'reports.export', 'reports.affiliations.view', 'reports.affiliations.export', 'audit.view', 'roles.view',
             'affiliates.update_institutional', 'affiliates.change_sector', 'affiliates.change_plan',
             'affiliates.change_status', 'affiliates.view_timeline', 'affiliates.view_audit',
             'affiliates.manage_credential',
@@ -85,7 +86,8 @@ return [
             'payments.confirm', 'payments.reject', 'payments.receipt', 'payments.view_receipt',
             'payments.download_receipt',
             'credentials.view', 'credentials.download', 'credentials.print',
-            'reports.view', 'settings.view', 'store.view', 'store.manage-products', 'store.manage-shipping', 'store.manage-coupons', 'store.verify-receipts',
+            'reports.view', 'reports.affiliations.view', 'reports.affiliations.export',
+            'settings.view', 'store.view', 'store.manage-products', 'store.manage-shipping', 'store.manage-coupons', 'store.verify-receipts',
         ],
         'cajero' => [
             'dashboard.view', 'affiliates.view', 'payments.view', 'payments.create', 'payments.update',
@@ -105,9 +107,9 @@ return [
             'dashboard.view', 'affiliates.view', 'affiliates.create', 'affiliates.update',
             'affiliate_jewels.view',
             'payments.view', 'credentials.view', 'credentials.download',
-            'credentials.print', 'reports.view',
+            'credentials.print', 'reports.view', 'reports.affiliations.view',
         ],
-        'consulta' => ['dashboard.view', 'affiliates.view', 'affiliate_jewels.view', 'payments.view', 'reports.view', 'credits.view', 'store.view'],
+        'consulta' => ['dashboard.view', 'affiliates.view', 'affiliate_jewels.view', 'payments.view', 'reports.view', 'reports.affiliations.view', 'credits.view', 'store.view'],
         'asesor_inversiones' => ['investment_prospects.view', 'investment_prospects.update', 'investment_prospect_interactions.view', 'investment_prospect_interactions.create'],
     ],
 ];

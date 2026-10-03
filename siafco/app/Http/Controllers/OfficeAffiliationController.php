@@ -102,6 +102,9 @@ class OfficeAffiliationController extends Controller
                     'photo_path' => $photoPath,
                     'registration_number' => null,
                     'status' => 'pendiente_pago',
+                    'origin' => 'administrative',
+                    'registered_by' => $actor->id,
+                    'managed_by' => $actor->id,
                     'verification_token' => Str::uuid()->toString(),
                 ]);
 

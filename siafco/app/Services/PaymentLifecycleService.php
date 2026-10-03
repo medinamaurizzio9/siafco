@@ -304,7 +304,14 @@ class PaymentLifecycleService
 
             if ($covered && $affiliate->status !== 'activo') {
                 $affiliate->status = 'activo';
+                $affiliate->approved_by = $actor->id;
+                $affiliate->approved_at = $payment->confirmed_at ?: now();
                 $affiliate->save();
+            } elseif ($covered && ! $affiliate->approved_by) {
+                $affiliate->update([
+                    'approved_by' => $actor->id,
+                    'approved_at' => $payment->confirmed_at ?: now(),
+                ]);
             }
 
             if ($request) {

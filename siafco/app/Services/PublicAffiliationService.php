@@ -73,6 +73,8 @@ class PublicAffiliationService
                     'phone' => $data['phone'],
                     'email' => $data['email'],
                     'status' => 'pago_en_revision',
+                    'origin' => 'web',
+                    'managed_by' => app(WebAffiliationManagerService::class)->current()?->id,
                 ]);
 
                 $user = app(AffiliateAccountService::class)->ensureForAffiliate($affiliate, $person);
@@ -227,6 +229,8 @@ class PublicAffiliationService
                     'birth_date' => $data['birth_date'],
                     'marital_status' => $data['marital_status'],
                     'status' => 'pendiente_pago',
+                    'origin' => 'web',
+                    'managed_by' => app(WebAffiliationManagerService::class)->current()?->id,
                 ]);
 
                 $application = PublicAffiliationRequest::create([

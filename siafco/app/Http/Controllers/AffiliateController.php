@@ -72,7 +72,7 @@ class AffiliateController extends Controller
         $institutionalQrPath = InstitutionalSetting::current()->payment_qr_path;
 
         try {
-            $affiliate = DB::transaction(function () use ($data, $photoPath, $institutionalQrPath) {
+            $affiliate = DB::transaction(function () use ($request, $data, $photoPath, $institutionalQrPath) {
                 $sector = Sector::findOrFail($data['sector_id']);
                 $plan = AffiliationPlan::findOrFail($data['affiliation_plan_id']);
                 $person = Person::updateOrCreate(
@@ -108,6 +108,9 @@ class AffiliateController extends Controller
                     'photo_path' => $photoPath,
                     'registration_number' => null,
                     'status' => 'pendiente_pago',
+                    'origin' => 'administrative',
+                    'registered_by' => $request->user()?->id,
+                    'managed_by' => $request->user()?->id,
                     'verification_token' => Str::uuid()->toString(),
                 ]);
 

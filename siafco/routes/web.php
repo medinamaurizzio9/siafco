@@ -9,6 +9,7 @@ use App\Http\Controllers\AffiliateJewelDeliveryController;
 use App\Http\Controllers\AffiliateProfileController;
 use App\Http\Controllers\AffiliatePasswordController;
 use App\Http\Controllers\AffiliateSupportReportController;
+use App\Http\Controllers\AffiliationReportController;
 use App\Http\Controllers\AffiliationPlanController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CashCollectionReportController;
@@ -274,6 +275,10 @@ Route::middleware(['auth', 'password.changed', 'affiliate.profile.complete', 'af
             ->middleware('permission:affiliate_jewels.manage')->name('affiliates.jewel-delivery.revert');
         Route::get('/pagos', [PaymentController::class, 'index'])->middleware('permission:payments.view')->name('payments.index');
         Route::get('/reportes', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reportes/afiliaciones', [AffiliationReportController::class, 'index'])
+            ->middleware('permission:reports.affiliations.view')->name('reports.affiliations.index');
+        Route::get('/reportes/afiliaciones/excel', [AffiliationReportController::class, 'export'])
+            ->middleware('permission:reports.affiliations.export')->name('reports.affiliations.export');
         Route::get('/reportes/joyas/csv', [ReportController::class, 'jewelDeliveryCsv'])
             ->middleware('permission:affiliate_jewels.report,reports.export')->name('reports.jewels.csv');
         Route::get('/reportes/afiliacion/soporte', [AffiliateSupportReportController::class, 'index'])

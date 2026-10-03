@@ -202,11 +202,24 @@
                                 @if($canManagePaymentQr)
                                     {!! $navLink('institutional-qr.show', 'QR y pago institucional', [], ['institutional-qr.*']) !!}
                                 @endif
-                                @if($user->hasPermission('reports.view'))
-                                    {!! $navLink('reports.index', 'Reportes de afiliacion', [], ['reports.*']) !!}
-                                @endif
                                 @if($canManageAffiliation)
                                     {!! $navLink('affiliation.settings.edit', 'Configuracion de afiliacion', [], ['affiliation.*']) !!}
+                                @endif
+                            </div>
+                        </section>
+                    @endif
+
+                    @if($user->hasPermission('reports.view') || $user->hasPermission('reports.affiliations.view'))
+                        <section class="nav-module" data-accordion-module="reports">
+                            <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'reports' ? 'true' : 'false' }}">
+                                <span class="flex items-center gap-3"><x-ui.icon name="chart" class="h-4 w-4" />Reportes</span><span class="nav-chevron">⌄</span>
+                            </button>
+                            <div class="nav-module-panel {{ $openModule === 'reports' ? '' : 'hidden' }}">
+                                @if($user->hasPermission('reports.view'))
+                                    {!! $navLink('reports.index', 'Resumen general', [], ['reports.index']) !!}
+                                @endif
+                                @if($user->hasPermission('reports.affiliations.view'))
+                                    {!! $navLink('reports.affiliations.index', 'Afiliaciones', [], ['reports.affiliations.*']) !!}
                                 @endif
                             </div>
                         </section>

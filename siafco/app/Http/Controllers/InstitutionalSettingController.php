@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\InstitutionalSetting;
+use App\Services\WebAffiliationManagerService;
 use App\Services\AuditService;
 use App\Services\CredentialExportCapabilities;
 use App\Support\TextNormalizer;
@@ -14,17 +15,20 @@ use Throwable;
 
 class InstitutionalSettingController extends Controller
 {
-    public function edit(CredentialExportCapabilities $exportCapabilities)
+    public function edit(CredentialExportCapabilities $exportCapabilities, WebAffiliationManagerService $webManagers)
     {
         return view('institutional-settings.edit', [
             'setting' => InstitutionalSetting::current(),
             'exportCapabilities' => $exportCapabilities,
+            'webAffiliationManagers' => $webManagers->authorizedUsers()->get(['id', 'name', 'role']),
         ]);
     }
 
-    public function update(Request $request)
+    public function update(Request $request, WebAffiliationManagerService $webManagers)
     {
         $setting = InstitutionalSetting::current();
+        $authorizedManagerIds = $webManagers->authorizedUsers()->pluck('id')->all();
+        $previousWebManagerId = $setting->web_affiliation_manager_id;
 
         $data = $request->validate([
             'institution_name' => ['required', 'string', 'max:255'],
@@ -42,6 +46,7 @@ class InstitutionalSettingController extends Controller
             'login_overlay_opacity' => ['required', 'integer', 'between:20,90'],
             'remove_login_background' => ['nullable', 'boolean'],
             'remove_login_logo' => ['nullable', 'boolean'],
+            'web_affiliation_manager_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::in($authorizedManagerIds)],
         ]);
 
         unset($data['logo'], $data['login_background'], $data['login_logo']);
@@ -89,6 +94,13 @@ class InstitutionalSettingController extends Controller
         Storage::disk('public')->delete(array_values(array_diff($oldPaths, $newPaths)));
         InstitutionalSetting::clearCurrentCache();
         AuditService::record('configuracion_institucional.actualizada', $setting);
+        if ((string) $previousWebManagerId !== (string) ($data['web_affiliation_manager_id'] ?? null)) {
+            AuditService::record('web_affiliation_manager_updated', $setting->fresh(), [
+                'old_user_id' => $previousWebManagerId,
+                'new_user_id' => $setting->web_affiliation_manager_id,
+                'actor_id' => $request->user()?->id,
+            ]);
+        }
 
         return back()->with('status', 'Configuracion institucional actualizada.');
     }
