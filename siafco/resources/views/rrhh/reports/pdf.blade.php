@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><style>
+@page{margin:24px 28px 36px}body{font-family:DejaVu Sans,sans-serif;color:#172033;font-size:9px}.head{border-bottom:3px solid #d4af37;padding-bottom:10px;margin-bottom:12px}.brand{color:#0b1f3a;font-size:20px;font-weight:bold}.module{color:#a57c00;font-size:10px;text-transform:uppercase}.meta{margin:8px 0 14px;color:#475569}.totals{margin:8px 0 14px}.total{display:inline-block;width:22%;margin:0 1% 5px 0;padding:6px;background:#f1f5f9}.total b{display:block;color:#0b1f3a;font-size:12px}table{width:100%;border-collapse:collapse;table-layout:auto}th{background:#0b1f3a;color:#fff;padding:5px;text-align:left}td{border-bottom:1px solid #dbe2ea;padding:5px;vertical-align:top;word-break:break-word}h1{font-size:16px;color:#0b1f3a;margin:4px 0}.footer{position:fixed;bottom:-24px;left:0;right:0;text-align:center;color:#64748b;font-size:8px}.page:after{content:counter(page)}
+</style></head><body>
+<div class="head"><div class="brand">SIAFCO</div><div class="module">Personal y Comisiones</div><h1>{{ $title }}</h1></div>
+<div class="meta"><strong>Emitido:</strong> {{ now()->format('d/m/Y H:i') }} · <strong>Período:</strong> {{ $filters['from'] ?? 'Sin inicio' }} a {{ $filters['to'] ?? 'Sin fin' }}<br><strong>Criterio temporal:</strong> {{ $criterion }}<br><strong>Filtros:</strong> {{ $filterSummary }}</div>
+@if($totals !== [])<div class="totals">@foreach($totals as $label => $value)<span class="total">{{ $label }}<b>{{ $value }}</b></span>@endforeach</div>@endif
+<table><thead><tr>@foreach($headers as $label)<th>{{ $label }}</th>@endforeach</tr></thead><tbody>@forelse($rows as $row)<tr>@foreach($headers as $key => $label)<td>{{ $row[$key] ?? '—' }}</td>@endforeach</tr>@empty<tr><td colspan="{{ count($headers) }}">No existen registros para los filtros seleccionados.</td></tr>@endforelse</tbody></table>
+<div class="footer">{{ $institution->institution_name ?? 'Cooperativa Tierra Bendita' }} · Documento informativo del sistema · Página <span class="page"></span></div>
+</body></html>

@@ -1,16 +1,29 @@
 <?php
 
-use App\Http\Controllers\AffiliateController;
+use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\RolePermissionController;
+use App\Http\Controllers\Admin\Store\CategoryController as StoreCategoryController;
+use App\Http\Controllers\Admin\Store\CouponController as StoreCouponController;
+use App\Http\Controllers\Admin\Store\DashboardController as StoreDashboardController;
+use App\Http\Controllers\Admin\Store\OrderController as StoreOrderController;
+use App\Http\Controllers\Admin\Store\OrderReceiptController as StoreAdminOrderReceiptController;
+use App\Http\Controllers\Admin\Store\ProductController as StoreProductController;
+use App\Http\Controllers\Admin\Store\ProductImageController as StoreProductImageController;
+use App\Http\Controllers\Admin\Store\ProductVariantController as StoreProductVariantController;
+use App\Http\Controllers\Admin\Store\SalesController as StoreSalesController;
+use App\Http\Controllers\Admin\Store\SettingController as StoreSettingController;
+use App\Http\Controllers\Admin\Store\ShippingRateController as StoreShippingRateController;
 use App\Http\Controllers\AffiliateAccessController;
 use App\Http\Controllers\AffiliateAdministrationController;
 use App\Http\Controllers\AffiliateBenefitController;
-use App\Http\Controllers\AffiliatePanelController;
+use App\Http\Controllers\AffiliateController;
 use App\Http\Controllers\AffiliateJewelDeliveryController;
-use App\Http\Controllers\AffiliateProfileController;
+use App\Http\Controllers\AffiliatePanelController;
 use App\Http\Controllers\AffiliatePasswordController;
+use App\Http\Controllers\AffiliateProfileController;
 use App\Http\Controllers\AffiliateSupportReportController;
-use App\Http\Controllers\AffiliationReportController;
 use App\Http\Controllers\AffiliationPlanController;
+use App\Http\Controllers\AffiliationReportController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CashCollectionReportController;
 use App\Http\Controllers\CashDepositController;
@@ -20,14 +33,28 @@ use App\Http\Controllers\HomeRedirectController;
 use App\Http\Controllers\InstitutionalQrController;
 use App\Http\Controllers\InstitutionalSettingController;
 use App\Http\Controllers\InternalUserController;
+use App\Http\Controllers\InvestmentCrm\AdvisorAuthController;
+use App\Http\Controllers\InvestmentCrm\AdvisorManualProspectController;
+use App\Http\Controllers\InvestmentCrm\AdvisorPortalController;
+use App\Http\Controllers\InvestmentCrm\AdvisorProspectController;
+use App\Http\Controllers\Investments\InvestmentAdvisorController;
+use App\Http\Controllers\Investments\InvestmentAdvisorPublicController;
+use App\Http\Controllers\Investments\InvestmentCrmController;
+use App\Http\Controllers\Investments\InvestmentCrmSettingsController;
+use App\Http\Controllers\Investments\InvestmentProspectActionController;
+use App\Http\Controllers\Investments\InvestmentProspectController;
 use App\Http\Controllers\OfficeAffiliationController;
-use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PasswordController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PlaceholderController;
 use App\Http\Controllers\PublicAffiliationAdminController;
 use App\Http\Controllers\PublicAffiliationController;
 use App\Http\Controllers\PublicAffiliationQrController;
-use App\Http\Controllers\PlaceholderController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RrhhController;
+use App\Http\Controllers\RrhhProductController;
+use App\Http\Controllers\RrhhReportController;
+use App\Http\Controllers\RrhhSaleController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\Store\CartController as StoreCartController;
 use App\Http\Controllers\Store\CatalogController as StoreCatalogController;
@@ -36,39 +63,6 @@ use App\Http\Controllers\Store\OrderController as StoreWebOrderController;
 use App\Http\Controllers\Store\ReceiptController as StoreReceiptController;
 use App\Http\Controllers\Store\WhatsAppController as StoreWhatsAppController;
 use App\Http\Controllers\VerificationController;
-use App\Http\Controllers\Admin\AuditLogController;
-use App\Http\Controllers\Admin\RolePermissionController;
-use App\Http\Controllers\Admin\Store\DashboardController as StoreDashboardController;
-use App\Http\Controllers\Admin\Store\SettingController as StoreSettingController;
-use App\Http\Controllers\Admin\Store\CategoryController as StoreCategoryController;
-use App\Http\Controllers\Admin\Store\CouponController as StoreCouponController;
-use App\Http\Controllers\Admin\Store\OrderController as StoreOrderController;
-use App\Http\Controllers\Admin\Store\OrderReceiptController as StoreAdminOrderReceiptController;
-use App\Http\Controllers\Admin\Store\ProductController as StoreProductController;
-use App\Http\Controllers\Admin\Store\ProductVariantController as StoreProductVariantController;
-use App\Http\Controllers\Admin\Store\ProductImageController as StoreProductImageController;
-use App\Http\Controllers\Admin\Store\SalesController as StoreSalesController;
-use App\Http\Controllers\Admin\Store\ShippingRateController as StoreShippingRateController;
-use App\Http\Controllers\Investments\DashboardController as InvestmentDashboardController;
-use App\Http\Controllers\Investments\InvestmentLotController;
-use App\Http\Controllers\Investments\InvestmentAdvisorController;
-use App\Http\Controllers\Investments\InvestmentAdvisorPublicController;
-use App\Http\Controllers\Investments\InvestmentProspectController;
-use App\Http\Controllers\Investments\InvestmentCrmController;
-use App\Http\Controllers\Investments\InvestmentProspectActionController;
-use App\Http\Controllers\Investments\InvestmentCrmSettingsController;
-use App\Http\Controllers\InvestmentCrm\AdvisorAuthController;
-use App\Http\Controllers\InvestmentCrm\AdvisorPortalController;
-use App\Http\Controllers\InvestmentCrm\AdvisorProspectController;
-use App\Http\Controllers\InvestmentCrm\AdvisorManualProspectController;
-use App\Http\Controllers\Investments\InvestorController;
-use App\Http\Controllers\Investments\InvestorPanelController;
-use App\Http\Controllers\Investments\InvestorTypeController;
-use App\Http\Controllers\Investments\ReceiptController as InvestmentReceiptController;
-use App\Http\Controllers\Investments\ReportController as InvestmentReportController;
-use App\Http\Controllers\Investments\ReturnPeriodController;
-use App\Http\Controllers\Investments\SettingController as InvestmentSettingController;
-use App\Http\Controllers\Investments\ShareReservationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeRedirectController::class, 'root']);
@@ -344,10 +338,6 @@ Route::middleware(['auth', 'password.changed', 'affiliate.profile.complete', 'af
         Route::get('/admin/credenciales/{affiliate}/imprimir', [CredentialController::class, 'print'])->name('credentials.print');
     });
 
-    Route::get('/panel-accionista', [InvestorPanelController::class, 'index'])
-        ->middleware('role:accionista,afiliado,administrador,caja,cajero')
-        ->name('investments.panel');
-
     Route::prefix('inversiones/asesores')->name('investments.advisors.')
         ->middleware(['role:administrador,superadministrador,gerente', 'permission:investment_advisors.view'])
         ->group(function () {
@@ -383,58 +373,12 @@ Route::middleware(['auth', 'password.changed', 'affiliate.profile.complete', 'af
             Route::post('/{prospect}/interacciones', [InvestmentProspectActionController::class, 'interaction'])->middleware('permission:investment_prospect_interactions.create')->name('interactions.store');
             Route::patch('/{prospect}/reasignar', [InvestmentProspectActionController::class, 'reassign'])->middleware('permission:investment_prospects.reassign')->name('reassign');
         });
-    Route::prefix('inversiones/crm')->name('investments.crm.')->middleware(['role:administrador,superadministrador,gerente'])->group(function(){
-        Route::get('/',[InvestmentCrmController::class,'dashboard'])->middleware('permission:investment_prospects.view')->name('dashboard');
-        Route::get('/kanban',[InvestmentCrmController::class,'kanban'])->middleware('permission:investment_prospects.view')->name('kanban');
-        Route::get('/configuracion',[InvestmentCrmSettingsController::class,'edit'])->middleware('permission:investment_crm_settings.view')->name('settings.edit');
-        Route::put('/configuracion',[InvestmentCrmSettingsController::class,'update'])->middleware('permission:investment_crm_settings.update')->name('settings.update');
-        Route::post('/configuracion/restaurar',[InvestmentCrmSettingsController::class,'restore'])->middleware('permission:investment_crm_settings.update')->name('settings.restore');
-    });
-
-    Route::prefix('inversiones')->name('investments.')
-        ->middleware(['role:administrador,gerente,caja,cajero', 'permission:investors.view'])
-        ->group(function () {
-        Route::get('/dashboard', [InvestmentDashboardController::class, 'index'])->name('dashboard');
-        Route::resource('accionistas', InvestorController::class)->except('destroy')
-            ->parameters(['accionistas' => 'investor'])->names('investors')
-            ->middlewareFor(['create', 'store'], 'permission:investors.create')
-            ->middlewareFor(['edit', 'update'], 'permission:investors.update');
-        Route::resource('tipos-inversionista', InvestorTypeController::class)->except('show', 'destroy')
-            ->parameters(['tipos-inversionista' => 'investorType'])->names('investor-types')
-            ->middlewareFor(['create', 'store'], 'permission:investors.create')
-            ->middlewareFor(['edit', 'update'], 'permission:investors.update');
-
-        Route::get('reservas', [ShareReservationController::class, 'index'])->name('reservations.index');
-        Route::get('reservas/crear', [ShareReservationController::class, 'create'])->middleware('permission:investors.create')->name('reservations.create');
-        Route::post('reservas', [ShareReservationController::class, 'store'])->middleware('permission:investors.create')->name('reservations.store');
-        Route::get('reservas/{reservation}', [ShareReservationController::class, 'show'])->name('reservations.show');
-        Route::post('reservas/{reservation}/convertir', [ShareReservationController::class, 'convert'])->middleware('permission:investors.update')->name('reservations.convert');
-        Route::post('reservas/{reservation}/cerrar', [ShareReservationController::class, 'close'])->middleware('permission:investors.update')->name('reservations.close');
-
-        Route::get('lotes', [InvestmentLotController::class, 'index'])->name('lots.index');
-        Route::get('lotes/crear', [InvestmentLotController::class, 'create'])->middleware('permission:investors.create')->name('lots.create');
-        Route::post('lotes', [InvestmentLotController::class, 'store'])->middleware('permission:investors.create')->name('lots.store');
-        Route::get('lotes/{lot}', [InvestmentLotController::class, 'show'])->name('lots.show');
-        Route::post('lotes/{lot}/aprobar', [InvestmentLotController::class, 'approve'])->middleware('permission:investors.update')->name('lots.approve');
-
-        Route::get('rendimientos', [ReturnPeriodController::class, 'index'])->name('returns.index');
-        Route::get('rendimientos/{period}', [ReturnPeriodController::class, 'show'])->name('returns.show');
-        Route::post('rendimientos/{period}/preparar', [ReturnPeriodController::class, 'prepare'])->middleware('permission:investors.update')->name('returns.prepare');
-        Route::post('rendimientos/{period}/aprobar', [ReturnPeriodController::class, 'approve'])->middleware('permission:investors.update')->name('returns.approve');
-        Route::post('rendimientos/{period}/rechazar', [ReturnPeriodController::class, 'reject'])->middleware('permission:investors.update')->name('returns.reject');
-        Route::post('rendimientos/{period}/recibo', [InvestmentReceiptController::class, 'issue'])->middleware('permission:investors.update')->name('receipts.issue');
-
-        Route::get('recibos', [InvestmentReceiptController::class, 'index'])->name('receipts.index');
-        Route::get('recibos/{receipt}', [InvestmentReceiptController::class, 'show'])->name('receipts.show');
-        Route::get('recibos/{receipt}/pdf', [InvestmentReceiptController::class, 'pdf'])->name('receipts.pdf');
-        Route::post('recibos/{receipt}/anular', [InvestmentReceiptController::class, 'void'])->middleware('permission:investors.update')->name('receipts.void');
-
-        Route::get('aprobaciones', [ReturnPeriodController::class, 'index'])->defaults('status', 'pending_approval')->name('approvals.index');
-        Route::get('configuracion', [InvestmentSettingController::class, 'edit'])->middleware('permission:investors.update')->name('settings.edit');
-        Route::put('configuracion', [InvestmentSettingController::class, 'update'])->middleware('permission:investors.update')->name('settings.update');
-        Route::get('reportes', [InvestmentReportController::class, 'index'])->name('reports.index');
-        Route::get('reportes/pdf', [InvestmentReportController::class, 'pdf'])->name('reports.pdf');
-        Route::get('reportes/csv', [InvestmentReportController::class, 'csv'])->name('reports.csv');
+    Route::prefix('inversiones/crm')->name('investments.crm.')->middleware(['role:administrador,superadministrador,gerente'])->group(function () {
+        Route::get('/', [InvestmentCrmController::class, 'dashboard'])->middleware('permission:investment_prospects.view')->name('dashboard');
+        Route::get('/kanban', [InvestmentCrmController::class, 'kanban'])->middleware('permission:investment_prospects.view')->name('kanban');
+        Route::get('/configuracion', [InvestmentCrmSettingsController::class, 'edit'])->middleware('permission:investment_crm_settings.view')->name('settings.edit');
+        Route::put('/configuracion', [InvestmentCrmSettingsController::class, 'update'])->middleware('permission:investment_crm_settings.update')->name('settings.update');
+        Route::post('/configuracion/restaurar', [InvestmentCrmSettingsController::class, 'restore'])->middleware('permission:investment_crm_settings.update')->name('settings.restore');
     });
 
     Route::view('/creditos', 'credits.placeholder')
@@ -444,16 +388,16 @@ Route::middleware(['auth', 'password.changed', 'affiliate.profile.complete', 'af
     Route::prefix('creditos')->name('credits.')
         ->middleware(['role:administrador,gerente,administrador_sector,secretaria,cajero,caja,consulta', 'permission:credits.view'])
         ->group(function () {
-        Route::get('/productos', PlaceholderController::class)->defaults('title', 'Productos de credito')->defaults('message', 'Tipos de credito, tasas y condiciones se construiran en la fase de creditos.')->name('products.index');
-        Route::get('/solicitudes', PlaceholderController::class)->defaults('title', 'Solicitudes de credito')->defaults('message', 'Registro y revision de solicitudes de credito pendiente de implementacion.')->name('applications.index');
-        Route::get('/simulador', PlaceholderController::class)->defaults('title', 'Simulador de creditos')->defaults('message', 'Simulador preparado para calcular cuotas, plazos e intereses.')->name('simulator');
-        Route::get('/aprobados', PlaceholderController::class)->defaults('title', 'Creditos aprobados')->defaults('message', 'Gestion de creditos aprobados pendiente para la fase financiera.')->name('approved.index');
-        Route::get('/cuotas', PlaceholderController::class)->defaults('title', 'Cuotas de credito')->defaults('message', 'Calendario de cuotas y seguimiento se implementara en el modulo de creditos.')->name('installments.index');
-        Route::get('/pagos', PlaceholderController::class)->defaults('title', 'Pagos de credito')->defaults('message', 'Registro de pagos de credito pendiente de implementacion.')->name('payments.index');
-        Route::get('/mora', PlaceholderController::class)->defaults('title', 'Mora por atraso')->defaults('message', 'Calculo de mora y alertas se agregaran en la fase de creditos.')->name('late-fees.index');
-        Route::get('/reportes', PlaceholderController::class)->defaults('title', 'Reportes de creditos')->defaults('message', 'Reportes financieros de creditos pendientes de implementacion.')->name('reports.index');
-        Route::get('/configuracion', PlaceholderController::class)->defaults('title', 'Configuracion de creditos')->defaults('message', 'Tasas, plazos, mora, productos, documentos y reglas de aprobacion se configuraran aqui.')->name('settings.edit');
-    });
+            Route::get('/productos', PlaceholderController::class)->defaults('title', 'Productos de credito')->defaults('message', 'Tipos de credito, tasas y condiciones se construiran en la fase de creditos.')->name('products.index');
+            Route::get('/solicitudes', PlaceholderController::class)->defaults('title', 'Solicitudes de credito')->defaults('message', 'Registro y revision de solicitudes de credito pendiente de implementacion.')->name('applications.index');
+            Route::get('/simulador', PlaceholderController::class)->defaults('title', 'Simulador de creditos')->defaults('message', 'Simulador preparado para calcular cuotas, plazos e intereses.')->name('simulator');
+            Route::get('/aprobados', PlaceholderController::class)->defaults('title', 'Creditos aprobados')->defaults('message', 'Gestion de creditos aprobados pendiente para la fase financiera.')->name('approved.index');
+            Route::get('/cuotas', PlaceholderController::class)->defaults('title', 'Cuotas de credito')->defaults('message', 'Calendario de cuotas y seguimiento se implementara en el modulo de creditos.')->name('installments.index');
+            Route::get('/pagos', PlaceholderController::class)->defaults('title', 'Pagos de credito')->defaults('message', 'Registro de pagos de credito pendiente de implementacion.')->name('payments.index');
+            Route::get('/mora', PlaceholderController::class)->defaults('title', 'Mora por atraso')->defaults('message', 'Calculo de mora y alertas se agregaran en la fase de creditos.')->name('late-fees.index');
+            Route::get('/reportes', PlaceholderController::class)->defaults('title', 'Reportes de creditos')->defaults('message', 'Reportes financieros de creditos pendientes de implementacion.')->name('reports.index');
+            Route::get('/configuracion', PlaceholderController::class)->defaults('title', 'Configuracion de creditos')->defaults('message', 'Tasas, plazos, mora, productos, documentos y reglas de aprobacion se configuraran aqui.')->name('settings.edit');
+        });
 
     Route::prefix('administracion/usuarios')->name('admin.users.')->controller(InternalUserController::class)->group(function () {
         Route::get('/', 'index')->name('index');
@@ -468,6 +412,55 @@ Route::middleware(['auth', 'password.changed', 'affiliate.profile.complete', 'af
         Route::post('/{user}/restablecer-contrasena', 'resetPassword')
             ->middleware('throttle:3,1')->name('password.reset');
         Route::delete('/{user}', 'destroy')->name('destroy');
+    });
+
+    Route::get('/mi-trabajo', [RrhhController::class, 'self'])->name('rrhh.self.dashboard');
+    Route::get('/mi-trabajo/ventas/{sale}', [RrhhController::class, 'selfSale'])->name('rrhh.self.sales.show');
+    Route::get('/mi-trabajo/liquidaciones/{period}', [RrhhController::class, 'selfPeriod'])->name('rrhh.self.periods.show');
+
+    Route::prefix('rrhh')->name('rrhh.')->group(function () {
+        Route::get('/', [RrhhController::class, 'dashboard'])->middleware('permission:rrhh.dashboard.view')->name('dashboard');
+        Route::get('/personal', [RrhhController::class, 'index'])->middleware('permission:rrhh.workers.view')->name('workers.index');
+        Route::get('/personal/crear', [RrhhController::class, 'create'])->middleware('permission:rrhh.workers.manage')->name('workers.create');
+        Route::post('/personal', [RrhhController::class, 'store'])->middleware('permission:rrhh.workers.manage')->name('workers.store');
+        Route::get('/personal/{worker}', [RrhhController::class, 'show'])->middleware('permission:rrhh.workers.view')->name('workers.show');
+        Route::get('/personal/{worker}/editar', [RrhhController::class, 'edit'])->middleware('permission:rrhh.workers.manage')->name('workers.edit');
+        Route::patch('/personal/{worker}', [RrhhController::class, 'update'])->middleware('permission:rrhh.workers.manage')->name('workers.update');
+        Route::patch('/personal/{worker}/estado', [RrhhController::class, 'toggle'])->middleware('permission:rrhh.workers.manage')->name('workers.toggle');
+        Route::post('/personal/{worker}/acceso', [RrhhController::class, 'access'])->middleware('permission:rrhh.workers.manage,rrhh.access.manage')->name('workers.access');
+        Route::delete('/personal/{worker}/acceso', [RrhhController::class, 'unlink'])->middleware('permission:rrhh.workers.manage,rrhh.access.manage')->name('workers.access.unlink');
+
+        Route::get('/productos', [RrhhProductController::class, 'index'])->middleware('permission:rrhh.products.view')->name('products.index');
+        Route::get('/productos/crear', [RrhhProductController::class, 'create'])->middleware('permission:rrhh.products.manage')->name('products.create');
+        Route::post('/productos', [RrhhProductController::class, 'store'])->middleware('permission:rrhh.products.manage')->name('products.store');
+        Route::get('/productos/{product}', [RrhhProductController::class, 'show'])->middleware('permission:rrhh.products.view')->name('products.show');
+        Route::get('/productos/{product}/editar', [RrhhProductController::class, 'edit'])->middleware('permission:rrhh.products.manage')->name('products.edit');
+        Route::patch('/productos/{product}', [RrhhProductController::class, 'update'])->middleware('permission:rrhh.products.manage')->name('products.update');
+        Route::patch('/productos/{product}/estado', [RrhhProductController::class, 'toggle'])->middleware('permission:rrhh.products.manage')->name('products.toggle');
+
+        Route::get('/ventas', [RrhhSaleController::class, 'index'])->middleware('permission:rrhh.sales.view')->name('sales.index');
+        Route::get('/ventas/crear', [RrhhSaleController::class, 'create'])->middleware('permission:rrhh.sales.create')->name('sales.create');
+        Route::post('/ventas', [RrhhSaleController::class, 'store'])->middleware('permission:rrhh.sales.create')->name('sales.store');
+        Route::get('/ventas/{sale}', [RrhhSaleController::class, 'show'])->middleware('permission:rrhh.sales.view')->name('sales.show');
+        Route::post('/ventas/{sale}/confirmar', [RrhhSaleController::class, 'confirm'])->middleware('permission:rrhh.sales.confirm')->name('sales.confirm');
+        Route::post('/ventas/{sale}/anular', [RrhhSaleController::class, 'void'])->middleware('permission:rrhh.sales.void')->name('sales.void');
+
+        Route::get('/informes', [RrhhReportController::class, 'index'])->middleware('permission:rrhh.reports.view')->name('reports.index');
+        Route::get('/informes/pdf', [RrhhReportController::class, 'pdf'])->middleware('permission:rrhh.reports.print')->name('reports.pdf');
+        Route::get('/informes/excel', [RrhhReportController::class, 'excel'])->middleware('permission:rrhh.reports.print')->name('reports.excel');
+        Route::get('/informes/liquidaciones', [RrhhReportController::class, 'periods'])->middleware('permission:rrhh.payments.view')->name('reports.periods.index');
+        Route::get('/informes/liquidaciones/crear', [RrhhReportController::class, 'createPeriod'])->middleware('permission:rrhh.payments.prepare')->name('reports.periods.create');
+        Route::post('/informes/liquidaciones', [RrhhReportController::class, 'storePeriod'])->middleware('permission:rrhh.payments.prepare')->name('reports.periods.store');
+        Route::get('/informes/liquidaciones/{period}', [RrhhReportController::class, 'showPeriod'])->middleware('permission:rrhh.payments.view')->name('reports.periods.show');
+        Route::get('/informes/liquidaciones/{period}/editar', [RrhhReportController::class, 'editPeriod'])->middleware('permission:rrhh.payments.prepare')->name('reports.periods.edit');
+        Route::patch('/informes/liquidaciones/{period}', [RrhhReportController::class, 'updatePeriod'])->middleware('permission:rrhh.payments.prepare')->name('reports.periods.update');
+        Route::post('/informes/liquidaciones/{period}/cerrar', [RrhhReportController::class, 'closePeriod'])->middleware('permission:rrhh.payments.prepare')->name('reports.periods.close');
+        Route::post('/informes/liquidaciones/{period}/pago', [RrhhReportController::class, 'payPeriod'])->middleware('permission:rrhh.payments.mark_paid')->name('reports.periods.pay');
+        Route::post('/informes/liquidaciones/{period}/anular', [RrhhReportController::class, 'voidPeriod'])->middleware('permission:rrhh.payments.prepare')->name('reports.periods.void');
+        Route::get('/informes/ajustes', [RrhhReportController::class, 'adjustments'])->middleware('permission:rrhh.reports.view')->name('reports.adjustments.index');
+        Route::post('/informes/ajustes', [RrhhReportController::class, 'storeAdjustment'])->middleware('permission:rrhh.adjustments.manage')->name('reports.adjustments.store');
+        Route::post('/informes/ajustes/{adjustment}/revisar', [RrhhReportController::class, 'reviewAdjustment'])->middleware('permission:rrhh.adjustments.manage')->name('reports.adjustments.review');
+        Route::post('/informes/ajustes/{adjustment}/anular', [RrhhReportController::class, 'voidAdjustment'])->middleware('permission:rrhh.adjustments.manage')->name('reports.adjustments.void');
     });
 
     Route::prefix('administracion')->name('administration.')->group(function () {
@@ -514,7 +507,7 @@ Route::middleware(['auth', 'password.changed', 'affiliate.profile.complete', 'af
     Route::prefix('configuracion-general')->name('settings.')
         ->middleware(['role:administrador,secretaria', 'permission:settings.view'])
         ->group(function () {
-        Route::get('/seguridad', PlaceholderController::class)->defaults('title', 'Seguridad')->defaults('message', 'Opciones de seguridad del sistema preparadas para una fase posterior.')->name('security');
-        Route::get('/sistema', PlaceholderController::class)->defaults('title', 'Configuracion del sistema')->defaults('message', 'Zona horaria, moneda por defecto y opciones generales del sistema se ampliaran aqui.')->name('system');
-    });
+            Route::get('/seguridad', PlaceholderController::class)->defaults('title', 'Seguridad')->defaults('message', 'Opciones de seguridad del sistema preparadas para una fase posterior.')->name('security');
+            Route::get('/sistema', PlaceholderController::class)->defaults('title', 'Configuracion del sistema')->defaults('message', 'Zona horaria, moneda por defecto y opciones generales del sistema se ampliaran aqui.')->name('system');
+        });
 });

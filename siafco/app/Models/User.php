@@ -3,15 +3,18 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Services\RolePermissionService;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     /**
@@ -84,6 +87,11 @@ class User extends Authenticatable
         return $this->hasOne(InvestmentAdvisor::class);
     }
 
+    public function rrhhWorker()
+    {
+        return $this->hasOne(RrhhWorker::class);
+    }
+
     public function uploadedStoreReceipts()
     {
         return $this->hasMany(StoreOrderReceipt::class, 'uploaded_by_user_id');
@@ -96,7 +104,7 @@ class User extends Authenticatable
 
     public function hasRole(string|array $roles): bool
     {
-        $service = app(\App\Services\RolePermissionService::class);
+        $service = app(RolePermissionService::class);
         $current = $service->normalizeRole($this->role);
         $roles = array_map(fn (string $role) => $service->normalizeRole($role), (array) $roles);
 
@@ -109,7 +117,7 @@ class User extends Authenticatable
             return false;
         }
 
-        return in_array($permission, app(\App\Services\RolePermissionService::class)->permissionsForRole($this->role), true);
+        return in_array($permission, app(RolePermissionService::class)->permissionsForRole($this->role), true);
     }
 
     public function isInternal(): bool
@@ -119,18 +127,18 @@ class User extends Authenticatable
         }
 
         return $this->user_type === null
-            && app(\App\Services\RolePermissionService::class)->isKnownInternalRole((string) $this->role);
+            && app(RolePermissionService::class)->isKnownInternalRole((string) $this->role);
     }
 
     public function roleLabel(): string
     {
-        $role = app(\App\Services\RolePermissionService::class)->normalizeRole($this->role);
+        $role = app(RolePermissionService::class)->normalizeRole($this->role);
 
         return config("internal_roles.labels.{$role}", str($this->role)->headline()->toString());
     }
 
     public function photoUrl(): ?string
     {
-        return $this->photo_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($this->photo_path) : null;
+        return $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null;
     }
 }

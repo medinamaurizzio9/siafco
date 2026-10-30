@@ -32,10 +32,8 @@
             $canViewInvestmentAdvisors = $user->hasPermission('investment_advisors.view');
             $canViewInvestmentProspects = $user->hasPermission('investment_prospects.view');
             $canViewInvestmentCrm = $canViewInvestmentAdvisors || $canViewInvestmentProspects;
-            $canManageInvestments = ($user->hasPermission('investors.view') || $canViewInvestmentAdvisors || $canViewInvestmentProspects)
-                && $user->hasRole(['superadministrador', 'administrador', 'gerente', 'caja', 'cajero', 'asesor_inversiones']);
-            $canCreateInvestments = $user->hasPermission('investors.create');
-            $canUpdateInvestments = $user->hasPermission('investors.update');
+            $canManageInvestments = $canViewInvestmentCrm
+                && $user->hasRole(['superadministrador', 'administrador', 'gerente', 'asesor_inversiones']);
             $canViewCredits = $user->hasPermission('credits.view')
                 && $user->hasRole(['superadministrador', 'administrador', 'gerente', 'administrador_sector', 'secretaria', 'cajero', 'caja', 'consulta']);
             $canManageUsers = $user->isInternal() && $user->hasPermission('users.view');
@@ -52,11 +50,17 @@
             $canManageStoreShipping = $user->isInternal() && $user->hasPermission('store.manage-shipping');
             $canManageStoreCoupons = $user->isInternal() && $user->hasPermission('store.manage-coupons');
             $canManageStoreOrders = $user->isInternal() && $user->hasPermission('store.manage-orders');
-            $isPersonalOnly = $user->hasRole(['afiliado', 'accionista']) && ! $canViewAffiliation && ! $canManageInvestments;
+            $canViewRrhh = collect([
+                'rrhh.dashboard.view', 'rrhh.workers.view', 'rrhh.products.view', 'rrhh.sales.view',
+                'rrhh.payments.view', 'rrhh.reports.view',
+            ])->contains(fn (string $permission) => $user->hasPermission($permission));
+            $isRrhhWorker = $user->hasRole('trabajador_rrhh');
+            $hasRrhhProfile = $isRrhhWorker;
+            $isPersonalOnly = ($user->hasRole('afiliado') && ! $canViewAffiliation && ! $canManageInvestments) || $isRrhhWorker;
             $isAffiliateExperience = $user->user_type === 'affiliate' || $user->hasRole('afiliado');
             $layoutAffiliate = $isAffiliateExperience ? $user->affiliate()->first() : null;
             $activeAffiliateStore = $isAffiliateExperience && $layoutAffiliate?->status === 'activo';
-            $canViewPersonalPanel = $user->hasRole(['afiliado', 'accionista']);
+            $canViewPersonalPanel = $user->hasRole('afiliado') || $hasRrhhProfile;
             $homeRoute = app(\App\Services\UserRedirectResolver::class)->homeRoute($user);
 
             $openModule = match (true) {
@@ -64,12 +68,12 @@
                 request()->routeIs('admin.dashboard') => 'home',
                 request()->routeIs('affiliates.*', 'affiliate-benefits.*', 'sectors.*', 'plans.*', 'payments.*', 'admin.collections.*', 'admin.payments.*', 'cash-deposits.*', 'credentials.*', 'credenciales.*', 'institutional-qr.*', 'reports.*', 'affiliation.*', 'public-affiliation.admin.*') => 'affiliation',
                 request()->routeIs('investments.crm.*', 'investments.prospects.*', 'investments.advisors.*') => 'investment-crm',
-                request()->routeIs('investments.*') && ! request()->routeIs('investments.panel') => 'formal-investments',
                 request()->routeIs('credits.*') => 'credits',
                 request()->routeIs('admin.store.*') => 'store',
+                request()->routeIs('rrhh.*') => 'rrhh',
                 request()->routeIs('administration.*', 'admin.users.*') => 'administration',
                 request()->routeIs('institutional-settings.*', 'settings.*') => 'general-settings',
-                request()->routeIs('affiliate.*', 'investments.panel') => 'personal',
+                request()->routeIs('affiliate.*') => 'personal',
                 default => 'home',
             };
 
@@ -80,16 +84,11 @@
                 'affiliate-benefits.index' => 'gift', 'payments.index' => 'credit-card', 'admin.collections.index' => 'chart',
                 'cash-deposits.dashboard' => 'credit-card',
                 'credentials.index' => 'credit-card', 'public-affiliation.qr.show' => 'qr-code', 'institutional-qr.show' => 'qr-code',
-                'reports.index' => 'chart', 'affiliation.settings.edit' => 'settings', 'investments.dashboard' => 'chart',
-                'investments.investors.index' => 'users', 'investments.investor-types.index' => 'users',
+                'reports.index' => 'chart', 'affiliation.settings.edit' => 'settings',
                 'investments.advisors.index' => 'users',
                 'investments.prospects.index' => 'file-text',
                 'investments.crm.dashboard' => 'chart', 'investments.crm.kanban' => 'package',
                 'investments.crm.settings.edit' => 'settings',
-                'investments.reservations.index' => 'file-text', 'investments.lots.create' => 'credit-card',
-                'investments.lots.index' => 'package', 'investments.returns.index' => 'chart',
-                'investments.receipts.index' => 'receipt', 'investments.approvals.index' => 'check',
-                'investments.reports.index' => 'chart', 'investments.settings.edit' => 'settings',
                 'credits.products.index' => 'credit-card', 'credits.applications.index' => 'file-text',
                 'credits.simulator' => 'chart', 'credits.approved.index' => 'check', 'credits.installments.index' => 'receipt',
                 'credits.payments.index' => 'credit-card', 'credits.late-fees.index' => 'receipt',
@@ -103,7 +102,11 @@
                 'affiliate.panel' => 'home', 'affiliate.profile.show' => 'user', 'affiliate.credential.preview' => 'credit-card',
                 'affiliate.benefits' => 'gift',
                 'store.catalog.index' => 'package', 'store.cart.show' => 'package', 'store.orders.index' => 'receipt',
-                'investments.panel' => 'chart',
+                'rrhh.dashboard' => 'users', 'rrhh.workers.index' => 'users',
+                'rrhh.products.index' => 'package', 'rrhh.sales.index' => 'receipt',
+                'rrhh.reports.periods.index' => 'credit-card',
+                'rrhh.reports.adjustments.index' => 'file-text',
+                'rrhh.reports.index' => 'chart', 'rrhh.self.dashboard' => 'user',
             ];
 
             $navLink = function (string $route, string $label, array $params = [], array|string $active = [], ?bool $forcedActive = null) use ($routeIcons) {
@@ -247,32 +250,6 @@
                         </section>
                     @endif
 
-                    @if($user->hasPermission('investors.view'))
-                        <section class="nav-module" data-accordion-module="formal-investments">
-                            <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'formal-investments' ? 'true' : 'false' }}">
-                                <span class="flex items-center gap-3"><x-ui.icon name="chart" class="h-4 w-4" />Inversiones formales</span><span class="nav-chevron">⌄</span>
-                            </button>
-                            <div class="nav-module-panel {{ $openModule === 'formal-investments' ? '' : 'hidden' }}">
-                                    {!! $navLink('investments.dashboard', 'Dashboard de inversiones', [], ['investments.dashboard']) !!}
-                                    {!! $navLink('investments.investors.index', 'Accionistas', [], ['investments.investors.*']) !!}
-                                    {!! $navLink('investments.investor-types.index', 'Tipos de inversionista', [], ['investments.investor-types.*']) !!}
-                                    {!! $navLink('investments.reservations.index', 'Reservas', [], ['investments.reservations.*']) !!}
-                                    @if($canCreateInvestments)
-                                        {!! $navLink('investments.lots.create', 'Venta de acciones', [], ['investments.lots.create']) !!}
-                                    @endif
-                                    {!! $navLink('investments.lots.index', 'Lotes de inversion', [], ['investments.lots.index', 'investments.lots.show']) !!}
-                                    {!! $navLink('investments.returns.index', 'Rendimientos mensuales', [], ['investments.returns.*']) !!}
-                                    {!! $navLink('investments.returns.index', 'Bonos de produccion minera', ['bonus' => 1], ['investments.returns.*']) !!}
-                                    {!! $navLink('investments.receipts.index', 'Recibos', [], ['investments.receipts.*']) !!}
-                                    {!! $navLink('investments.approvals.index', 'Aprobaciones', [], ['investments.approvals.*']) !!}
-                                    {!! $navLink('investments.reports.index', 'Reportes de inversiones', [], ['investments.reports.*']) !!}
-                                    @if($canUpdateInvestments)
-                                        {!! $navLink('investments.settings.edit', 'Configuracion de inversiones', [], ['investments.settings.*']) !!}
-                                    @endif
-                            </div>
-                        </section>
-                    @endif
-
                     @if($canViewCredits)
                         <section class="nav-module" data-accordion-module="credits">
                             <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'credits' ? 'true' : 'false' }}">
@@ -314,6 +291,23 @@
                                 @if($canManageStoreSettings)
                                     {!! $navLink('admin.store.settings.edit', 'Configuración', [], ['admin.store.settings.*']) !!}
                                 @endif
+                            </div>
+                        </section>
+                    @endif
+
+                    @if($canViewRrhh)
+                        <section class="nav-module" data-accordion-module="rrhh">
+                            <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'rrhh' ? 'true' : 'false' }}">
+                                <span class="flex items-center gap-3"><x-ui.icon name="users" class="h-4 w-4" />PERSONAL Y COMISIONES</span><span class="nav-chevron">⌄</span>
+                            </button>
+                            <div class="nav-module-panel {{ $openModule === 'rrhh' ? '' : 'hidden' }}">
+                                @if($user->hasPermission('rrhh.dashboard.view')){!! $navLink('rrhh.dashboard', 'Resumen', [], ['rrhh.dashboard']) !!}@endif
+                                @if($user->hasPermission('rrhh.workers.view')){!! $navLink('rrhh.workers.index', 'Personal', [], ['rrhh.workers.*']) !!}@endif
+                                @if($user->hasPermission('rrhh.products.view')){!! $navLink('rrhh.products.index', 'Productos', [], ['rrhh.products.*']) !!}@endif
+                                @if($user->hasPermission('rrhh.sales.view')){!! $navLink('rrhh.sales.index', 'Ventas', [], ['rrhh.sales.*']) !!}@endif
+                                @if($user->hasPermission('rrhh.payments.view')){!! $navLink('rrhh.reports.periods.index', 'Liquidaciones', [], ['rrhh.reports.periods.*']) !!}@endif
+                                @if($user->hasPermission('rrhh.reports.view')){!! $navLink('rrhh.reports.adjustments.index', 'Ajustes y correcciones', [], ['rrhh.reports.adjustments.*']) !!}@endif
+                                @if($user->hasPermission('rrhh.reports.view')){!! $navLink('rrhh.reports.index', 'Informes', [], [], request()->routeIs('rrhh.reports.index')) !!}@endif
                             </div>
                         </section>
                     @endif
@@ -369,8 +363,8 @@
                                 {!! $navLink('store.orders.index', 'Mis pedidos', [], ['store.orders.*', 'store.checkout.*']) !!}
                             @endif
                         @endif
-                        @if($user->hasRole('accionista'))
-                            {!! $navLink('investments.panel', 'Panel del accionista', [], ['investments.panel']) !!}
+                        @if($hasRrhhProfile)
+                            {!! $navLink('rrhh.self.dashboard', 'Mi trabajo', [], ['rrhh.self.*']) !!}
                         @endif
                     </div>
                 </section>

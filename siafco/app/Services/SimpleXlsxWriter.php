@@ -6,7 +6,7 @@ use RuntimeException;
 
 class SimpleXlsxWriter
 {
-    public function output(array $headers, iterable $rows, string $sheetName = 'Reporte'): string
+    public function output(array $headers, iterable $rows, string $sheetName = 'Reporte', array $metadata = []): string
     {
         $files = [
             '[Content_Types].xml' => $this->contentTypes(),
@@ -14,13 +14,18 @@ class SimpleXlsxWriter
             'xl/workbook.xml' => $this->workbook($sheetName),
             'xl/_rels/workbook.xml.rels' => $this->workbookRels(),
             'xl/styles.xml' => $this->styles(),
-            'xl/worksheets/sheet1.xml' => $this->worksheet($headers, $rows),
+            'xl/worksheets/sheet1.xml' => $this->worksheet($headers, $rows, $metadata),
         ];
 
         return $this->zip($files);
     }
 
-    private function worksheet(array $headers, iterable $rows): string
+    public function number(string|int|float $value): XlsxNumber
+    {
+        return new XlsxNumber((string) $value);
+    }
+
+    private function worksheet(array $headers, iterable $rows, array $metadata): string
     {
         $xml = ['<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'];
         $lastColumn = $this->columnName(count($headers));
@@ -34,14 +39,20 @@ class SimpleXlsxWriter
             $xml[] = '<col min="'.$column.'" max="'.$column.'" width="'.$width.'" customWidth="1"/>';
         }
         $xml[] = '</cols><sheetData>';
-        $xml[] = $this->rowXml(1, $headers, 1);
-
-        $rowNumber = 2;
+        $rowNumber = 1;
+        foreach ($metadata as $label => $value) {
+            $xml[] = $this->rowXml($rowNumber++, [$label, $value], 0);
+        }
+        if ($metadata !== []) {
+            $rowNumber++;
+        }
+        $headerRow = $rowNumber;
+        $xml[] = $this->rowXml($rowNumber++, $headers, 1);
         foreach ($rows as $row) {
             $xml[] = $this->rowXml($rowNumber++, array_values($row), 0);
         }
 
-        $xml[] = '</sheetData><autoFilter ref="A1:'.$lastColumn.max(1, $rowNumber - 1).'"/>';
+        $xml[] = '</sheetData><autoFilter ref="A'.$headerRow.':'.$lastColumn.max($headerRow, $rowNumber - 1).'"/>';
         $xml[] = '</worksheet>';
 
         return implode('', $xml);
@@ -52,7 +63,11 @@ class SimpleXlsxWriter
         $cells = [];
         foreach ($values as $index => $value) {
             $reference = $this->columnName($index + 1).$rowNumber;
-            $cells[] = '<c r="'.$reference.'" t="inlineStr"'.($style ? ' s="'.$style.'"' : '').'><is><t>'.$this->escape($value).'</t></is></c>';
+            if ($value instanceof XlsxNumber) {
+                $cells[] = '<c r="'.$reference.'" t="n"'.($style ? ' s="'.$style.'"' : '').'><v>'.$this->escape($value->value).'</v></c>';
+            } else {
+                $cells[] = '<c r="'.$reference.'" t="inlineStr"'.($style ? ' s="'.$style.'"' : '').'><is><t>'.$this->escape($value).'</t></is></c>';
+            }
         }
 
         return '<row r="'.$rowNumber.'">'.implode('', $cells).'</row>';
@@ -119,17 +134,17 @@ class SimpleXlsxWriter
             $size = strlen($content);
             $nameLength = strlen($name);
 
-            $localHeader = pack('VvvvvvVVVvv', 0x04034b50, 20, 0, 0, 0, 0, $crc, $size, $size, $nameLength, 0).$name;
+            $localHeader = pack('VvvvvvVVVvv', 0x04034B50, 20, 0, 0, 0, 0, $crc, $size, $size, $nameLength, 0).$name;
             $local .= $localHeader.$content;
 
-            $central .= pack('VvvvvvvVVVvvvvvVV', 0x02014b50, 20, 20, 0, 0, 0, 0, $crc, $size, $size, $nameLength, 0, 0, 0, 0, 32, $offset).$name;
+            $central .= pack('VvvvvvvVVVvvvvvVV', 0x02014B50, 20, 20, 0, 0, 0, 0, $crc, $size, $size, $nameLength, 0, 0, 0, 0, 32, $offset).$name;
             $offset += strlen($localHeader) + $size;
         }
 
         $centralOffset = strlen($local);
         $centralSize = strlen($central);
         $count = count($files);
-        $end = pack('VvvvvVVv', 0x06054b50, 0, 0, $count, $count, $centralSize, $centralOffset, 0);
+        $end = pack('VvvvvVVv', 0x06054B50, 0, 0, $count, $count, $centralSize, $centralOffset, 0);
 
         $zip = $local.$central.$end;
         if ($zip === '') {
@@ -155,4 +170,9 @@ class SimpleXlsxWriter
     {
         return htmlspecialchars((string) $value, ENT_XML1 | ENT_COMPAT, 'UTF-8');
     }
+}
+
+final readonly class XlsxNumber
+{
+    public function __construct(public string $value) {}
 }

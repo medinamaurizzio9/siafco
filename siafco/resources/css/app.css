@@ -671,7 +671,8 @@ canvas {
 
     .form-label { @apply mb-1 block text-sm font-bold; color: var(--ds-color-text); }
     .form-helper { @apply mt-1 text-xs; color: var(--ds-color-muted); }
-    .form-input {
+    .form-input,
+    .form-control {
         @apply w-full px-4 py-3 text-sm outline-none transition;
         min-height: 48px;
         border: 2px solid #cbd5e1;
@@ -681,12 +682,18 @@ canvas {
         font-family: inherit;
         transition-duration: var(--ds-duration-base);
     }
-    .form-input:hover { border-color: var(--ds-color-primary-raised); }
-    .form-input:focus { border-color: var(--ds-color-secondary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ds-color-secondary) 24%, transparent); }
+    .form-input:hover,
+    .form-control:hover { border-color: var(--ds-color-primary-raised); }
+    .form-input:focus,
+    .form-control:focus { border-color: var(--ds-color-secondary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ds-color-secondary) 24%, transparent); }
     .form-input[aria-invalid="true"],
-    .form-input.border-red-500 { border-color: #dc2626; }
+    .form-input.border-red-500,
+    .form-control[aria-invalid="true"],
+    .form-control.border-red-500 { border-color: #dc2626; }
     .form-input[disabled],
-    .form-input:disabled { background: #f1f5f9; color: var(--ds-color-muted); cursor: not-allowed; }
+    .form-input:disabled,
+    .form-control[disabled],
+    .form-control:disabled { background: #f1f5f9; color: var(--ds-color-muted); cursor: not-allowed; }
     .password-toggle-button {
         @apply absolute inset-y-1 right-1 grid w-11 place-items-center rounded-lg text-slate-500 transition hover:text-[#0b1f3a] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#d4af37];
     }

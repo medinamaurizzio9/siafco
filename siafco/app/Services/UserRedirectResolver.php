@@ -57,12 +57,12 @@ class UserRedirectResolver
             return 'affiliate.panel';
         }
 
-        if ($user->role === 'accionista') {
-            return 'investments.panel';
-        }
-
         if ($user->hasRole(['caja', 'cajero'])) {
             return 'cash-deposits.dashboard';
+        }
+
+        if ($user->hasRole('trabajador_rrhh')) {
+            return 'rrhh.self.dashboard';
         }
 
         return $this->firstAuthorizedInternalRoute($user);
@@ -91,10 +91,6 @@ class UserRedirectResolver
                 || str_starts_with($path, 'cambiar-contrasena-obligatoria');
         }
 
-        if ($user->role === 'accionista') {
-            return $path === 'panel-accionista' || str_starts_with($path, 'inversiones');
-        }
-
         return $this->internalPathIsAuthorized($user, $path);
     }
 
@@ -102,6 +98,7 @@ class UserRedirectResolver
     {
         foreach ([
             'dashboard.view' => 'admin.dashboard',
+            'rrhh.dashboard.view' => 'rrhh.dashboard',
             'investment_prospects.view' => 'investments.crm.dashboard',
             'affiliates.view' => 'affiliates.index',
             'payments.view' => 'payments.index',
@@ -119,13 +116,15 @@ class UserRedirectResolver
 
     private function internalPathIsAuthorized(User $user, string $path): bool
     {
-        if (in_array($path, ['panel-afiliado', 'mi-perfil', 'afiliado/credencial', 'panel-accionista'], true)
+        if (in_array($path, ['panel-afiliado', 'mi-perfil', 'afiliado/credencial'], true)
             || str_starts_with($path, 'mi-perfil/')
             || str_starts_with($path, 'afiliado/credencial/')) {
             return false;
         }
 
         return match (true) {
+            $path === 'mi-trabajo' => $user->hasPermission('rrhh.self.view'),
+            str_starts_with($path, 'rrhh') => $user->hasPermission('rrhh.dashboard.view'),
             str_starts_with($path, 'inversiones/crm'), str_starts_with($path, 'inversiones/prospectos') => $user->hasPermission('investment_prospects.view'),
             $path === 'dashboard' => $user->hasPermission('dashboard.view'),
             str_starts_with($path, 'afiliados') => $user->hasPermission('affiliates.view'),

@@ -1,0 +1,6 @@
+<x-layouts.app title="Mi liquidación">
+<div class="mx-auto max-w-4xl space-y-5"><div><p class="text-sm font-bold uppercase text-siafco-gold-600">{{ $period->number }}</p><h1 class="text-2xl font-black text-siafco-primary-900">Mi liquidación</h1><p>{{ $period->date_from->format('d/m/Y') }} - {{ $period->date_to->format('d/m/Y') }} · {{ strtoupper($period->status) }}</p></div>
+<div class="grid gap-3 sm:grid-cols-4">@foreach(['Base'=>$period->base_amount,'Comisiones'=>$period->commission_total,'Ajustes'=>$period->adjustment_total,'Total'=>$period->calculated_total] as $label=>$amount)<x-ui.card><p class="text-sm text-slate-500">{{ $label }}</p><p class="text-xl font-black">BOB {{ number_format((float)$amount,2) }}</p></x-ui.card>@endforeach</div>
+<x-ui.card class="overflow-hidden p-0"><div class="overflow-x-auto"><table class="min-w-full text-sm"><thead class="bg-slate-100"><tr><th class="p-3 text-left">Detalle</th><th class="p-3 text-right">Importe</th></tr></thead><tbody>@foreach($period->lines as $line)<tr class="border-t"><td class="p-3">{{ $line->description }}</td><td class="p-3 text-right">BOB {{ number_format((float)$line->amount,2) }}</td></tr>@endforeach</tbody></table></div></x-ui.card>
+<x-ui.button href="{{ route('rrhh.self.dashboard') }}" variant="outline">Volver</x-ui.button></div>
+</x-layouts.app>

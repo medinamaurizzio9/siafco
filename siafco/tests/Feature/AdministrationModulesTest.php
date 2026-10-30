@@ -3,8 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\AuditLog;
-use App\Models\Investor;
-use App\Models\Person;
 use App\Models\RolePermissionOverride;
 use App\Models\User;
 use App\Services\AuditLogSanitizer;
@@ -29,11 +27,61 @@ class AdministrationModulesTest extends TestCase
             ->assertSee('Super Administrador')
             ->assertSee('Administrador (legado)')
             ->assertSee('Gerente')
+            ->assertSee('Recursos Humanos (RRHH)')
+            ->assertSee('Trabajador de Personal y Comisiones')
+            ->assertSee('Gestionado por el modulo')
             ->assertSee('Mini tienda')
             ->assertDontSee('Afiliado Visible No')
             ->assertDontSee('/administracion/roles-permisos/afiliado', false);
 
         $this->assertDatabaseHas('audit_logs', ['action' => 'role_user_count_viewed']);
+    }
+
+    public function test_rrhh_is_assignable_but_worker_role_is_managed_only_by_its_module(): void
+    {
+        $super = $this->internalUser('superadministrador');
+
+        $response = $this->actingAs($super)->get(route('admin.users.create'));
+
+        $response->assertOk()
+            ->assertSee('<option value="rrhh"', false)
+            ->assertSee('Recursos Humanos (RRHH)')
+            ->assertDontSee('<option value="trabajador_rrhh"', false);
+
+        $this->assertContains('rrhh', config('internal_roles.assignable'));
+        $this->assertNotContains('trabajador_rrhh', config('internal_roles.assignable'));
+        $this->assertContains('trabajador_rrhh', config('internal_roles.module_managed'));
+    }
+
+    public function test_rrhh_permissions_are_confined_to_personal_and_commissions(): void
+    {
+        $roles = app(RolePermissionService::class);
+        $rrhhPermissions = $roles->permissionsForRole('rrhh');
+
+        $this->assertNotEmpty($rrhhPermissions);
+        $this->assertTrue(collect($rrhhPermissions)->every(
+            fn (string $permission) => str_starts_with($permission, 'rrhh.') && $permission !== 'rrhh.self.view'
+        ));
+        $this->assertSame(['rrhh.self.view'], $roles->permissionsForRole('trabajador_rrhh'));
+
+        $super = $this->internalUser('superadministrador');
+        $this->actingAs($super)->patch(route('administration.roles.update', 'rrhh'), [
+            'permissions' => [...$rrhhPermissions, 'affiliates.view'],
+        ])->assertSessionHasErrors('permissions');
+
+        $this->assertFalse($this->internalUser('rrhh')->hasPermission('affiliates.view'));
+        $this->assertFalse($this->internalUser('rrhh')->hasPermission('cash_deposits.view_all'));
+        $this->assertFalse($this->internalUser('rrhh')->hasPermission('investment_prospects.view'));
+    }
+
+    public function test_rrhh_integration_does_not_reduce_management_permissions(): void
+    {
+        $manager = $this->internalUser('gerente');
+
+        $this->assertTrue($manager->hasPermission('affiliates.view'));
+        $this->assertTrue($manager->hasPermission('payments.view'));
+        $this->assertTrue($manager->hasPermission('investment_prospects.view'));
+        $this->assertTrue($manager->hasPermission('rrhh.workers.view'));
     }
 
     public function test_user_without_roles_permission_receives_forbidden(): void
@@ -114,7 +162,7 @@ class AdministrationModulesTest extends TestCase
             ->assertSee('Afiliacion')
             ->assertSee('Solicitudes Web')
             ->assertSee('CRM de inversiones')
-            ->assertSee('Inversiones formales')
+            ->assertDontSee('Inversiones formales')
             ->assertSee('Creditos')
             ->assertSee('Configuracion general')
             ->assertSee('Usuarios internos')
@@ -153,7 +201,7 @@ class AdministrationModulesTest extends TestCase
         $this->assertSame('Caja', config('internal_roles.labels.caja'));
         $this->assertNotEmpty($roles->permissionsForRole('caja'));
 
-        foreach (['dashboard.view', 'affiliates.view', 'payments.view', 'payments.create', 'payments.view_receipt', 'cash_deposits.view_own', 'cash_deposits.create', 'credits.view', 'investors.view'] as $permission) {
+        foreach (['dashboard.view', 'affiliates.view', 'payments.view', 'payments.create', 'payments.view_receipt', 'cash_deposits.view_own', 'cash_deposits.create', 'credits.view'] as $permission) {
             $this->assertTrue($cashDesk->hasPermission($permission), $permission);
         }
 
@@ -183,42 +231,27 @@ class AdministrationModulesTest extends TestCase
         $this->actingAs($cashDesk)->get(route('administration.audit.index'))->assertForbidden();
     }
 
-    public function test_cash_desk_can_read_investments_but_cannot_open_or_submit_write_actions(): void
+    public function test_formal_investment_routes_and_permissions_are_retired(): void
     {
-        $cashDesk = $this->internalUser('caja');
-        $person = Person::create(['full_name' => 'INVERSIONISTA CONSULTA', 'ci' => 'INV-CONSULTA']);
-        $investor = Investor::create([
-            'person_id' => $person->id,
-            'investor_number' => 'INV-CONSULTA-001',
-            'status' => 'prospect',
-        ]);
+        foreach ([
+            'investments.panel',
+            'investments.dashboard',
+            'investments.investors.index',
+            'investments.investor-types.index',
+            'investments.reservations.index',
+            'investments.lots.index',
+            'investments.returns.index',
+            'investments.receipts.index',
+            'investments.approvals.index',
+            'investments.reports.index',
+            'investments.settings.edit',
+        ] as $route) {
+            $this->assertFalse(Route::has($route), $route);
+        }
 
-        $this->actingAs($cashDesk)->get(route('investments.dashboard'))
-            ->assertOk()
-            ->assertDontSee('Registrar venta');
-        $this->actingAs($cashDesk)->get(route('investments.investors.index'))
-            ->assertOk()
-            ->assertDontSee('Nuevo accionista');
-        $this->actingAs($cashDesk)->get(route('investments.investor-types.index'))
-            ->assertOk()
-            ->assertDontSee('Nuevo tipo')
-            ->assertDontSee('Editar');
-        $this->actingAs($cashDesk)->get(route('investments.investors.show', $investor))
-            ->assertOk()
-            ->assertSee('INVERSIONISTA CONSULTA')
-            ->assertDontSee('Editar')
-            ->assertDontSee('Venta de acciones')
-            ->assertDontSee('Crear reserva');
-
-        $this->actingAs($cashDesk)->get(route('investments.investors.create'))->assertForbidden();
-        $this->actingAs($cashDesk)->post(route('investments.investors.store'), [])->assertForbidden();
-        $this->actingAs($cashDesk)->get(route('investments.investors.edit', $investor))->assertForbidden();
-        $this->actingAs($cashDesk)->put(route('investments.investors.update', $investor), [])->assertForbidden();
-        $this->actingAs($cashDesk)->get(route('investments.lots.create'))->assertForbidden();
-        $this->actingAs($cashDesk)->post(route('investments.lots.store'), [])->assertForbidden();
-        $this->actingAs($cashDesk)->get(route('investments.settings.edit'))->assertForbidden();
-        $this->actingAs($cashDesk)->put(route('investments.settings.update'), [])->assertForbidden();
-        $this->assertFalse(Route::has('investments.investors.destroy'));
+        foreach (['investors.view', 'investors.create', 'investors.update'] as $permission) {
+            $this->assertNotContains($permission, app(RolePermissionService::class)->catalog());
+        }
     }
 
     public function test_cash_desk_can_read_credits_and_module_has_no_write_routes(): void
@@ -238,19 +271,15 @@ class AdministrationModulesTest extends TestCase
         ));
     }
 
-    public function test_manager_is_read_only_and_administrators_keep_investment_write_access(): void
+    public function test_crm_investment_routes_remain_available_after_formal_module_retirement(): void
     {
         $manager = $this->internalUser('gerente');
 
-        $this->actingAs($manager)->get(route('investments.investors.index'))->assertOk();
-        $this->actingAs($manager)->get(route('investments.investors.create'))->assertForbidden();
-        $this->actingAs($manager)->post(route('investments.investors.store'), [])->assertForbidden();
-
-        foreach (['superadministrador', 'administrador'] as $role) {
-            $administrator = $this->internalUser($role);
-            $this->actingAs($administrator)->get(route('investments.investors.create'))->assertOk();
-            $this->actingAs($administrator)->get(route('investments.settings.edit'))->assertOk();
-        }
+        $this->assertTrue(Route::has('investments.crm.dashboard'));
+        $this->assertTrue(Route::has('investments.crm.kanban'));
+        $this->assertTrue(Route::has('investments.prospects.index'));
+        $this->assertTrue(Route::has('investments.advisors.index'));
+        $this->actingAs($manager)->get(route('investments.crm.dashboard'))->assertOk();
     }
 
     public function test_historical_accounting_role_no_longer_accesses_active_financial_modules(): void
@@ -260,9 +289,7 @@ class AdministrationModulesTest extends TestCase
 
         $this->assertFalse($roles->isKnownInternalRole('contabilidad'));
         $this->assertSame([], $roles->permissionsForRole('contabilidad'));
-        $this->actingAs($accounting)->get(route('investments.dashboard'))->assertForbidden();
         $this->actingAs($accounting)->get(route('credits.products.index'))->assertForbidden();
-        $this->actingAs($accounting)->get(route('investments.panel'))->assertForbidden();
     }
 
     public function test_cashier_sidebar_only_exposes_authorized_operational_modules(): void
@@ -293,7 +320,7 @@ class AdministrationModulesTest extends TestCase
         $this->actingAs($cashier)->get(route('admin.users.index'))->assertForbidden();
         $this->actingAs($cashier)->get(route('administration.roles.index'))->assertForbidden();
         $this->actingAs($cashier)->get(route('administration.audit.index'))->assertForbidden();
-        $this->actingAs($cashier)->get(route('investments.dashboard'))->assertForbidden();
+        $this->assertFalse(Route::has('investments.dashboard'));
     }
 
     public function test_manager_sidebar_matches_permissions_and_route_authorization(): void
@@ -305,7 +332,7 @@ class AdministrationModulesTest extends TestCase
             ->assertSee('Afiliacion en Oficina')
             ->assertSee('Reporte de cobros')
             ->assertSee('CRM de inversiones')
-            ->assertSee('Inversiones formales')
+            ->assertDontSee('Inversiones formales')
             ->assertSee('Creditos')
             ->assertSee('Mini tienda')
             ->assertSee('Usuarios internos')
@@ -313,7 +340,7 @@ class AdministrationModulesTest extends TestCase
             ->assertSee('Auditoria')
             ->assertDontSee('Configuracion general');
 
-        $this->actingAs($manager)->get(route('investments.dashboard'))->assertOk();
+        $this->actingAs($manager)->get(route('investments.crm.dashboard'))->assertOk();
         $this->actingAs($manager)->get(route('credits.products.index'))->assertOk();
     }
 

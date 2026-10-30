@@ -18,6 +18,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -354,7 +355,7 @@ class PublicAffiliationTest extends TestCase
             ->assertDontSee('Descargar PDF');
         $this->get(route('affiliate.credential.pdf'))->assertRedirect(route('affiliate.panel'));
         $this->get(route('affiliate.credential.png'))->assertRedirect(route('affiliate.panel'));
-        $this->get(route('investments.panel'))->assertRedirect(route('affiliate.panel'));
+        $this->assertFalse(Route::has('investments.panel'));
     }
 
     public function test_active_user_sees_full_panel_but_cannot_download_existing_credential(): void

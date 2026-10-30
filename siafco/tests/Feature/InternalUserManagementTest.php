@@ -91,6 +91,26 @@ class InternalUserManagementTest extends TestCase
         $this->actingAs($cashier)->post(route('admin.users.store'), $this->validPayload())->assertForbidden();
     }
 
+    public function test_super_administrator_can_assign_canonical_rrhh_role_from_internal_user_form(): void
+    {
+        $super = $this->internalUser('superadministrador');
+        $payload = $this->validPayload([
+            'name' => 'Responsable Recursos Humanos',
+            'role' => 'rrhh',
+            'position' => 'RRHH',
+            'area' => 'Administración',
+        ]);
+
+        $response = $this->actingAs($super)->post(route('admin.users.store'), $payload);
+
+        $response->assertSessionHasNoErrors();
+        $created = User::where('username', $payload['username'])->firstOrFail();
+        $this->assertSame('rrhh', $created->role);
+        $this->assertTrue($created->hasPermission('rrhh.dashboard.view'));
+        $this->assertFalse($created->hasPermission('affiliates.view'));
+        $this->assertFalse($created->hasPermission('investment_prospects.view'));
+    }
+
     public function test_update_changes_allowed_data_and_audits_role_without_touching_password(): void
     {
         $super = $this->internalUser('superadministrador');

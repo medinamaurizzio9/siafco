@@ -45,10 +45,11 @@ class RolePermissionService
         $groups = [
             'Dashboard' => ['dashboard.'],
             'CRM de Inversiones' => ['investment_advisors.', 'investment_prospects.', 'investment_prospect_interactions.'],
-            'Afiliacion' => ['affiliates.', 'affiliate_access.', 'investors.'],
+            'Afiliacion' => ['affiliates.', 'affiliate_access.'],
             'Tesoreria' => ['payments.', 'cash_deposits.', 'credits.'],
             'Credenciales' => ['credentials.'],
             'Mini Tienda' => ['store.'],
+            'Personal y Comisiones' => ['rrhh.'],
             'Usuarios Internos' => ['users.'],
             'Configuracion' => ['settings.'],
             'Auditoria' => ['audit.'],
@@ -85,7 +86,7 @@ class RolePermissionService
                 'key' => $role,
                 'label' => $label,
                 'description' => config("internal_roles.descriptions.{$role}", $this->defaultDescription($role)),
-                'status' => in_array($role, config('internal_roles.assignable', []), true) ? 'Asignable' : 'Historico',
+                'status' => $this->roleStatus($role),
                 'permission_count' => count($this->permissionsForRole($role)),
                 'user_count' => User::query()
                     ->where('role', $role)
@@ -117,14 +118,22 @@ class RolePermissionService
             return [];
         }
 
+        if ($role === 'superadministrador') {
+            return $this->catalog();
+        }
+
         $permissions = $this->overrideFor($role)?->permissions
             ?? config("internal_roles.roles.{$role}", []);
 
         $permissions = array_values(array_intersect($this->catalog(), array_unique($permissions)));
 
+        $permissions = $this->enforceModuleBoundary($role, $permissions);
+
         if (in_array($role, ['superadministrador', 'administrador'], true)) {
             $permissions = array_values(array_unique([...$permissions, ...self::CRITICAL_PERMISSIONS]));
         }
+
+        $permissions = $this->enforceModuleBoundary($role, $permissions);
 
         return $permissions;
     }
@@ -196,6 +205,42 @@ class RolePermissionService
         if ($forbidden !== []) {
             throw ValidationException::withMessages(['permissions' => 'El rol seleccionado no puede recibir permisos administrativos sensibles.']);
         }
+
+        if (in_array($role, ['rrhh', 'trabajador_rrhh'], true)
+            && $this->enforceModuleBoundary($role, $permissions) !== array_values(array_unique($permissions))) {
+            throw ValidationException::withMessages([
+                'permissions' => 'Los roles de Personal y Comisiones solo pueden recibir permisos de su propio modulo.',
+            ]);
+        }
+    }
+
+    private function enforceModuleBoundary(string $role, array $permissions): array
+    {
+        if ($role === 'rrhh') {
+            return array_values(array_filter(
+                $permissions,
+                fn (string $permission) => str_starts_with($permission, 'rrhh.') && $permission !== 'rrhh.self.view'
+            ));
+        }
+
+        if ($role === 'trabajador_rrhh') {
+            return array_values(array_intersect($permissions, ['rrhh.self.view']));
+        }
+
+        return array_values($permissions);
+    }
+
+    private function roleStatus(string $role): string
+    {
+        if (in_array($role, config('internal_roles.assignable', []), true)) {
+            return 'Asignable';
+        }
+
+        if (in_array($role, config('internal_roles.module_managed', []), true)) {
+            return 'Gestionado por el modulo';
+        }
+
+        return 'Historico';
     }
 
     private function overrideFor(string $role): ?RolePermissionOverride
@@ -236,6 +281,8 @@ class RolePermissionService
             'cajero' => 'Gestion de caja y pagos.',
             'caja' => 'Gestion operativa de cobros, pagos y consulta financiera autorizada.',
             'consulta' => 'Acceso de solo lectura a modulos permitidos.',
+            'rrhh' => 'Gestion operativa independiente de personal y comisiones.',
+            'trabajador_rrhh' => 'Consulta exclusiva de su informacion laboral.',
             default => 'Rol interno configurado para SIAFCO.',
         };
     }
