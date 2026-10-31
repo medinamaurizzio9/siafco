@@ -50,6 +50,7 @@ class RolePermissionService
             'Credenciales' => ['credentials.'],
             'Mini Tienda' => ['store.'],
             'Personal y Comisiones' => ['rrhh.'],
+            'Inversiones Simple' => ['simple_investments.'],
             'Usuarios Internos' => ['users.'],
             'Configuracion' => ['settings.'],
             'Auditoria' => ['audit.'],
@@ -209,7 +210,7 @@ class RolePermissionService
         if (in_array($role, ['rrhh', 'trabajador_rrhh'], true)
             && $this->enforceModuleBoundary($role, $permissions) !== array_values(array_unique($permissions))) {
             throw ValidationException::withMessages([
-                'permissions' => 'Los roles de Personal y Comisiones solo pueden recibir permisos de su propio modulo.',
+                'permissions' => 'El rol seleccionado solo puede recibir permisos expresamente permitidos para su ámbito.',
             ]);
         }
     }
@@ -217,10 +218,18 @@ class RolePermissionService
     private function enforceModuleBoundary(string $role, array $permissions): array
     {
         if ($role === 'rrhh') {
-            return array_values(array_filter(
-                $permissions,
-                fn (string $permission) => str_starts_with($permission, 'rrhh.') && $permission !== 'rrhh.self.view'
-            ));
+            $allowedInvestmentOperations = [
+                'simple_investments.dashboard.view',
+                'simple_investments.investors.view',
+                'simple_investments.investors.manage',
+                'simple_investments.contracts.view',
+                'simple_investments.contracts.create',
+                'simple_investments.documents.view',
+                'simple_investments.documents.upload',
+            ];
+
+            return array_values(array_filter($permissions, fn (string $permission) => (str_starts_with($permission, 'rrhh.') && $permission !== 'rrhh.self.view')
+                || in_array($permission, $allowedInvestmentOperations, true)));
         }
 
         if ($role === 'trabajador_rrhh') {
@@ -283,6 +292,7 @@ class RolePermissionService
             'consulta' => 'Acceso de solo lectura a modulos permitidos.',
             'rrhh' => 'Gestion operativa independiente de personal y comisiones.',
             'trabajador_rrhh' => 'Consulta exclusiva de su informacion laboral.',
+            'supervisor_inversiones' => 'Gestion integral del modulo Inversiones Simple.',
             default => 'Rol interno configurado para SIAFCO.',
         };
     }

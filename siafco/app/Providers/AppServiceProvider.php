@@ -17,20 +17,24 @@ use App\Listeners\GenerateCredentialListener;
 use App\Listeners\RefreshAffiliateCapabilitiesListener;
 use App\Listeners\UpdateDashboardStatisticsListener;
 use App\Models\InstitutionalSetting;
-use App\Models\User;
 use App\Models\InvestmentProspect;
-use App\Services\InvestmentCrmSettingsService;
+use App\Models\SimpleInvestmentContract;
+use App\Models\SimpleInvestmentInvestor;
+use App\Models\User;
 use App\Policies\InvestmentProspectPolicy;
+use App\Policies\SimpleInvestmentContractPolicy;
+use App\Policies\SimpleInvestmentInvestorPolicy;
 use App\Policies\UserPolicy;
-use Illuminate\Database\QueryException;
+use App\Services\InvestmentCrmSettingsService;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -49,7 +53,11 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(InvestmentProspect::class, InvestmentProspectPolicy::class);
+        Gate::policy(SimpleInvestmentInvestor::class, SimpleInvestmentInvestorPolicy::class);
+        Gate::policy(SimpleInvestmentContract::class, SimpleInvestmentContractPolicy::class);
         $this->registerPublicAffiliationRateLimiters();
+        RateLimiter::for('simple-investor-login', fn (Request $request) => Limit::perMinute(5)
+            ->by('simple-investor:'.hash('sha256', $request->ip().'|'.mb_strtoupper(trim((string) $request->input('ci'))))));
         $this->registerDomainListeners();
         foreach (['store.view', 'store.manage-products', 'store.manage-settings', 'store.manage-shipping', 'store.manage-coupons', 'store.manage-orders', 'store.verify-receipts'] as $permission) {
             Gate::define($permission, fn (User $user) => $user->isInternal() && $user->hasPermission($permission));

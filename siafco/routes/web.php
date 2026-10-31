@@ -56,6 +56,14 @@ use App\Http\Controllers\RrhhProductController;
 use App\Http\Controllers\RrhhReportController;
 use App\Http\Controllers\RrhhSaleController;
 use App\Http\Controllers\SectorController;
+use App\Http\Controllers\SimpleInvestmentContractController;
+use App\Http\Controllers\SimpleInvestmentDashboardController;
+use App\Http\Controllers\SimpleInvestmentDocumentController;
+use App\Http\Controllers\SimpleInvestmentInvestorController;
+use App\Http\Controllers\SimpleInvestmentSettingController;
+use App\Http\Controllers\SimpleInvestorAccessController;
+use App\Http\Controllers\SimpleInvestorAuthController;
+use App\Http\Controllers\SimpleInvestorPortalController;
 use App\Http\Controllers\Store\CartController as StoreCartController;
 use App\Http\Controllers\Store\CatalogController as StoreCatalogController;
 use App\Http\Controllers\Store\CheckoutController as StoreCheckoutController;
@@ -66,6 +74,35 @@ use App\Http\Controllers\VerificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeRedirectController::class, 'root']);
+
+Route::prefix('mi-inversion')->name('simple-investor.')->group(function () {
+    Route::get('/sw.js', fn () => response()->file(public_path('investor-pwa/sw.js'), [
+        'Content-Type' => 'application/javascript',
+        'Cache-Control' => 'no-cache',
+        'Service-Worker-Allowed' => '/mi-inversion/',
+    ]))->name('worker');
+    Route::get('/', [SimpleInvestorAuthController::class, 'create'])->name('login');
+    Route::get('/acceso', fn () => redirect('/mi-inversion'))->name('login.alias');
+    Route::post('/acceso', [SimpleInvestorAuthController::class, 'store'])->middleware('throttle:simple-investor-login')->name('login.store');
+    Route::middleware('simple.investor:true')->group(function () {
+        Route::get('/cambiar-contrasena', [SimpleInvestorAuthController::class, 'editPassword'])->name('password.edit');
+        Route::post('/cambiar-contrasena', [SimpleInvestorAuthController::class, 'updatePassword'])->name('password.update');
+        Route::post('/salir', [SimpleInvestorAuthController::class, 'logout'])->name('logout');
+    });
+    Route::middleware('simple.investor')->group(function () {
+        Route::get('/inicio', [SimpleInvestorPortalController::class, 'dashboard'])->name('home');
+        Route::get('/perfil', [SimpleInvestorPortalController::class, 'profile'])->name('profile');
+        Route::patch('/perfil', [SimpleInvestorPortalController::class, 'updateProfile'])->name('profile.update');
+        Route::get('/perfil/foto', [SimpleInvestorPortalController::class, 'photo'])->name('profile.photo');
+        Route::get('/contratos', [SimpleInvestorPortalController::class, 'contracts'])->name('contracts');
+        Route::get('/contratos/{contract}', [SimpleInvestorPortalController::class, 'contract'])->name('contracts.show');
+        Route::get('/contratos/{contract}/documentos/{document}', [SimpleInvestorPortalController::class, 'document'])->name('documents.download');
+        Route::get('/unidades', [SimpleInvestorPortalController::class, 'units'])->name('units');
+        Route::get('/calendario', [SimpleInvestorPortalController::class, 'calendar'])->name('calendar');
+        Route::get('/avisos', [SimpleInvestorPortalController::class, 'notifications'])->name('notifications');
+        Route::post('/avisos/{notification}/leer', [SimpleInvestorPortalController::class, 'read'])->name('notifications.read');
+    });
+});
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -417,6 +454,35 @@ Route::middleware(['auth', 'password.changed', 'affiliate.profile.complete', 'af
     Route::get('/mi-trabajo', [RrhhController::class, 'self'])->name('rrhh.self.dashboard');
     Route::get('/mi-trabajo/ventas/{sale}', [RrhhController::class, 'selfSale'])->name('rrhh.self.sales.show');
     Route::get('/mi-trabajo/liquidaciones/{period}', [RrhhController::class, 'selfPeriod'])->name('rrhh.self.periods.show');
+
+    Route::prefix('inversiones-simple')->name('simple-investments.')->group(function () {
+        Route::get('/', SimpleInvestmentDashboardController::class)->middleware('permission:simple_investments.dashboard.view')->name('dashboard');
+        Route::get('/inversionistas', [SimpleInvestmentInvestorController::class, 'index'])->middleware('permission:simple_investments.investors.view')->name('investors.index');
+        Route::get('/inversionistas/crear', [SimpleInvestmentInvestorController::class, 'create'])->middleware('permission:simple_investments.investors.manage')->name('investors.create');
+        Route::post('/inversionistas', [SimpleInvestmentInvestorController::class, 'store'])->middleware('permission:simple_investments.investors.manage')->name('investors.store');
+        Route::get('/inversionistas/{investor}', [SimpleInvestmentInvestorController::class, 'show'])->middleware('permission:simple_investments.investors.view')->name('investors.show');
+        Route::get('/inversionistas/{investor}/editar', [SimpleInvestmentInvestorController::class, 'edit'])->middleware('permission:simple_investments.investors.manage')->name('investors.edit');
+        Route::patch('/inversionistas/{investor}', [SimpleInvestmentInvestorController::class, 'update'])->middleware('permission:simple_investments.investors.manage')->name('investors.update');
+        Route::get('/inversionistas/{investor}/foto', [SimpleInvestmentInvestorController::class, 'photo'])->middleware('permission:simple_investments.investors.view')->name('investors.photo');
+        Route::post('/inversionistas/{investor}/acceso-portal', [SimpleInvestorAccessController::class, 'store'])->middleware('permission:simple_investments.portal_access.manage')->name('investors.portal-access.store');
+
+        Route::get('/contratos', [SimpleInvestmentContractController::class, 'index'])->middleware('permission:simple_investments.contracts.view')->name('contracts.index');
+        Route::get('/contratos/crear', [SimpleInvestmentContractController::class, 'create'])->middleware('permission:simple_investments.contracts.create')->name('contracts.create');
+        Route::post('/contratos', [SimpleInvestmentContractController::class, 'store'])->middleware('permission:simple_investments.contracts.create')->name('contracts.store');
+        Route::get('/contratos/{contract}', [SimpleInvestmentContractController::class, 'show'])->middleware('permission:simple_investments.contracts.view')->name('contracts.show');
+        Route::get('/contratos/{contract}/imprimir', [SimpleInvestmentContractController::class, 'print'])->middleware('permission:simple_investments.contracts.view')->name('contracts.print');
+        Route::post('/contratos/{contract}/pendiente-firma', [SimpleInvestmentContractController::class, 'pending'])->middleware('permission:simple_investments.contracts.transition')->name('contracts.pending');
+        Route::post('/contratos/{contract}/firmar', [SimpleInvestmentContractController::class, 'sign'])->middleware('permission:simple_investments.contracts.transition')->name('contracts.sign');
+        Route::post('/contratos/{contract}/anular', [SimpleInvestmentContractController::class, 'void'])->middleware('permission:simple_investments.contracts.transition')->name('contracts.void');
+        Route::post('/contratos/{contract}/documentos', [SimpleInvestmentDocumentController::class, 'store'])->middleware('permission:simple_investments.documents.upload')->name('contracts.documents.store');
+        Route::get('/contratos/{contract}/documentos/{document}/ver', [SimpleInvestmentDocumentController::class, 'view'])->middleware('permission:simple_investments.documents.view')->name('contracts.documents.view');
+        Route::get('/contratos/{contract}/documentos/{document}/descargar', [SimpleInvestmentDocumentController::class, 'download'])->middleware('permission:simple_investments.documents.view')->name('contracts.documents.download');
+        Route::post('/contratos/{contract}/documentos/{document}/verificar', [SimpleInvestmentDocumentController::class, 'verify'])->middleware('permission:simple_investments.documents.verify')->name('contracts.documents.verify');
+        Route::post('/contratos/{contract}/documentos/{document}/observar', [SimpleInvestmentDocumentController::class, 'observe'])->middleware('permission:simple_investments.documents.verify')->name('contracts.documents.observe');
+
+        Route::get('/configuracion', [SimpleInvestmentSettingController::class, 'edit'])->middleware('permission:simple_investments.settings.manage')->name('settings.edit');
+        Route::put('/configuracion', [SimpleInvestmentSettingController::class, 'update'])->middleware('permission:simple_investments.settings.manage')->name('settings.update');
+    });
 
     Route::prefix('rrhh')->name('rrhh.')->group(function () {
         Route::get('/', [RrhhController::class, 'dashboard'])->middleware('permission:rrhh.dashboard.view')->name('dashboard');

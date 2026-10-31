@@ -36,6 +36,13 @@ $permissions = [
     'rrhh.sales.confirm', 'rrhh.sales.void', 'rrhh.payments.view', 'rrhh.payments.prepare',
     'rrhh.payments.mark_paid', 'rrhh.adjustments.manage', 'rrhh.reports.view',
     'rrhh.reports.print', 'rrhh.access.manage', 'rrhh.self.view',
+    'simple_investments.dashboard.view',
+    'simple_investments.investors.view', 'simple_investments.investors.manage',
+    'simple_investments.contracts.view', 'simple_investments.contracts.create',
+    'simple_investments.contracts.transition',
+    'simple_investments.documents.view', 'simple_investments.documents.upload',
+    'simple_investments.documents.verify', 'simple_investments.settings.manage',
+    'simple_investments.portal_access.manage',
 ];
 
 return [
@@ -52,13 +59,15 @@ return [
         'asesor_inversiones' => 'Asesor de Inversiones',
         'rrhh' => 'Recursos Humanos (RRHH)',
         'trabajador_rrhh' => 'Trabajador de Personal y Comisiones',
+        'supervisor_inversiones' => 'Supervisor de Inversiones',
     ],
-    'assignable' => ['superadministrador', 'gerente', 'secretaria', 'cajero', 'caja', 'asesor_inversiones', 'rrhh'],
+    'assignable' => ['superadministrador', 'gerente', 'secretaria', 'cajero', 'caja', 'asesor_inversiones', 'rrhh', 'supervisor_inversiones'],
     'module_managed' => ['trabajador_rrhh'],
     'descriptions' => [
         'caja' => 'Gestión operativa de cobros, pagos y consulta financiera autorizada.',
         'rrhh' => 'Gestión operativa independiente de personal y comisiones.',
         'trabajador_rrhh' => 'Consulta exclusiva de su información laboral.',
+        'supervisor_inversiones' => 'Gestión integral del módulo Inversiones Simple.',
     ],
     'roles' => [
         'superadministrador' => $permissions,
@@ -130,5 +139,14 @@ return [
             'rrhh.reports.print',
         ],
         'trabajador_rrhh' => ['rrhh.self.view'],
+        'supervisor_inversiones' => [
+            'simple_investments.dashboard.view',
+            'simple_investments.investors.view', 'simple_investments.investors.manage',
+            'simple_investments.contracts.view', 'simple_investments.contracts.create',
+            'simple_investments.contracts.transition',
+            'simple_investments.documents.view', 'simple_investments.documents.upload',
+            'simple_investments.documents.verify', 'simple_investments.settings.manage',
+            'simple_investments.portal_access.manage',
+        ],
     ],
 ];

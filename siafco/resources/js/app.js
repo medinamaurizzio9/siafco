@@ -8,7 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initPhotoCroppers();
 
     const canUseServiceWorker = window.location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(window.location.hostname);
-    if ('serviceWorker' in navigator && canUseServiceWorker) {
+    const investorPortal = window.location.pathname === '/mi-inversion' || window.location.pathname.startsWith('/mi-inversion/');
+    if ('serviceWorker' in navigator && canUseServiceWorker && !investorPortal) {
         navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
 

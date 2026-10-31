@@ -32,6 +32,8 @@
             $canViewInvestmentAdvisors = $user->hasPermission('investment_advisors.view');
             $canViewInvestmentProspects = $user->hasPermission('investment_prospects.view');
             $canViewInvestmentCrm = $canViewInvestmentAdvisors || $canViewInvestmentProspects;
+            $canViewSimpleInvestments = collect(['simple_investments.dashboard.view', 'simple_investments.investors.view', 'simple_investments.contracts.view', 'simple_investments.settings.manage'])
+                ->contains(fn (string $permission) => $user->hasPermission($permission));
             $canManageInvestments = $canViewInvestmentCrm
                 && $user->hasRole(['superadministrador', 'administrador', 'gerente', 'asesor_inversiones']);
             $canViewCredits = $user->hasPermission('credits.view')
@@ -68,6 +70,7 @@
                 request()->routeIs('admin.dashboard') => 'home',
                 request()->routeIs('affiliates.*', 'affiliate-benefits.*', 'sectors.*', 'plans.*', 'payments.*', 'admin.collections.*', 'admin.payments.*', 'cash-deposits.*', 'credentials.*', 'credenciales.*', 'institutional-qr.*', 'reports.*', 'affiliation.*', 'public-affiliation.admin.*') => 'affiliation',
                 request()->routeIs('investments.crm.*', 'investments.prospects.*', 'investments.advisors.*') => 'investment-crm',
+                request()->routeIs('simple-investments.*') => 'simple-investments',
                 request()->routeIs('credits.*') => 'credits',
                 request()->routeIs('admin.store.*') => 'store',
                 request()->routeIs('rrhh.*') => 'rrhh',
@@ -107,6 +110,8 @@
                 'rrhh.reports.periods.index' => 'credit-card',
                 'rrhh.reports.adjustments.index' => 'file-text',
                 'rrhh.reports.index' => 'chart', 'rrhh.self.dashboard' => 'user',
+                'simple-investments.dashboard' => 'chart', 'simple-investments.investors.index' => 'users',
+                'simple-investments.contracts.index' => 'file-text', 'simple-investments.settings.edit' => 'settings',
             ];
 
             $navLink = function (string $route, string $label, array $params = [], array|string $active = [], ?bool $forcedActive = null) use ($routeIcons) {
@@ -246,6 +251,20 @@
                                 @if($user->hasPermission('investment_crm_settings.view'))
                                     {!! $navLink('investments.crm.settings.edit', 'Configuración', [], ['investments.crm.settings.*']) !!}
                                 @endif
+                            </div>
+                        </section>
+                    @endif
+
+                    @if($canViewSimpleInvestments)
+                        <section class="nav-module" data-accordion-module="simple-investments">
+                            <button type="button" class="nav-module-button" data-accordion-toggle aria-expanded="{{ $openModule === 'simple-investments' ? 'true' : 'false' }}">
+                                <span class="flex items-center gap-3"><x-ui.icon name="chart" class="h-4 w-4" />INVERSIONES</span><span class="nav-chevron">⌄</span>
+                            </button>
+                            <div class="nav-module-panel {{ $openModule === 'simple-investments' ? '' : 'hidden' }}">
+                                @if($user->hasPermission('simple_investments.dashboard.view')){!! $navLink('simple-investments.dashboard', 'Resumen', [], ['simple-investments.dashboard']) !!}@endif
+                                @if($user->hasPermission('simple_investments.investors.view')){!! $navLink('simple-investments.investors.index', 'Inversionistas', [], ['simple-investments.investors.*']) !!}@endif
+                                @if($user->hasPermission('simple_investments.contracts.view')){!! $navLink('simple-investments.contracts.index', 'Contratos y ventas', [], ['simple-investments.contracts.*']) !!}@endif
+                                @if($user->hasPermission('simple_investments.settings.manage')){!! $navLink('simple-investments.settings.edit', 'Configuración', [], ['simple-investments.settings.*']) !!}@endif
                             </div>
                         </section>
                     @endif

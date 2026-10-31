@@ -1,13 +1,25 @@
 <?php
 
+use App\Http\Middleware\EnsureActiveMobileStoreAffiliate;
+use App\Http\Middleware\EnsureActiveStoreAffiliate;
+use App\Http\Middleware\EnsureAffiliateProfileIsComplete;
+use App\Http\Middleware\EnsureInvestmentAdvisorAuthenticated;
+use App\Http\Middleware\EnsureMobileAffiliateAccess;
+use App\Http\Middleware\EnsurePasswordIsChanged;
+use App\Http\Middleware\EnsureSimpleInvestorAuthenticated;
+use App\Http\Middleware\MeasureRequestPerformance;
+use App\Http\Middleware\PermissionMiddleware;
+use App\Http\Middleware\RestrictPendingAffiliateAccess;
+use App\Http\Middleware\RoleMiddleware;
+use App\Http\Responses\MobileApiResponse;
+use App\Services\UserRedirectResolver;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
-use App\Http\Responses\MobileApiResponse;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -26,7 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             $homeRoute = $user
-                ? app(\App\Services\UserRedirectResolver::class)->homeRoute($user)
+                ? app(UserRedirectResolver::class)->homeRoute($user)
                 : null;
 
             return $homeRoute ? route($homeRoute) : url('/');
@@ -34,20 +46,21 @@ return Application::configure(basePath: dirname(__DIR__))
 
         if (env('SIAFCO_MEASURE_PERFORMANCE', false)) {
             $middleware->web(append: [
-                \App\Http\Middleware\MeasureRequestPerformance::class,
+                MeasureRequestPerformance::class,
             ]);
         }
 
         $middleware->alias([
-            'permission' => \App\Http\Middleware\PermissionMiddleware::class,
-            'role' => \App\Http\Middleware\RoleMiddleware::class,
-            'affiliate.active-access' => \App\Http\Middleware\RestrictPendingAffiliateAccess::class,
-            'affiliate.profile.complete' => \App\Http\Middleware\EnsureAffiliateProfileIsComplete::class,
-            'affiliate.store.active' => \App\Http\Middleware\EnsureActiveStoreAffiliate::class,
-            'mobile.affiliate.active' => \App\Http\Middleware\EnsureActiveMobileStoreAffiliate::class,
-            'password.changed' => \App\Http\Middleware\EnsurePasswordIsChanged::class,
-            'mobile.affiliate' => \App\Http\Middleware\EnsureMobileAffiliateAccess::class,
-            'investment.crm.advisor' => \App\Http\Middleware\EnsureInvestmentAdvisorAuthenticated::class,
+            'permission' => PermissionMiddleware::class,
+            'role' => RoleMiddleware::class,
+            'affiliate.active-access' => RestrictPendingAffiliateAccess::class,
+            'affiliate.profile.complete' => EnsureAffiliateProfileIsComplete::class,
+            'affiliate.store.active' => EnsureActiveStoreAffiliate::class,
+            'mobile.affiliate.active' => EnsureActiveMobileStoreAffiliate::class,
+            'password.changed' => EnsurePasswordIsChanged::class,
+            'mobile.affiliate' => EnsureMobileAffiliateAccess::class,
+            'investment.crm.advisor' => EnsureInvestmentAdvisorAuthenticated::class,
+            'simple.investor' => EnsureSimpleInvestorAuthenticated::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

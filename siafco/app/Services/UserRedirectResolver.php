@@ -98,6 +98,7 @@ class UserRedirectResolver
     {
         foreach ([
             'dashboard.view' => 'admin.dashboard',
+            'simple_investments.dashboard.view' => 'simple-investments.dashboard',
             'rrhh.dashboard.view' => 'rrhh.dashboard',
             'investment_prospects.view' => 'investments.crm.dashboard',
             'affiliates.view' => 'affiliates.index',
@@ -126,6 +127,7 @@ class UserRedirectResolver
             $path === 'mi-trabajo' => $user->hasPermission('rrhh.self.view'),
             str_starts_with($path, 'rrhh') => $user->hasPermission('rrhh.dashboard.view'),
             str_starts_with($path, 'inversiones/crm'), str_starts_with($path, 'inversiones/prospectos') => $user->hasPermission('investment_prospects.view'),
+            str_starts_with($path, 'inversiones-simple') => $user->hasPermission('simple_investments.dashboard.view'),
             $path === 'dashboard' => $user->hasPermission('dashboard.view'),
             str_starts_with($path, 'afiliados') => $user->hasPermission('affiliates.view'),
             str_starts_with($path, 'pagos') => $user->hasPermission('payments.view'),
