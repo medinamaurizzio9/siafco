@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\RrhhAdjustmentService;
 use App\Services\RrhhPayrollService;
 use App\Services\RrhhSaleService;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -118,6 +119,8 @@ class RrhhPhaseThreeTest extends TestCase
 
     public function test_voiding_paid_sale_creates_one_unapplied_correction_and_keeps_payment(): void
     {
+        $this->travelTo(CarbonImmutable::parse('2026-10-31 00:01:00', 'UTC'));
+
         $actor = $this->user('rrhh');
         $worker = $this->worker('commission_only', null, 'virtual');
         $sale = $this->confirmedSale($worker, '80.00');
@@ -142,6 +145,41 @@ class RrhhPhaseThreeTest extends TestCase
         $applied = $payroll->calculate($this->periodData($worker, ['date_from' => '2026-10-30', 'date_to' => '2026-10-31', 'adjustment_ids' => [$correction->id]]), $actor);
         $this->assertSame('-80.00', $applied->calculated_total);
         $this->assertSame(RrhhAdjustment::STATUS_PENDING, $correction->fresh()->status);
+    }
+
+    public function test_voided_sale_corrections_respect_utc_and_period_date_boundaries(): void
+    {
+        $moments = [
+            'before UTC midnight' => ['2026-10-30 23:59:00', '2026-10-30'],
+            'after UTC midnight' => ['2026-10-31 00:01:00', '2026-10-31'],
+            'before La Paz date change' => ['2026-10-31 03:59:00', '2026-10-31'],
+            'after La Paz date change' => ['2026-10-31 04:01:00', '2026-10-31'],
+        ];
+
+        foreach ($moments as $case => [$moment, $expectedDate]) {
+            $this->travelTo(CarbonImmutable::parse($moment, 'UTC'));
+            $actor = $this->user('rrhh');
+            $worker = $this->worker('commission_only', null, 'virtual');
+            $sale = $this->confirmedSale($worker, '25.00', $expectedDate);
+            $payroll = app(RrhhPayrollService::class);
+            $period = $payroll->calculate($this->periodData($worker, ['date_from' => $expectedDate, 'date_to' => $expectedDate]), $actor);
+            $payroll->close($period, $actor);
+            $payroll->pay($period, ['paid_at' => $expectedDate, 'paid_amount' => '25.00'], $actor);
+
+            app(RrhhSaleService::class)->void($sale, $actor, "Caso controlado: {$case}");
+            $correction = RrhhAdjustment::where('source_sale_id', $sale->id)->firstOrFail();
+            $this->assertSame($expectedDate, $correction->applies_on->toDateString(), $case);
+            app(RrhhAdjustmentService::class)->review($correction, $actor, 'approved', 'Regresión de límite temporal');
+
+            $next = $payroll->calculate($this->periodData($worker, [
+                'date_from' => $expectedDate,
+                'date_to' => $expectedDate,
+                'adjustment_ids' => [$correction->id],
+            ]), $actor);
+            $this->assertSame('-25.00', $next->calculated_total, $case);
+
+            $this->travelBack();
+        }
     }
 
     public function test_void_sale_releases_draft_blocks_closed_and_never_creates_unearned_correction(): void

@@ -51,7 +51,7 @@ class RrhhPayrollService
 
             $lines = [['type' => 'base', 'description' => $this->baseDescription($worker, $data['recognized_days'] ?? null), 'amount' => (string) $base]];
             $commission = BigDecimal::zero()->toScale(2);
-            $items = RrhhSaleItem::query()->whereHas('sale', fn ($q) => $q->where('worker_id', $worker->id)->where('status', RrhhSale::STATUS_CONFIRMED)->whereBetween('sold_on', [$data['date_from'], $data['date_to']]))
+            $items = RrhhSaleItem::query()->whereHas('sale', fn ($q) => $q->where('worker_id', $worker->id)->where('status', RrhhSale::STATUS_CONFIRMED)->whereDate('sold_on', '>=', $data['date_from'])->whereDate('sold_on', '<=', $data['date_to']))
                 ->whereDoesntHave('payLine')->lockForUpdate()->get();
             foreach ($items as $item) {
                 $amount = BigDecimal::of($item->commission_amount)->toScale(2, RoundingMode::HalfUp);
@@ -61,7 +61,7 @@ class RrhhPayrollService
 
             $adjustmentTotal = BigDecimal::zero()->toScale(2);
             $adjustmentIds = array_values(array_unique(array_map('intval', $data['adjustment_ids'] ?? [])));
-            $adjustments = RrhhAdjustment::query()->whereIn('id', $adjustmentIds)->where('worker_id', $worker->id)->where('status', RrhhAdjustment::STATUS_PENDING)->where('review_status', RrhhAdjustment::REVIEW_APPROVED)->whereBetween('applies_on', [$data['date_from'], $data['date_to']])->whereDoesntHave('payLine')->lockForUpdate()->get();
+            $adjustments = RrhhAdjustment::query()->whereIn('id', $adjustmentIds)->where('worker_id', $worker->id)->where('status', RrhhAdjustment::STATUS_PENDING)->where('review_status', RrhhAdjustment::REVIEW_APPROVED)->whereDate('applies_on', '>=', $data['date_from'])->whereDate('applies_on', '<=', $data['date_to'])->whereDoesntHave('payLine')->lockForUpdate()->get();
             if ($adjustments->count() !== count($adjustmentIds)) {
                 throw ValidationException::withMessages(['adjustment_ids' => 'Uno o más ajustes no están disponibles o no fueron revisados.']);
             }
