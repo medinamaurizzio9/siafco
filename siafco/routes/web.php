@@ -577,3 +577,5 @@ Route::middleware(['auth', 'password.changed', 'affiliate.profile.complete', 'af
             Route::get('/sistema', PlaceholderController::class)->defaults('title', 'Configuracion del sistema')->defaults('message', 'Zona horaria, moneda por defecto y opciones generales del sistema se ampliaran aqui.')->name('system');
         });
 });
+
+require __DIR__.'/communications.php';

@@ -79,3 +79,5 @@ Route::prefix('mobile/v1')->name('api.mobile.v1.')->group(function () {
         });
     });
 });
+
+require __DIR__.'/mobile_communications.php';

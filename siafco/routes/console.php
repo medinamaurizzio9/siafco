@@ -15,3 +15,5 @@ Artisan::command('simple-investments:prepare-notices', function () {
 })->purpose('Prepara avisos internos idempotentes de fechas contractuales');
 
 Schedule::command('simple-investments:prepare-notices')->dailyAt('08:00')->withoutOverlapping();
+
+Schedule::command('communications:process')->everyMinute()->withoutOverlapping();

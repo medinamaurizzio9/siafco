@@ -1,6 +1,7 @@
 <?php
 
 $permissions = [
+    'communications.manage', 'communications.publish', 'communications.report',
     'dashboard.view',
     'users.view', 'users.create', 'users.update', 'users.block', 'users.activate',
     'users.reset-password', 'users.delete', 'users.restore', 'users.assign-role',

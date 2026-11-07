@@ -388,6 +388,9 @@
                     </div>
                 </section>
                 @endif
+                @can('manage',\App\Models\Communication::class)
+                    <a class="nav-link" href="{{ route('communications.index') }}">Comunicaciones → Comunicados</a>
+                @endcan
             </nav>
             @unless(request()->routeIs('password.force.*'))
                 <form method="post" action="{{ route('logout') }}" class="sticky bottom-0 border-t border-white/10 bg-[#07172b] px-3 py-4"
@@ -422,6 +425,9 @@
                             <span class="block truncate text-xs font-bold text-siafco-muted">{{ $institution->institution_name }}</span>
                             <span class="block truncate text-sm font-black text-siafco-primary-900">{{ auth()->user()->name }}</span>
                         </span>
+                        @if($isAffiliateExperience && auth()->user()->is_active && auth()->user()->role === 'afiliado' && auth()->user()->user_type === 'affiliate' && auth()->user()->affiliate?->status === 'activo')
+                            @include('communications.bell')
+                        @endif
                         @unless($isAffiliateExperience)
                             <button class="btn-icon" type="button" aria-label="Notificaciones preparadas">
                                 <x-ui.icon name="bell" class="h-5 w-5" />
